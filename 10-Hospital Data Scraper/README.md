@@ -88,6 +88,9 @@ Each script will generate a CSV file containing scraped data:
 - `output2.csv` → Psychologen.at listings
 
 ---
+## Result Excel Files Screenshot
+![Screenshot 2025-04-01 101236](https://github.com/user-attachments/assets/6cffc777-5c06-48d4-997d-0a9a5a1c8ec1)
+![Screenshot 2025-04-01 101236](https://github.com/user-attachments/assets/9b8863ac-980c-4961-b03b-00509c7540e4)
 
 ## 📌 Notes
 
