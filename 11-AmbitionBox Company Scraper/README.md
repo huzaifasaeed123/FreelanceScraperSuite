@@ -60,6 +60,9 @@ The project contains several Python scripts:
 ### Challenge 3: File Uploads and Data Storage
 - **Solution:** 
   - Implemented a file upload feature (`upload.py`) to upload CSV data to an external server, providing easy access for the client.
+## Result Excel File Screenshots
+![image](https://github.com/user-attachments/assets/d6433294-2516-484e-b098-f5e94e828729)
+![image](https://github.com/user-attachments/assets/f31da336-d885-4f45-84f5-f8a14a0c1d75)
 
 ## ⚙️ Setup Instructions
 
