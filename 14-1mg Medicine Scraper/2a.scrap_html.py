@@ -13,9 +13,8 @@ from alive_progress import alive_bar
 import pandas as pd
 import threading
 lock = threading.Lock()
-# proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb330318881872d6@gw.dataimpulse.com:823"
-# proxy= "http://86a4367be4b3a6fd0c6d__cr.sg:eb381c36f3936c4b@gw.dataimpulse.com:823"
-proxy= "http://791149d37c1c6ba881cb__cr.ca,in,cl,au:8e90b93c40298610@gw.dataimpulse.com:823"
+
+proxy= "http://791149d37c1c6ba881cb__cr.ca,in,cl,au:8e900@gw.dataimpulse.com:823"
 
 proxies = {
     "http": proxy,

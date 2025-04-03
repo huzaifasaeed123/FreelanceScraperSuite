@@ -14,7 +14,7 @@ from aiohttp import DummyCookieJar
 # -------------------
 # Global setup
 # -------------------
-proxy_url = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb330318881872d6@gw.dataimpulse.com:823"
+proxy_url = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb3d6@gw.dataimpulse.com:823"
 db = dataset.connect("sqlite:///MedicineMain2.db")
 table = db["Scraped"]
 

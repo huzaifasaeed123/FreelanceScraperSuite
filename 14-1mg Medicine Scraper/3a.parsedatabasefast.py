@@ -11,7 +11,7 @@ import dataset
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool, cpu_count
 
-proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb330318881872d6@gw.dataimpulse.com:823"
+proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb372d6@gw.dataimpulse.com:823"
 
 proxies = {
     "http": proxy,

@@ -8,7 +8,7 @@ import traceback
 from alive_progress import alive_bar
 import pandas as pd
 # Function that makes the request, parses with BeautifulSoup, and returns the result
-proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb330318881872d6@gw.dataimpulse.com:823"
+proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb36@gw.dataimpulse.com:823"
 
 proxies = {
     "http": proxy,
