@@ -45,6 +45,9 @@ The client required a solution to **extract hierarchical data** related to the *
 - **Structured Output:** Saves the output as **Excel** files to ensure easy readability and further use.
 - **Scalable:** Can handle large datasets by making use of recursive calls to fetch child links dynamically.
 - **Error Handling:** Includes robust error handling for failed requests, ensuring smooth data extraction.
+## Final Result Excel File
+![image](https://github.com/user-attachments/assets/cd3e7ad0-f698-4cad-9925-419007a25553)
+![image](https://github.com/user-attachments/assets/aeaf5278-6c05-41ab-9b8f-8a282ef89149)
 
 ## ⚙️ **Setup Instructions**
 
