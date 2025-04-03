@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import dataset
-proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb330318881872d6@gw.dataimpulse.com:823"
+proxy = "http://adf1f9b7b95b8a8e4bcc__cr.sg:eb36@gw.dataimpulse.com:823"
 
 proxies = {
     "http": proxy,
