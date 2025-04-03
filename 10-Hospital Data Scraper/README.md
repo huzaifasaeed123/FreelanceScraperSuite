@@ -1,4 +1,4 @@
-# 🧠 Psychetrist Data Scraper
+# 🧠 Doctor Data Scraper
 
 This project is a collection of Python scripts built to scrape publicly available data about psychologists and psychotherapists from various European platforms. It extracts contact information, addresses, professions, languages spoken, and more.
 
