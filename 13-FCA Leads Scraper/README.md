@@ -35,6 +35,10 @@ The client required an automated solution to extract detailed company data from 
   - Captures XHR requests containing company information.
   - Extracts and organizes company details such as names, contact information, and addresses.
   - Saves the final data into an **Excel file** for easy access and analysis.
+## Excel File Result
+![image](https://github.com/user-attachments/assets/9aa78b4c-1678-4799-a46b-35e5c0afcd40)
+
+![image](https://github.com/user-attachments/assets/310a0651-0074-4870-83b1-c3e7db3d1195)
 
 ## 📦 **How the Code Works**
 
