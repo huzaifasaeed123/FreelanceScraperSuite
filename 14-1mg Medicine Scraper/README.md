@@ -36,6 +36,12 @@ This project consists of multiple Python scripts, each with a different role:
   - Uses **multiprocessing** to parse large batches of data efficiently.
   - Extracts fields like **Uses**, **Side Effects**, **Storage**, **Manufacturer**, and **Safety Advice**.
   - Saves the parsed data in an Excel file for easy access and analysis.
+## Final Result Excel Screenshot
+![image](https://github.com/user-attachments/assets/f74ab97d-e88e-4a85-950a-89658810d65a)
+
+![image](https://github.com/user-attachments/assets/57176e1c-a1f1-4ce5-aa82-068c61545f88)
+
+![image](https://github.com/user-attachments/assets/cee79901-b367-4f75-8e21-d418a5e586f3)
 
 ## ⚙️ **Setup Instructions**
 
