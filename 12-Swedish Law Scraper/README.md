@@ -27,6 +27,9 @@ The client's objective was to collect detailed law-related data from the Fedlex 
 ### 3. **📝 Parsing Law Files & Handling Nested Sections**  
 - **Challenge:** Parsing nested sections, articles, and footnotes from law files in different formats.  
 - **Solution:** Implemented robust HTML parsing logic using **BeautifulSoup**, which handles nested tags, and replaced `<br>` and `<sup>` tags for clean data extraction. Extracted articles were then stored systematically.
+## Excel Result Screenshot
+![image](https://github.com/user-attachments/assets/f2bfe464-166b-487a-95e5-981ff71eee8f)
+![image](https://github.com/user-attachments/assets/f16295e3-792b-4a67-9abf-ee8a58a33428)
 
 ## 📂 **Code Structure**
 
