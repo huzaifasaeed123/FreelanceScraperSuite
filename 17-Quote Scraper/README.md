@@ -68,6 +68,7 @@ The project is split into two primary scripts, each handling different parts of 
 - **`objects_to_excel.py`** – Converts the scraped data into an Excel file.
 
 ## 📈 Example Data (Sample Output)
+![image](https://github.com/user-attachments/assets/d8f22ac9-7759-43f9-9636-1e4ac16b0f61)
 
 
 ## 📌 Notes
