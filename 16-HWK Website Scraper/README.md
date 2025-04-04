@@ -34,6 +34,12 @@ This project contains **23 Python scripts**, one for each website, with the base
 
 ---
 
+## Final Result Excel Files
+![image](https://github.com/user-attachments/assets/d7792cdb-ed35-4761-8401-58b1df413942)
+
+![image](https://github.com/user-attachments/assets/68a3813c-0715-4e61-9ce9-a58005cd3d87)
+
+![image](https://github.com/user-attachments/assets/a01e0d7f-0503-4e1d-bd5b-132e8449719a)
 
 ## ⚙️ **Setup Instructions**
 
