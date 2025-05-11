@@ -17,7 +17,7 @@ DB = dataset.connect("sqlite:///bricklink_data.db")
 TABLE = DB["minifigures"]
 inputtext = "Minifigureitems.txt"
 catType = "M"
-proxy = "http://b912cb5266abc81e1325:204ecb60116fb799@gw.dataimpulse.com:823"
+proxy = ""
 proxies = {
     "http": proxy,
     "https": proxy
