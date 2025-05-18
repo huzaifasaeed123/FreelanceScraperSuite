@@ -1,0 +1,26 @@
+# Facebook Bot Configuration File
+# Lines starting with # are comments
+
+# FACEBOOK SETTINGS
+
+profile_url=https://www.facebook.com/profile.php?id=61572910406844
+headless=true
+scroll_distance=2100
+posts_to_scrape=5
+
+# WHATSAPP API SETTINGS
+phone_number=923471729745
+instance=7105205743
+api=3029b532f92048e0bbfa4adcb6aed55574b994edae144847a4
+
+# GENERAL SETTINGS
+check_interval=100
+output_dir=result
+previous_posts_file=previous_posts.json
+log_file=facebook_bot.log
+
+# DELAY SETTINGS (SECONDS)
+after_page_load=5
+after_popup_dismiss=3
+after_scroll=5
+between_posts=3

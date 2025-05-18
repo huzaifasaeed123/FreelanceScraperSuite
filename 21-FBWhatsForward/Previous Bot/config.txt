@@ -1,0 +1,13 @@
+# CHANGE THIS
+delay-in-second=180
+profile_link=https://m.facebook.com/profile.php?id=61556572291686
+recipient_number=6282137125683
+
+#BELOW ARE CHROME FUNCTION, DONT CHANGE UNLESS YOU KNOW IT
+profile-directory=Profile 14
+user-agent=Mozilla/5.0 (Linux; Android 4.4.2; Nexus 4 Build/KOT49H) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.114 Mobile Safari/537.36
+headless=True
+
+#BELOW ARE WHATSAPP API
+instance=7105205743
+api=3029b532f92048e0bbfa4adcb6aed55574b994edae144847a4

@@ -1,0 +1,260 @@
+2025-05-14 13:14:58,565 - facebook_scraper1 - INFO - WebDriver initialized
+2025-05-14 13:14:58,566 - __main__ - INFO - Starting Facebook post check at 2025-05-14 13:14:58
+2025-05-14 13:14:58,566 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-14 13:15:03,451 - facebook_scraper1 - INFO - Looking for login popup dialog...
+2025-05-14 13:15:03,478 - facebook_scraper1 - INFO - Found login dialog
+2025-05-14 13:15:03,506 - facebook_scraper1 - INFO - Found close button using Method 1
+2025-05-14 13:15:03,506 - facebook_scraper1 - INFO - Clicking close button...
+2025-05-14 13:15:03,677 - facebook_scraper1 - INFO - Clicked close button
+2025-05-14 13:15:11,692 - facebook_scraper1 - INFO - Starting incremental scroll of ~2100 pixels over ~5 seconds
+2025-05-14 13:15:11,710 - facebook_scraper1 - INFO - Initial scroll position: 0px
+2025-05-14 13:15:12,574 - facebook_scraper1 - INFO - Scrolled to position 265.6000061035156px (step 5/42)
+2025-05-14 13:15:13,614 - facebook_scraper1 - INFO - Scrolled to position 492px (step 10/42)
+2025-05-14 13:15:13,621 - facebook_scraper1 - INFO - Page height increased from 1902 to 4324
+2025-05-14 13:15:14,439 - facebook_scraper1 - INFO - Scrolled to position 741.5999755859375px (step 15/42)
+2025-05-14 13:15:14,446 - facebook_scraper1 - INFO - Page height increased from 4324 to 5142
+2025-05-14 13:15:15,191 - facebook_scraper1 - INFO - Scrolled to position 959.2000122070312px (step 20/42)
+2025-05-14 13:15:15,976 - facebook_scraper1 - INFO - Scrolled to position 1230.4000244140625px (step 25/42)
+2025-05-14 13:15:16,745 - facebook_scraper1 - INFO - Scrolled to position 1504px (step 30/42)
+2025-05-14 13:15:16,761 - facebook_scraper1 - INFO - Page height increased from 5142 to 6726
+2025-05-14 13:15:17,609 - facebook_scraper1 - INFO - Scrolled to position 1759.199951171875px (step 35/42)
+2025-05-14 13:15:18,417 - facebook_scraper1 - INFO - Scrolled to position 2012.800048828125px (step 40/42)
+2025-05-14 13:15:18,717 - facebook_scraper1 - INFO - Scrolled to position 2092px (step 42/42)
+2025-05-14 13:15:18,732 - facebook_scraper1 - INFO - Page height increased from 6726 to 6731
+2025-05-14 13:15:18,749 - facebook_scraper1 - INFO - Final scroll position: 2092px (moved 2092px)
+2025-05-14 13:15:25,767 - facebook_scraper1 - INFO - Scraping Facebook posts
+2025-05-14 13:15:25,818 - facebook_scraper1 - INFO - Found 7 posts with selector: div[data-pagelet^='TimelineFeedUnit_']
+2025-05-14 13:15:25,997 - facebook_scraper1 - INFO - Found 1 images in post 1
+2025-05-14 13:15:25,997 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4986893399161282008?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2Fff32%2Flive%2F0cdd9470-308f-11f0-96c3-cf669419a2b0.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=8otycizyZ8Y79rFW5pya5w&_nc_oc=AdmekcG205C-XvmaqF2xUzI2nlqhPiVpYzdzMu9eaNWA4QSqWRpNWNi9kJQH2wSqo_g&ccb=13-1&oh=06_Q3-zAZn6ahl4UkqmQs5eH2M3RzIi-8PdQpq2Z8tJGb8g608-&oe=68263065&_nc_sid=e17101
+2025-05-14 13:15:26,763 - facebook_scraper1 - INFO - Found video link in post 2: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:15:26,867 - facebook_scraper1 - INFO - Found 1 images in post 3
+2025-05-14 13:15:26,868 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4628622026863181345?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2F5494%2Flive%2F2427e5b0-3065-11f0-8519-3b5a01ebe413.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=-u20qMYnchFv3E_JT48fHQ&_nc_oc=AdmqFKteZz9bcXy38tWYLqiuHBMj-sl4hfQ8K1vRDqZ0zTbMwWxxMutr0QTPIcE2s_8&ccb=13-1&oh=06_Q3-zATx5rMQwZvFlKaY0FpIQ_DvURZTH5LTcmLLUMQc0IQbW&oe=68264449&_nc_sid=c97757
+2025-05-14 13:15:27,241 - facebook_scraper1 - INFO - Found 1 images in post 4
+2025-05-14 13:15:27,242 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t39.30808-6/497708314_1111081637728421_3769145296334955038_n.jpg?_nc_cat=1&ccb=1-7&_nc_sid=127cfc&_nc_ohc=zDeXJkEPsb0Q7kNvwHlxrYp&_nc_oc=Adm2x0N0qahGl6CDbTQ2skiMlwO_GMKCPa1Rwf1wEJB9BpuoRggMPeNi_89jwc5dPb8&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=-u20qMYnchFv3E_JT48fHQ&oh=00_AfKtsfxDXNZkIVaQKQQ_ZWavWTtUPOVa4HFS7Cw6ri8azA&oe=682A1875
+2025-05-14 13:15:27,638 - facebook_scraper1 - INFO - Found 1 images in post 5
+2025-05-14 13:15:27,639 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t39.30808-6/497631080_1111055374397714_4962873059392981478_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=104&ccb=1-7&_nc_sid=127cfc&_nc_ohc=kkybJ0wzue4Q7kNvwHjgr5O&_nc_oc=Admz1ClDoGwaoWN0WkSWfLmJGXhoTm3rBdXYsVgc4u9DEvWY9Yda2rbbCFbLujAvp_c&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=7galqJjA5OnG3LIN1ueVXA&oh=00_AfJ5rkztCbTc86lPT_tERyYScxG-jTUdxbkZgDBcs-DA5g&oe=682A2702
+2025-05-14 13:15:27,924 - __main__ - INFO - First run, all posts are considered new
+2025-05-14 13:15:27,925 - __main__ - INFO - Found 5 new posts to send
+2025-05-14 13:15:27,925 - whatsapp_sender - INFO - Sending post 1 to WhatsApp
+2025-05-14 13:15:27,925 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:15:28,498 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5E976D57483E6"}'
+2025-05-14 13:15:30,502 - whatsapp_sender - INFO - Sending post 2 to WhatsApp
+2025-05-14 13:15:30,503 - whatsapp_sender - INFO - Processing video post: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:15:30,504 - whatsapp_sender - INFO - Downloading video from: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:15:33,693 - whatsapp_sender - INFO - Download completed: result\video_1747210530.mp4
+2025-05-14 13:15:42,015 - whatsapp_sender - INFO - Video uploaded successfully: https://files.catbox.moe/ran8kd.mp4
+2025-05-14 13:15:42,565 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5839B3651D8D2"}'
+2025-05-14 13:15:42,576 - whatsapp_sender - INFO - Deleted local video file: result\video_1747210530.mp4
+2025-05-14 13:15:44,589 - whatsapp_sender - INFO - Sending post 3 to WhatsApp
+2025-05-14 13:15:44,590 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:15:45,125 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5AF871D82AC89"}'
+2025-05-14 13:15:47,136 - whatsapp_sender - INFO - Sending post 4 to WhatsApp
+2025-05-14 13:15:47,137 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:15:47,702 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5E32150E6BC70"}'
+2025-05-14 13:15:49,719 - whatsapp_sender - INFO - Sending post 5 to WhatsApp
+2025-05-14 13:15:49,720 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:15:50,260 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE50E0762660ED3"}'
+2025-05-14 13:15:52,273 - __main__ - INFO - Finished processing. Waiting 546 seconds until next check...
+2025-05-14 13:24:58,581 - __main__ - INFO - Starting Facebook post check at 2025-05-14 13:24:58
+2025-05-14 13:24:58,582 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-14 13:25:03,117 - facebook_scraper1 - INFO - Looking for login popup dialog...
+2025-05-14 13:25:03,139 - facebook_scraper1 - INFO - Found login dialog
+2025-05-14 13:25:03,161 - facebook_scraper1 - INFO - Found close button using Method 1
+2025-05-14 13:25:03,162 - facebook_scraper1 - INFO - Clicking close button...
+2025-05-14 13:25:03,453 - facebook_scraper1 - INFO - Clicked close button
+2025-05-14 13:25:11,459 - facebook_scraper1 - INFO - Starting incremental scroll of ~2100 pixels over ~5 seconds
+2025-05-14 13:25:11,476 - facebook_scraper1 - INFO - Initial scroll position: 0px
+2025-05-14 13:25:12,368 - facebook_scraper1 - INFO - Scrolled to position 242.39999389648438px (step 5/42)
+2025-05-14 13:25:13,228 - facebook_scraper1 - INFO - Scrolled to position 480px (step 10/42)
+2025-05-14 13:25:13,314 - facebook_scraper1 - INFO - Page height increased from 1831 to 2573
+2025-05-14 13:25:14,155 - facebook_scraper1 - INFO - Scrolled to position 752.7999877929688px (step 15/42)
+2025-05-14 13:25:15,390 - facebook_scraper1 - INFO - Scrolled to position 981.5999755859375px (step 20/42)
+2025-05-14 13:25:15,405 - facebook_scraper1 - INFO - Page height increased from 2573 to 4355
+2025-05-14 13:25:16,411 - facebook_scraper1 - INFO - Scrolled to position 1211.199951171875px (step 25/42)
+2025-05-14 13:25:16,426 - facebook_scraper1 - INFO - Page height increased from 4355 to 6638
+2025-05-14 13:25:17,488 - facebook_scraper1 - INFO - Scrolled to position 1447.199951171875px (step 30/42)
+2025-05-14 13:25:17,506 - facebook_scraper1 - INFO - Page height increased from 6638 to 9365
+2025-05-14 13:25:18,409 - facebook_scraper1 - INFO - Scrolled to position 1690.4000244140625px (step 35/42)
+2025-05-14 13:25:19,318 - facebook_scraper1 - INFO - Scrolled to position 1944px (step 40/42)
+2025-05-14 13:25:19,686 - facebook_scraper1 - INFO - Scrolled to position 2033.5999755859375px (step 42/42)
+2025-05-14 13:25:19,719 - facebook_scraper1 - INFO - Final scroll position: 2033.5999755859375px (moved 2033.5999755859375px)
+2025-05-14 13:25:26,734 - facebook_scraper1 - INFO - Scraping Facebook posts
+2025-05-14 13:25:26,775 - facebook_scraper1 - INFO - Found 10 posts with selector: div[data-pagelet^='TimelineFeedUnit_']
+2025-05-14 13:25:27,036 - facebook_scraper1 - INFO - Found 1 images in post 1
+2025-05-14 13:25:27,037 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t39.30808-6/497535836_1111121201057798_3199540242072279454_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=127cfc&_nc_ohc=sfk4AH7k0EUQ7kNvwFbyaHF&_nc_oc=Adn65bABsOWhfWWnc-DZJhKMi7WXL6Tk15f5Z4YPsth9sILMtjBQE5fvNqTedBF1U0k&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=CIaG55ZPcgaDCyUoBe0gWg&oh=00_AfIM0ujw8vjXJ5ySlOU_yTGJy8em9WCC_Vp730vLtNE9tw&oe=682A28D1
+2025-05-14 13:25:27,751 - facebook_scraper1 - INFO - Found 1 images in post 2
+2025-05-14 13:25:27,752 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4986893399161282008?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2Fff32%2Flive%2F0cdd9470-308f-11f0-96c3-cf669419a2b0.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=tLF8-pKMVpgHP5IHhca-ug&_nc_oc=AdmekcG205C-XvmaqF2xUzI2nlqhPiVpYzdzMu9eaNWA4QSqWRpNWNi9kJQH2wSqo_g&ccb=13-1&oh=06_Q3-zAccO_E1FIdWVOWH5zbeKJuAQTk1FzZKfhjax1OM7lmF9&oe=68263065&_nc_sid=c97757
+2025-05-14 13:25:28,668 - facebook_scraper1 - INFO - Found video link in post 3: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:25:28,877 - facebook_scraper1 - INFO - Found 1 images in post 4
+2025-05-14 13:25:28,878 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4628622026863181345?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2F5494%2Flive%2F2427e5b0-3065-11f0-8519-3b5a01ebe413.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=tLF8-pKMVpgHP5IHhca-ug&_nc_oc=AdmqFKteZz9bcXy38tWYLqiuHBMj-sl4hfQ8K1vRDqZ0zTbMwWxxMutr0QTPIcE2s_8&ccb=13-1&oh=06_Q3-zAc0XjQ2ejy0z_LDQ-oYKllj8KafMwuU9lNC-9-bljipE&oe=68264449&_nc_sid=c97757
+2025-05-14 13:25:29,534 - facebook_scraper1 - INFO - Found 1 images in post 5
+2025-05-14 13:25:29,535 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t39.30808-6/497708314_1111081637728421_3769145296334955038_n.jpg?_nc_cat=1&ccb=1-7&_nc_sid=127cfc&_nc_ohc=zDeXJkEPsb0Q7kNvwHlxrYp&_nc_oc=Adm2x0N0qahGl6CDbTQ2skiMlwO_GMKCPa1Rwf1wEJB9BpuoRggMPeNi_89jwc5dPb8&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=TE49hVJabHWPeA7Y08nDtA&oh=00_AfJDvZRbCN35kcjD7y7zPm3bYmFFnTkGdyQC326ZyEG73A&oe=682A1875
+2025-05-14 13:25:29,872 - __main__ - INFO - Found 2 new posts
+2025-05-14 13:25:29,873 - __main__ - INFO - Found 2 new posts to send
+2025-05-14 13:25:29,875 - whatsapp_sender - INFO - Sending post 1 to WhatsApp
+2025-05-14 13:25:29,875 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:25:30,421 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5192FB9EC2EB8"}'
+2025-05-14 13:25:32,427 - whatsapp_sender - INFO - Sending post 2 to WhatsApp
+2025-05-14 13:25:32,428 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:25:33,996 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5FB8080A4B935"}'
+2025-05-14 13:25:36,008 - __main__ - INFO - Finished processing. Waiting 563 seconds until next check...
+2025-05-14 13:34:58,586 - __main__ - INFO - Starting Facebook post check at 2025-05-14 13:34:58
+2025-05-14 13:34:58,587 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-14 13:35:02,912 - facebook_scraper1 - INFO - Looking for login popup dialog...
+2025-05-14 13:35:02,947 - facebook_scraper1 - INFO - Found login dialog
+2025-05-14 13:35:02,985 - facebook_scraper1 - INFO - Found close button using Method 1
+2025-05-14 13:35:02,986 - facebook_scraper1 - INFO - Clicking close button...
+2025-05-14 13:35:03,180 - facebook_scraper1 - INFO - Clicked close button
+2025-05-14 13:35:11,200 - facebook_scraper1 - INFO - Starting incremental scroll of ~2100 pixels over ~5 seconds
+2025-05-14 13:35:11,212 - facebook_scraper1 - INFO - Initial scroll position: 0px
+2025-05-14 13:35:12,052 - facebook_scraper1 - INFO - Scrolled to position 260.79998779296875px (step 5/42)
+2025-05-14 13:35:12,103 - facebook_scraper1 - INFO - Page height increased from 2104 to 2805
+2025-05-14 13:35:13,286 - facebook_scraper1 - INFO - Scrolled to position 536.7999877929688px (step 10/42)
+2025-05-14 13:35:13,302 - facebook_scraper1 - INFO - Page height increased from 2805 to 4538
+2025-05-14 13:35:14,266 - facebook_scraper1 - INFO - Scrolled to position 755.2000122070312px (step 15/42)
+2025-05-14 13:35:14,276 - facebook_scraper1 - INFO - Page height increased from 4538 to 6748
+2025-05-14 13:35:15,160 - facebook_scraper1 - INFO - Scrolled to position 1013.5999755859375px (step 20/42)
+2025-05-14 13:35:15,167 - facebook_scraper1 - INFO - Page height increased from 6748 to 7543
+2025-05-14 13:35:16,147 - facebook_scraper1 - INFO - Scrolled to position 1267.199951171875px (step 25/42)
+2025-05-14 13:35:16,157 - facebook_scraper1 - INFO - Page height increased from 7543 to 9231
+2025-05-14 13:35:16,909 - facebook_scraper1 - INFO - Scrolled to position 1484.800048828125px (step 30/42)
+2025-05-14 13:35:17,661 - facebook_scraper1 - INFO - Scrolled to position 1762.4000244140625px (step 35/42)
+2025-05-14 13:35:18,443 - facebook_scraper1 - INFO - Scrolled to position 1988.800048828125px (step 40/42)
+2025-05-14 13:35:18,772 - facebook_scraper1 - INFO - Scrolled to position 2088px (step 42/42)
+2025-05-14 13:35:18,786 - facebook_scraper1 - INFO - Final scroll position: 2088px (moved 2088px)
+2025-05-14 13:35:25,796 - facebook_scraper1 - INFO - Scraping Facebook posts
+2025-05-14 13:35:25,825 - facebook_scraper1 - INFO - Found 10 posts with selector: div[data-pagelet^='TimelineFeedUnit_']
+2025-05-14 13:35:26,306 - facebook_scraper1 - INFO - Found video link in post 1: https://www.facebook.com/reel/1024425232998560/
+2025-05-14 13:35:26,495 - facebook_scraper1 - INFO - Found 1 images in post 2
+2025-05-14 13:35:26,496 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t39.30808-6/497535836_1111121201057798_3199540242072279454_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=127cfc&_nc_ohc=sfk4AH7k0EUQ7kNvwFbyaHF&_nc_oc=Adn65bABsOWhfWWnc-DZJhKMi7WXL6Tk15f5Z4YPsth9sILMtjBQE5fvNqTedBF1U0k&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=TBgAn8KqWJWbFg3hhFUEHw&oh=00_AfLDMz_GeQ-759mCWnLxhRg9hDgCis3Ijd5gNHKVfTu2jg&oe=682A28D1
+2025-05-14 13:35:26,998 - facebook_scraper1 - INFO - Found 1 images in post 3
+2025-05-14 13:35:26,999 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4986893399161282008?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2Fff32%2Flive%2F0cdd9470-308f-11f0-96c3-cf669419a2b0.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=TBgAn8KqWJWbFg3hhFUEHw&_nc_oc=AdmekcG205C-XvmaqF2xUzI2nlqhPiVpYzdzMu9eaNWA4QSqWRpNWNi9kJQH2wSqo_g&ccb=13-1&oh=06_Q3-zAT2waPLLcEzLfYNeFrv8bDKsXWg0zn_clDLIMvTkkOqU&oe=68263065&_nc_sid=c97757
+2025-05-14 13:35:27,277 - facebook_scraper1 - INFO - Found 1 images in post 4
+2025-05-14 13:35:27,278 - facebook_scraper1 - INFO - First image: https://scontent.fisb7-1.fna.fbcdn.net/v/t15.5256-10/497517185_1847043816089481_2541545641346549112_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=1&ccb=1-7&_nc_sid=7965db&_nc_ohc=UoAkNzDScRIQ7kNvwEpfkkI&_nc_oc=AdlXZFNrvqzB7RWWxjM43s5bgOukIZp28mun7RB3ourZ9E1lkaUf3DL6mjCcKtsf1GY&_nc_zt=23&_nc_ht=scontent.fisb7-1.fna&_nc_gid=TBgAn8KqWJWbFg3hhFUEHw&oh=00_AfKTzjxn7nhZzYfneFNszlv0ZmJey6fECl5uGnwAAVffyw&oe=682A17BD
+2025-05-14 13:35:27,591 - facebook_scraper1 - INFO - Found video link in post 4: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:35:27,704 - facebook_scraper1 - INFO - Found 1 images in post 5
+2025-05-14 13:35:27,705 - facebook_scraper1 - INFO - First image: https://external.fisb7-1.fna.fbcdn.net/emg1/v/t13/4628622026863181345?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2F5494%2Flive%2F2427e5b0-3065-11f0-8519-3b5a01ebe413.jpg&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=U3YKrIJDVdl7o_fFKr5gkQ&_nc_oc=AdmqFKteZz9bcXy38tWYLqiuHBMj-sl4hfQ8K1vRDqZ0zTbMwWxxMutr0QTPIcE2s_8&ccb=13-1&oh=06_Q3-zATuplkI2VfoaUoTZnymlwGuKogCx-nw1C4DEgLc8tt3R&oe=68264449&_nc_sid=c97757
+2025-05-14 13:35:27,861 - __main__ - INFO - Found 5 new posts
+2025-05-14 13:35:27,861 - __main__ - INFO - Found 5 new posts to send
+2025-05-14 13:35:27,862 - whatsapp_sender - INFO - Sending post 1 to WhatsApp
+2025-05-14 13:35:27,862 - whatsapp_sender - INFO - Processing video post: https://www.facebook.com/reel/1024425232998560/
+2025-05-14 13:35:27,862 - whatsapp_sender - INFO - Downloading video from: https://www.facebook.com/reel/1024425232998560/
+2025-05-14 13:35:49,699 - whatsapp_sender - ERROR - Error downloading video: 'NoneType' object has no attribute 'get'
+2025-05-14 13:35:49,700 - whatsapp_sender - ERROR - Failed to download video from https://www.facebook.com/reel/1024425232998560/
+2025-05-14 13:35:51,708 - whatsapp_sender - INFO - Sending post 2 to WhatsApp
+2025-05-14 13:35:51,708 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:35:52,288 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE56CE8ECA4D270"}'
+2025-05-14 13:35:54,303 - whatsapp_sender - INFO - Sending post 3 to WhatsApp
+2025-05-14 13:35:54,304 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:35:54,845 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5C38FCC43B818"}'
+2025-05-14 13:35:56,855 - whatsapp_sender - INFO - Sending post 4 to WhatsApp
+2025-05-14 13:35:56,856 - whatsapp_sender - INFO - Processing video post: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:35:56,857 - whatsapp_sender - INFO - Downloading video from: https://www.facebook.com/bbcurdu/videos/549500841287887/
+2025-05-14 13:36:00,891 - whatsapp_sender - INFO - Download completed: result\video_1747211756.mp4
+2025-05-14 13:36:07,062 - whatsapp_sender - INFO - Video uploaded successfully: https://files.catbox.moe/ran8kd.mp4
+2025-05-14 13:36:07,655 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE59D1DD55365E4"}'
+2025-05-14 13:36:07,666 - whatsapp_sender - INFO - Deleted local video file: result\video_1747211756.mp4
+2025-05-14 13:36:09,673 - whatsapp_sender - INFO - Sending post 5 to WhatsApp
+2025-05-14 13:36:09,674 - whatsapp_sender - INFO - Processing image post with 1 images
+2025-05-14 13:36:10,234 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE58674C28252A3"}'
+2025-05-14 13:36:12,246 - __main__ - INFO - Finished processing. Waiting 526 seconds until next check...
+2025-05-14 13:43:27,871 - __main__ - INFO - Script interrupted by user
+2025-05-14 13:43:27,883 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ProtocolError('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))': /session/effc8652ad0f2d91ffe3be2bd11bbab4
+2025-05-14 15:30:10,523 - __main__ - INFO - Script interrupted by user
+2025-05-14 15:47:50,081 - facebook_scraper1 - INFO - WebDriver initialized
+2025-05-14 15:47:50,081 - __main__ - INFO - Starting Facebook post check at 2025-05-14 15:47:50
+2025-05-14 15:47:50,082 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-15 00:29:36,287 - post_tracker - INFO - Loaded 0 previous post fingerprints
+2025-05-17 20:16:46,678 - post_tracker - INFO - Loaded 0 previous post fingerprints
+2025-05-17 20:17:09,196 - facebook_scraper1 - INFO - WebDriver initialized
+2025-05-17 20:17:09,196 - __main__ - INFO - Starting Facebook post check at 2025-05-17 20:17:09
+2025-05-17 20:17:09,196 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-17 20:17:15,093 - facebook_scraper1 - INFO - Waiting 5 seconds for page to load
+2025-05-17 20:17:20,102 - facebook_scraper1 - INFO - Looking for login popup dialog...
+2025-05-17 20:17:20,130 - facebook_scraper1 - INFO - Found login dialog
+2025-05-17 20:17:20,162 - facebook_scraper1 - INFO - Found close button using Method 1
+2025-05-17 20:17:20,163 - facebook_scraper1 - INFO - Clicking close button...
+2025-05-17 20:17:20,273 - facebook_scraper1 - INFO - Clicked close button
+2025-05-17 20:17:20,273 - facebook_scraper1 - INFO - Waiting 3 seconds after dismissing popup
+2025-05-17 20:17:25,287 - facebook_scraper1 - INFO - Starting incremental scroll of ~2100 pixels over ~5 seconds
+2025-05-17 20:17:25,302 - facebook_scraper1 - INFO - Initial scroll position: 0px
+2025-05-17 20:17:26,053 - facebook_scraper1 - INFO - Scrolled to position 217px (step 5/42)
+2025-05-17 20:17:26,864 - facebook_scraper1 - INFO - Scrolled to position 473px (step 10/42)
+2025-05-17 20:17:26,880 - facebook_scraper1 - INFO - Page height increased from 2786 to 5117
+2025-05-17 20:17:27,657 - facebook_scraper1 - INFO - Scrolled to position 726px (step 15/42)
+2025-05-17 20:17:28,411 - facebook_scraper1 - INFO - Scrolled to position 984px (step 20/42)
+2025-05-17 20:17:29,176 - facebook_scraper1 - INFO - Scrolled to position 1213px (step 25/42)
+2025-05-17 20:17:29,967 - facebook_scraper1 - INFO - Scrolled to position 0px (step 30/42)
+2025-05-17 20:17:30,879 - facebook_scraper1 - INFO - Scrolled to position 130px (step 35/42)
+2025-05-17 20:17:31,560 - facebook_scraper1 - INFO - Scrolled to position 130px (step 40/42)
+2025-05-17 20:17:31,879 - facebook_scraper1 - INFO - Scrolled to position 130px (step 42/42)
+2025-05-17 20:17:31,892 - facebook_scraper1 - INFO - Final scroll position: 130px (moved 130px)
+2025-05-17 20:17:31,893 - facebook_scraper1 - INFO - Waiting 5 seconds for content to load after scrolling
+2025-05-17 20:17:36,907 - facebook_scraper1 - INFO - Scraping Facebook posts
+2025-05-17 20:17:36,926 - facebook_scraper1 - INFO - Found 5 posts with selector: div[data-pagelet^='TimelineFeedUnit_']
+2025-05-17 20:17:37,169 - facebook_scraper1 - INFO - Found 1 images in post 1
+2025-05-17 20:17:37,170 - facebook_scraper1 - INFO - First image: https://scontent.fxjm1-1.fna.fbcdn.net/v/t39.30808-6/498646173_1113909120779006_4274541173192088241_n.jpg?stp=dst-jpg_p180x540_tt6&_nc_cat=101&ccb=1-7&_nc_sid=127cfc&_nc_ohc=PHAK4BPbKkEQ7kNvwEYYCWu&_nc_oc=Adkyx7ZKoE4_R4zPiQcEgiWttVyiShWz5XYR9K67Jskdo0go2-pDFMZRcuRf4Qxv-2A&_nc_zt=23&_nc_ht=scontent.fxjm1-1.fna&_nc_gid=MNl_pGUGHf5EwCaWmmIYgw&oh=00_AfKkFY2hkneQAdhAhiMfp-SC1n7Nmka07uSnSuEvYpvp5A&oe=682E7C0C
+2025-05-17 20:17:37,269 - facebook_scraper1 - INFO - Post 1 text: حماس کے مطابق غزہ میں جنگ ختم کرنے کے لیے ان کی جانب سے دوحہ میں مذاکرات کے نئے دور کا آغاز کیا گیا ...
+2025-05-17 20:17:37,340 - facebook_scraper1 - INFO - Post 1 fingerprint: حماس کے مطابق غزہ میں جنگ ختم کرنے کے لیے ان کی جا...
+2025-05-17 20:17:37,460 - facebook_scraper1 - INFO - Found 1 images in post 2
+2025-05-17 20:17:37,461 - facebook_scraper1 - INFO - First image: https://scontent.fxjm1-1.fna.fbcdn.net/v/t39.30808-6/495110783_1113896937446891_150373838936659348_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=127cfc&_nc_ohc=nOHfCjKcZ4cQ7kNvwF9cw9G&_nc_oc=AdkfLilT_Bj1Zylj0sBb1vmbnowBz-QBZVzhvE1fvzQA-nqf_0k_pUZqA89BLncgDUs&_nc_zt=23&_nc_ht=scontent.fxjm1-1.fna&_nc_gid=yr4CPPgN5zq0s5S5fj4ItQ&oh=00_AfLYqXmO-V4AOicrLXb71_M9jj2WkA9-7LKY1BfSSYNQmQ&oe=682E8EA4
+2025-05-17 20:17:37,548 - facebook_scraper1 - INFO - Post 2 text: ’حملہ کرنے سے پہلے پاکستان کو آگاہ کرنا جرم ہے، جے شنکر بتائیں اس کی اجازت کس نے دی‘: راہل گاندھی
+’ا...
+2025-05-17 20:17:37,634 - facebook_scraper1 - INFO - Post 2 fingerprint: ’حملہ کرنے سے پہلے پاکستان کو آگاہ کرنا جرم ہے، جے...
+2025-05-17 20:17:37,748 - facebook_scraper1 - INFO - Found 1 images in post 3
+2025-05-17 20:17:37,749 - facebook_scraper1 - INFO - First image: https://external.fxjm1-1.fna.fbcdn.net/emg1/v/t13/15181910526506026141?url=https%3A%2F%2Fichef.bbci.co.uk%2Fnews%2F1024%2Fbranded_urdu%2Fabf6%2Flive%2Fa15c5ed0-323b-11f0-8519-3b5a01ebe413.png&fb_obo=1&utld=bbci.co.uk&stp=c0.5000x0.5000f_dst-jpg_flffffff_p500x261_q75_tt6&_nc_gid=yr4CPPgN5zq0s5S5fj4ItQ&_nc_oc=AdmLr0VhilHLtJetXBj7oJJ2kVxOBMvTIbD6WuQgVM74ULrDBa0SiNnonXboOfW3lYo&ccb=13-1&oh=06_Q3-zAWnCHq67L8RCed3iYYQPHX8iK1GsLhITnnsxc0d3SNGI&oe=682A8AB6&_nc_sid=c97757
+2025-05-17 20:17:37,782 - facebook_scraper1 - INFO - Post 3 text: کیا ہمیں کوئی ’ٹرمپ ڈاکٹرائن‘ دکھائی دے رہا ہے یا یہ سب کچھ صرف ایک اتفاق ہے جس میں دنیا بھر کے واقع...
+2025-05-17 20:17:37,843 - facebook_scraper1 - INFO - Post 3 fingerprint: کیا ہمیں کوئی ’ٹرمپ ڈاکٹرائن‘ دکھائی دے رہا ہے یا ...
+2025-05-17 20:17:37,996 - facebook_scraper1 - INFO - Found 1 images in post 4
+2025-05-17 20:17:37,996 - facebook_scraper1 - INFO - First image: https://scontent.fxjm1-1.fna.fbcdn.net/v/t39.30808-6/497916190_1113882184115033_8076850614540929571_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=107&ccb=1-7&_nc_sid=127cfc&_nc_ohc=lCpPf2mOyYQQ7kNvwH0b31Q&_nc_oc=AdnoQRW0clvsefS6tGZ2rpJVW97yqRuOz5XYBMDchmQHv7akMrDKpxx7pxK9ENb57vE&_nc_zt=23&_nc_ht=scontent.fxjm1-1.fna&_nc_gid=yr4CPPgN5zq0s5S5fj4ItQ&oh=00_AfKQHcrrxjw2FkS5bl4_ckdpsAvbLDJQ8YxgYTS6MUsSdA&oe=682E6492
+2025-05-17 20:17:38,045 - facebook_scraper1 - INFO - Post 4 text: 1۔ پاکستانی شہری کے ساتھ مبینہ طور پر رابطے اور حساس معلومات شیئر کرنے کے الزام میں انڈیا کی ٹریول و...
+2025-05-17 20:17:38,091 - facebook_scraper1 - INFO - Post 4 fingerprint: 1۔ پاکستانی شہری کے ساتھ مبینہ طور پر رابطے اور حس...
+2025-05-17 20:17:38,148 - facebook_scraper1 - INFO - Found 1 images in post 5
+2025-05-17 20:17:38,148 - facebook_scraper1 - INFO - First image: https://scontent.fxjm1-1.fna.fbcdn.net/v/t15.5256-10/498671449_1040956717432721_4739691660352817757_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7965db&_nc_ohc=quUW3ZUVPIYQ7kNvwG0OQRk&_nc_oc=AdlJ_uUvf2tnsZ9P9RUliC5FFkUmt5RcW4aOOW73nhNHcnYbkPlpBTlIeoDX4Tz1LTA&_nc_zt=23&_nc_ht=scontent.fxjm1-1.fna&_nc_gid=a9XNg4Zlg2afPv67ii_-XQ&oh=00_AfIiVFy70Qlp5xpKdZZnsGIIYlvZsXzENFdbJEa_tZqgkw&oe=682E8D43
+2025-05-17 20:17:38,205 - facebook_scraper1 - INFO - Post 5 text: ڈونلڈ ٹرمپ نے اقتدار میں دوبارہ آنے کے بعد جس پہلے غیر ملکی دورے کا انتخاب کیا وہ مشرق وسطٰی ہے، اس ...
+2025-05-17 20:17:38,329 - facebook_scraper1 - INFO - Found 4 video links in post 5
+2025-05-17 20:17:38,329 - facebook_scraper1 - INFO - Post 5 fingerprint: ڈونلڈ ٹرمپ نے اقتدار میں دوبارہ آنے کے بعد جس پہلے...
+2025-05-17 20:17:38,329 - post_tracker - INFO - Post 1 is NEW
+2025-05-17 20:17:38,330 - post_tracker - INFO - Post 2 is NEW
+2025-05-17 20:17:38,330 - post_tracker - INFO - Post 3 is NEW
+2025-05-17 20:17:38,330 - post_tracker - INFO - Post 4 is NEW
+2025-05-17 20:17:38,330 - post_tracker - INFO - Post 5 is NEW
+2025-05-17 20:17:38,331 - post_tracker - INFO - Filtered 5 posts to 5 new posts
+2025-05-17 20:17:38,331 - root - INFO - Found 5 new posts to send
+2025-05-17 20:17:38,332 - whatsapp_sender - INFO - Sending post 1 to WhatsApp
+2025-05-17 20:17:38,332 - whatsapp_sender - INFO - Processing post with 1 images
+2025-05-17 20:17:38,332 - whatsapp_sender - INFO - Processing image 1/1
+2025-05-17 20:17:40,235 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5B6BEEDBFE56B"}'
+2025-05-17 20:17:40,241 - post_tracker - INFO - Marked post 1 as sent
+2025-05-17 20:17:40,241 - root - INFO - Waiting 3 seconds before next post
+2025-05-17 20:17:43,246 - whatsapp_sender - INFO - Sending post 2 to WhatsApp
+2025-05-17 20:17:43,247 - whatsapp_sender - INFO - Processing post with 1 images
+2025-05-17 20:17:43,247 - whatsapp_sender - INFO - Processing image 1/1
+2025-05-17 20:17:44,094 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5AF58FD0169D0"}'
+2025-05-17 20:17:44,096 - post_tracker - INFO - Marked post 2 as sent
+2025-05-17 20:17:44,097 - root - INFO - Waiting 3 seconds before next post
+2025-05-17 20:17:47,099 - whatsapp_sender - INFO - Sending post 3 to WhatsApp
+2025-05-17 20:17:47,100 - whatsapp_sender - INFO - Processing post with 1 images
+2025-05-17 20:17:47,100 - whatsapp_sender - INFO - Processing image 1/1
+2025-05-17 20:17:48,706 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5349F3AF07956"}'
+2025-05-17 20:17:48,710 - post_tracker - INFO - Marked post 3 as sent
+2025-05-17 20:17:48,710 - root - INFO - Waiting 3 seconds before next post
+2025-05-17 20:17:51,714 - whatsapp_sender - INFO - Sending post 4 to WhatsApp
+2025-05-17 20:17:51,715 - whatsapp_sender - INFO - Processing post with 1 images
+2025-05-17 20:17:51,716 - whatsapp_sender - INFO - Processing image 1/1
+2025-05-17 20:17:52,543 - whatsapp_sender - INFO - URL file message sent. Response: b'{"idMessage":"BAE5C086879D4A54"}'
+2025-05-17 20:17:52,544 - post_tracker - INFO - Marked post 4 as sent
+2025-05-17 20:17:52,545 - root - INFO - Waiting 3 seconds before next post
+2025-05-17 20:17:55,551 - whatsapp_sender - INFO - Sending post 5 to WhatsApp
+2025-05-17 20:17:55,555 - whatsapp_sender - INFO - Processing post with 4 videos
+2025-05-17 20:17:55,556 - whatsapp_sender - INFO - Processing video 1/4: https://www.facebook.com/bbcurdu/videos/686350254336251/
+2025-05-17 20:17:55,557 - whatsapp_sender - INFO - Downloading video from: https://www.facebook.com/bbcurdu/videos/686350254336251/
+2025-05-17 20:19:10,586 - whatsapp_sender - INFO - Download completed: result\video_1747495075.mp4
+2025-05-17 20:19:10,600 - whatsapp_sender - INFO - Uploading file to Catbox: result\video_1747495075.mp4
+2025-05-17 20:23:04,375 - post_tracker - INFO - Loaded 4 previous post fingerprints
+2025-05-17 20:23:06,359 - facebook_scraper1 - INFO - WebDriver initialized
+2025-05-17 20:23:06,359 - __main__ - INFO - Starting Facebook post check at 2025-05-17 20:23:06
+2025-05-17 20:23:06,359 - facebook_scraper1 - INFO - Navigating to https://www.facebook.com/bbcurdu
+2025-05-17 20:23:15,818 - facebook_scraper1 - INFO - Waiting 5 seconds for page to load
+2025-05-17 20:23:19,546 - __main__ - INFO - Script interrupted by user
+2025-05-17 20:23:19,551 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ProtocolError('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))': /session/708d7fcd76c4d2928b213034793f58da
