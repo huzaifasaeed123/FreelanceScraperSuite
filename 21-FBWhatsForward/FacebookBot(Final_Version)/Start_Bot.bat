@@ -1,0 +1,3 @@
+@echo off 
+echo Starting Facebook Bot... 
+start FacebookBot.exe 
