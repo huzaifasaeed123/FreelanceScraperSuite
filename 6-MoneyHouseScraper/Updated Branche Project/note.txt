@@ -1,0 +1,2 @@
+The Part of project that i have done is to get branches of Main Company and also deduct whther its headquareter and branches
+But When i do this project 3rd time at my end then i note if we do scraping at start then we dont need to get branches data separately,Because we already scraped it when we scraping whole data and there is no need for sepaarte scraping
