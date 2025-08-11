@@ -87,7 +87,7 @@ def main():
     #Parse All XML Files placed in Local Directoy to get All url
     all_urls=ParseXml()
     #Create a txt files from Parsed URL
-    converttoTxt(all_urls)
+    # converttoTxt(all_urls)
 
     #Convert Url to DataBase
 
