@@ -246,9 +246,9 @@ If you encounter issues:
 
 ## 📞 Contact
 
-- **Author**: Your Name
-- **Email**: your.email@example.com
-- **GitHub**: [@yourusername](https://github.com/yourusername)
+- **Author**: Huzaifa Saeed
+- **Email**: saeedhuzaifa678@gmail.com
+- **GitHub**: [@huzaifasaeed123](https://github.com/huzaifasaeed123)
 
 ## 🙏 Acknowledgments
 
