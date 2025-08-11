@@ -7,7 +7,80 @@ import traceback
 import re
 import dataset
 # URL of the target page
-def retriveIndividualPages(obj1,index):
+def get_management_info(record,headers):
+    linkedin_link = ""
+    president_name = ""
+    branch_leader=""
+    try:
+        # Extract URL path from the full URL
+        base_url = "https://www.moneyhouse.ch/de/company/"
+        url_path = record['Url']
+        
+        management_url = f"{base_url}{url_path}/management"
+        # Headers (to mimic a real browser)
+        # Send GET request
+        response = requests.get(management_url, headers=headers)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, "html.parser")
+            key_classes = soup.find_all("td", class_="entity-name")
+
+            rechtsform_id = int(record.get('Rechtsform', 0))
+            
+            for key in key_classes:
+                president_span = key.find("span", class_="role bean bean-col-mandate")
+                if president_span:
+                    if rechtsform_id == 3:
+                        if "Verwaltungsrat-Präsident" in president_span.text:
+                            president_name_a = key.find("a", class_="name-link l-mobile-one-whole")
+                            if president_name_a:
+                                president_name = president_name_a.text.strip()
+
+                            entity_follow = key.find_next_sibling("td", class_="entity-follow")
+                            if entity_follow:
+                                a = entity_follow.find("a", class_="icon-linkedIn linkedin-link")
+                                if a:
+                                    linkedin_link = a.get("href", "")
+                            break
+                            
+                    elif rechtsform_id == 9:
+                        if "Leiter der Zweigniederlassung" in president_span.text:
+                            president_name_a = key.find("a", class_="name-link l-mobile-one-whole")
+                            if president_name_a:
+                                branch_leader = president_name_a.text.strip()
+
+                            entity_follow = key.find_next_sibling("td", class_="entity-follow")
+                            if entity_follow:
+                                a = entity_follow.find("a", class_="icon-linkedIn linkedin-link")
+                                if a:
+                                    linkedin_link = a.get("href", "")
+                            break
+
+            # print(f"Management info scraped for record ID: {record.get('Url', 'Unknown')}")
+            
+            return {
+                "Präsident": president_name,
+                "Leiter der Zweigniederlassungen": branch_leader,
+                "LinkedIn Link": linkedin_link,
+            }
+        else:
+            print(f"Failed to retrieve management page. Status code: {response.status_code} for record ID: {record.get('Url', 'Unknown')}")
+            return{
+                "Präsident": president_name,
+                "Leiter der Zweigniederlassungen": branch_leader,
+                "LinkedIn Link": linkedin_link,
+            }
+    except Exception as e:
+        print(f"Exception occurred for record ID {record.get('Url', 'Unknown')}: {e}")
+        traceback.print_exc()
+        return{
+                "Präsident": president_name,
+                "Leiter der Zweigniederlassungen": branch_leader,
+                "LinkedIn Link": linkedin_link,
+            }
+
+def retriveIndividualPages(obj1):
     try:
         base_url="https://www.moneyhouse.ch/de/company/"
         url = f"{base_url}{obj1['Url']}"
@@ -19,7 +92,7 @@ def retriveIndividualPages(obj1,index):
             'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
             'X-Requested-With': 'XMLHttpRequest',
             'Connection': 'keep-alive',
-            "cookie": "mh_lifetime=80nf1vqm01ok4bc; __cmpconsent10444=CQDo93gQDo93gAfIPBENBCFsAP_gAEPgAAQ4J6pR9G7ebWlHOHpzYfsEaYUX11hp4sQhAACBA6IACBOA8IQG1GACIAyAJCACABAAoBZBIAFsGAhEAUAAAIAFIBAoQgAAAAAKIGAAAAERQ0AQCAgIAAAgQAAAAAAEAgAAgAAACBKIBIAAgIAACgAAAAABAAAAABIAAAAIABAAAAIAYAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACB44AJBoVEAJRAhIQSBhBAgBEFYQAUCAAAAAgQICAAgQAOAEAlRgAgAAAAAAAAAAAKAAAQAACAAIRABAAACAACAQKAAAAAAACABgAAAAAUAAEAAICAAAIEAAAAAABAAAAIAAAAAQAAAAAAAAAAoAAAAAAQAAAAAAAAAACAA; __cmpcvcu10444=__s2215_s1574_s866_s1227_s74_c6302_s981_s1642_s1852_c16312_s94_s446_s1052_s40_s64_s73_s3022_s914_s335_s1255_s672_s640_s1259_s2379_s904_s28_s1989_s2003_s2351_s405_s1932_s457_s65_c10950_s23_s896_s1592_s1898_c56556_c14743_s2294_s571_s25_s1100_s56_s314_s336_s125_c10951_s239_s127_s7_c10254_c34768_s1656_s573_s1974_s312_s1591_s1655_s1_s26_s2612_s135_s1104_s2723_s2739_s1409_s905_s977_c10089_s46_s10_s24_s161_s1298_s37_s14_s1465_s561_s1475_c10274_s1442_s2103_c8346_s533_s2688_s2_s1315_c24245_c9657_s1399_s654_s6_s153_c34773_s220_s884_s216_s11_s1049_s322_s1934_s885_s338_s252_c9211_s1272_s4_s562_s1358_s267_s883_s1097_c7017_s49_s1085_s2546_s2492_s886_s1595_c13897_c11387_s1341_s2369_s460_s1327_s271_s291_s292_c9982_s2522_s358_s188_s191_s1659_c31009_s1658_s193_c35039_s19_s653_s748_c10083_s1068_s462_s1886_s441_s274_c28050_c10013_s2536_s52_s199_s1432_s1657_s1431_c10095_c22002_s605_s203_c9145_s32_s2297_s141_s1777_s1203_s77_s739_s60_c14426_c13900_s21_s679_s34_s67_s35_s3_s30_c10012_s1189_s1618__; __cmpcpcu10444=____; ens_mrcntcmp=; p4m_vid=eb8fea758cc48e2a9c0b4c9bdff7ecb75d6d0b78f0dfaf77eb2fb91ebae1ad93; pa_privacy=%22optin%22; _pcid=%7B%22browserId%22%3A%22m01okkoat68xem9t%22%2C%22_t%22%3A%22mfq3i20e%7Cm01okkoe%22%7D; _pctx=%7Bu%7DN4IgrgzgpgThIC4B2YA2qA05owMoBcBDfSREQpAeyRCwgEt8oBJAE0RXSwH18yBbAGYBHAMz0ATAAZBAH35SAjJQDWKyoJABfIA; _cc_id=8507958ff1a4191d436e7be8d71866cc; panoramaId_expiry=1724718205295; panoramaId=b851886c2d0100b160a53a03514a4945a70233a26a2deac4f5f20bb6da25016c; panoramaIdType=panoIndiv; cto_bundle=SwxfA19PQjIyZmszV3VUQzhUdjZZSUtKQkI5USUyRmx3N1ZXazR0MEw1bk5lWmYybUM2TTdsaUdDVHZZN3hha2hWQ2JNZ0pWbGtEJTJCd0ZmY1NqRDIyMUlCbXNNV2QlMkZDbCUyRjIlMkJsdGJ2RU84enFVNHRvOFZFJTJGelFOd0ZXS1FZaXFtSEFHWXNwa0ZzJTJGOTZsNUJaVmpTMWllWVNsSkdmczJwOTFJT21KMUh3OG53RVBZR3VnbG04JTJGV3VBYzBhd1IyMzhDTmZYUHBEUkY4RDNoeHV2ekszTGVxRWQ2Y09LOGRWRGVpOTFId3hQbU1yd1lYNjJQVFM5TE9RS05GMGQ2aEl6MlBmc2g5S2puYnMzeEx6bTg4ajVjcGxoUVlVJTJGUSUzRCUzRA; _gcl_au=1.1.1896058727.1724113533; _hjSessionUser_1177114=eyJpZCI6IjQ5Y2U3ODEzLWNmYTUtNTEwNS04MzliLTRlNjhkNTZlNjkxYiIsImNyZWF0ZWQiOjE3MjQxMTM1MzM1MDcsImV4aXN0aW5nIjp0cnVlfQ==; mh_session=4jqd1l1m01puvz2; mh_employee=; mh_employee_reason=; p4m_snot=3; _hjSession_1177114=eyJpZCI6ImMwNGE4OWUwLTNiYTktNDkyMC04NmFiLTM1MmMwZWU1ZjUwMyIsImMiOjE3MjQxMTkzMDc3NTMsInMiOjEsInIiOjEsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; __vads=-fwIGzS0Un18m2ufmCFja06xG; _uetsid=b69c40105e8a11ef82cb4bac85656669; _uetvid=b69c7b905e8a11efb9a169ff75366d56; bclk=5359209766070114; __gads=ID=72138ccf30765566:T=1724119490:RT=1724120241:S=ALNI_MavVXybTWvdd_7doFFsTV_mPiuABA; __gpi=UID=00000ed1650d1248:T=1724119490:RT=1724120241:S=ALNI_MbqkelRAQ3yr3y5JZXlfjHpdqACQQ; __eoi=ID=fb5f6034f6622bc6:T=1724119490:RT=1724120241:S=AA-Afjbo20kwHai69SSry3-wFeMq; token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1OTA1NSwidGlkIjoxLCJpYXQiOjE3MjQxMjAzMjN9.wUW1f_hVm707-Q138SeQh0IKjqBm2RFQC_3X-qL8QhM; user=eyJpZCI6MTU1OTA1NSwiZ3VpZCI6ImQ3MzI2MTlmLTY0ZWUtNDNiMS05MWFmLTBjMGNiM2YwZWZmZCIsImNybV9pZCI6IjAwMVZqMDAwMDA2V1dSRElBNCJ9; session=eyJmbGFzaCI6e30sInBhc3Nwb3J0Ijp7InVzZXIiOiJ7XCJpZFwiOlwiMTAxMTM0ODcyXCIsXCJ0b2tlblwiOlwiZDczMjYxOWYtNjRlZS00M2IxLTkxYWYtMGMwY2IzZjBlZmZkXCJ9In19; session.sig=lETdHGb9_nCSBZJLv8yflV6Xn2I; mh_status=premium; ens_c1pid=101134872; p4m_inos=29; p4m_inot=43; p4m_sid=1724119303926_3495548763-4206934085-2698965808-617574777%3BTue%20Aug%2020%202024%2007%3A51%3A17%20GMT%2B0500%20(Pakistan%20Standard%20Time)"
+            "cookie": "mh_lifetime=1edan612e8mbyykjhk; __cmpconsent10444=CQTFvHgQTFvHgAfIPBENBvFsAP_gAEPgAAQ4J6pR9G7ebWlHODp3YfsEaYQX11hp4sQhAgCBA6IACBOA8IQG1GAiIAyAJCACABAAoBRBIAFsGAhEAUAAAIAFIBCoQAAAAAAKIGAAAAERQ0AQCAgIAAAgQAAAAABEAhAAgAAACBKIBIAAgIAACgAAAAABAAAAAQIAAAAIQBAAAAIAYAAAEAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAACCN4AJBoVEEJRAAIRCBhBAgAEFYQAUCAIAAAgQICAAgQAOAEAFRgIgAAAAAAAAAAAIAAAQAACAAIRABAAACAACAQKAAAAAAACABgAAAAAUAAEAAICAAAIEAAAAAARAAQAIAAAAAQAAAAAAAAAAoAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAACAA; __cmpcvcu10444=__s2215_c57305_s1574_s866_s1227_s74_c6302_s981_s1642_s1852_c16312_s94_s446_s154_s1052_s40_s64_s73_s3022_s914_s335_s1255_s672_s640_s1259_s1651_s2379_s904_s28_s1989_s2003_s2351_s405_s1932_s457_s65_c10950_s23_s896_s1592_s1898_c56556_c14743_s2294_s571_s1254_s25_s1100_s56_s314_s336_s125_c10951_s239_s127_s7_c10254_c34768_s1656_s573_s1974_s312_s1591_s1655_s1_s26_s2612_s135_s1104_s2723_s2739_s1409_s905_s977_c10089_s46_s10_s24_s161_s1298_s37_s14_s1465_s561_s3118_s1475_c10274_s1442_s2103_c8346_s533_s2688_s2_s1315_c24245_c9657_s1399_s654_s6_s153_c34773_s220_s884_s216_s11_s1049_s322_s1934_s885_s338_s252_s1365_c9211_s1272_c60588_s4_s562_s1358_s741_s267_s883_s1097_c44896_c44894_c7017_s49_s1085_s2546_s2492_s886_s1595_c13897_c11387_s1341_s2369_s460_s1327_s271_s291_s292_c9982_s2522_s188_s191_s1659_c31009_s1658_s193_c35039_s19_s653_s748_c10083_s1068_s462_s1886_s441_s274_c28050_c10013_s2536_s52_s199_s1432_s1657_s1431_c10095_c22002_s605_s203_c9145_s32_s2297_s141_s1777_s1203_s77_s739_s60_c14426_c13900_s21_s679_s34_s67_s35_s3_s30_c10012_s1189_s1618__; __cmpcpcu10444=____; p4m_inot=1; p4m_snot=1; ens_mrcntcmp=; p4m_vid=427221db20435cd97c0a144309c4f8502257b9b7b32b4e207b4e0f4636092c79; _cc_id=16cbce3265c0efac8910ac910fa09b8c; __vads=rYIZv0M33vWogpqSpHZcI5YAK; __gads=ID=af3a05297f3b417e:T=1750070143:RT=1751151156:S=ALNI_MYl_HHFQ9ULoYgV-1eXchxOQz9MAg; __gpi=UID=000011305e493c0a:T=1750070143:RT=1751151156:S=ALNI_MaDnhfpDNKIIOxEebT2t9eHk6axRA; __eoi=ID=593a7767b288a491:T=1750070143:RT=1751151156:S=AA-AfjZr0HjpRGYYY67VUeVKyMTZ; bclk=2442708271100794; token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1OTA1NSwidGlkIjoxLCJpYXQiOjE3NTExNTIxMTZ9.vonHLziUyFkikbFliwJjr_5DsZmjt2DwmEQiZ6lMqHI; user=eyJpZCI6MTU1OTA1NSwiZ3VpZCI6ImQ3MzI2MTlmLTY0ZWUtNDNiMS05MWFmLTBjMGNiM2YwZWZmZCIsImNybV9pZCI6IjAwMVZqMDAwMDA2V1dSRElBNCIsInNlc3Npb25faWQiOiJjMDEzMjdkOC1kYzJhLTQ2ZTYtYTNkNC0zZGY2ODg2MTdmMTQifQ%3D%3D; _sharedid=05ef558e-a31b-4441-aae8-53c3fb7e9b46; _sharedid_cst=NCw%2BLJcs4Q%3D%3D; pbjs-unifiedid=%7B%22TDID%22%3A%225be9da22-4874-4640-9426-6f6f9a467aad%22%2C%22TDID_LOOKUP%22%3A%22TRUE%22%2C%22TDID_CREATED_AT%22%3A%222025-06-15T12%3A48%3A58%22%7D; pbjs-unifiedid_cst=NCw%2BLJcs4Q%3D%3D; cto_bidid=61fJa183RVU2c3VKWUp3cGlxQXdSUlBQczlGeGR0VldhbWF3ell4dkF2WmJRTVh5R0NONFBCY3g0eEdyQUh2aUhuOERNd2RUaFpwSFQlMkZRNk1DWmIyQjNLdmZHWVFkeE96TE45elZKYmJBWHpMWllJJTNE; _criteoId=%7B%22criteoId%22%3A%2261fJa183RVU2c3VKWUp3cGlxQXdSUlBQczlGeGR0VldhbWF3ell4dkF2WmJRTVh5R0NONFBCY3g0eEdyQUh2aUhuOERNd2RUaFpwSFQlMkZRNk1DWmIyQjNLdmZHWVFkeE96TE45elZKYmJBWHpMWllJJTNE%22%7D; _criteoId_cst=NCw%2BLJcs4Q%3D%3D; panoramaId_expiry=1753188551818; panoramaId=b1c8e448054e53dadb5d753b581e4945a70257f982097a444aa3a19955c5839d; panoramaIdType=panoIndiv; cto_bundle=nVflVV9ibXM5Nm9mbmpBRlBYOWVvOHRnNm1MUUJFZkc4bkZkY2h1VlpCREhwd1IlMkZ0OXlOZUVkZ3h0R2xCTUg5Vkg4ekdkM2Z6VDQxUCUyQjd2dnVubUJ0MUtkVEpGenlRaHdMQ1pxVHo1ZERBWnJBSUNpemx5OURoaCUyRjR3JTJCeVRuNHVzYnVTQzdmc0xNY2M5R0xadiUyQkpCZnFGZW0wdlVuajFzS29nJTJGWnVNaWFJeHUlMkJncyUzRA; mh_session=z67xm9omd9mz70y; session=eyJmbGFzaCI6e30sInBhc3Nwb3J0Ijp7InVzZXIiOiJ7XCJpZFwiOlwiMTAxMTM0ODcyXCIsXCJ0b2tlblwiOlwiZDczMjYxOWYtNjRlZS00M2IxLTkxYWYtMGMwY2IzZjBlZmZkXCIsXCJzZXNzaW9uSWRcIjpcImMwMTMyN2Q4LWRjMmEtNDZlNi1hM2Q0LTNkZjY4ODYxN2YxNFwifSJ9fQ==; session.sig=fkzyED-Dwreb3R7RZ5T3NXQVPZA; mh_status=premium; _sp_ses.becb=*; _sp_id.becb=c07cfa08-d4ee-4a4d-b5cc-5426e0c428aa.1750070139.14.1752892696.1752857079.e60659ac-8589-432d-a189-cf461057c07c.5f20e5cb-2fb7-4c6c-950d-ab9cb0786bbb.2e7a8fd7-6598-4fca-adfd-0fb5de860567.1752892576798.12"
             # Add any additional headers you need
         }
 
@@ -47,7 +120,7 @@ def retriveIndividualPages(obj1,index):
                     Rechtsform=key.find_next_sibling('p',class_="value").text
                 elif "Geschäftsleitung" ==key.text:
                     managment1=key.find_next_sibling('p').text
-                elif "neueste Vorstandsmitglieder" ==key.text:
+                elif "neueste Verwaltungsräte" ==key.text:
                     newsetVor=key.find_next_sibling('p').text
                 elif "neuste Zeichnungsberechtigte" ==key.text:
                     newsetZei=key.find_next_sibling('p').text
@@ -101,13 +174,21 @@ def retriveIndividualPages(obj1,index):
                 if Kanton_ele:
                     Kanton=Kanton_ele.text.replace("Rechtsform:","").strip()
             # print(f"branche is ::{branche}")
-            print(f"Individual Threading Reached at ::{index}")
+            print(f"Individual Threading Reached at ::{obj1['id']}")
             try:
                 plz1=int(obj1["PLZ"])
             except Exception as e:
                 plz1=str(obj1["PLZ"])
             if telephone!="":
                 telephone=f"'{telephone}'"
+            if obj1["Rechtsform"] in [3,9,'3','9']:
+                obj3=get_management_info(obj1,headers)
+            else:
+                obj3={
+                "Präsident": "",
+                "Leiter der Zweigniederlassungen": "",
+                "LinkedIn Link": "",
+            }
             obj2={
                 "Url": url,
                 "Name": obj1["Name"],
@@ -125,12 +206,13 @@ def retriveIndividualPages(obj1,index):
                 # "Management":str(Management),
                 "Geschäftsleitung":managment1,
                 "neuste Zeichnungsberechtigte": newsetZei,
-                "neueste Vorstandsmitglieder":newsetVor,
+                "neueste Verwaltungsräte":newsetVor,
                 "Branche":branche,
                 "Firmenzweck":Firmenzweck,
                 "UID Number":uidNumber,
                 "Rechtsform 2(Extra For Testing)": obj1["Rechtsform"]
             }
+            obj2.update(obj3)
             return obj2
         else:
             values_list = list(obj1.values())
@@ -141,7 +223,7 @@ def retriveIndividualPages(obj1,index):
         values_list = list(obj1.values())
         traceback.print_exc()
         return values_list
-   
+    
 
 
 def readCSV(filePath):
@@ -155,6 +237,9 @@ def readCSV(filePath):
     #     for key, value in row.items():
     #         print(f"{key}: {value}")
     #     print("--- End of Row ---")
+
+
+
 def Final_updation_inDB(UpdatedTable,list):
     UpdatedTable.insert_many(list)
     print("Done Insertionion of Updated Database")
