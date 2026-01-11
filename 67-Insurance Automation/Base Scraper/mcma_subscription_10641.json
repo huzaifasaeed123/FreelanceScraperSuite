@@ -1,0 +1,334 @@
+{
+    "essentielle": {
+        "title": "Optimal",
+        "color": "#2fd0a7",
+        "promoted": false,
+        "disabled": false,
+        "privileges": [
+            {
+                "title": "Responsabilité Civile",
+                "description": "<p>C'est une garantie obligatoire. Elle couvre l'indemnisation des dommages corporels et mat&eacute;riels caus&eacute;s &agrave; des tiers par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "public_liability"
+            },
+            {
+                "title": "Défense et Recours",
+                "description": "<p> Garantie la d&eacute;fense des int&eacute;r&ecirc;ts des personnes assur&eacute;es d&egrave;s lors qu'elles sont poursuivies &agrave; la suite d'un &eacute;v&eacute;nement en relation avec le v&eacute;hicule assur&eacute;. Elle permet aussi l'obtention de la r&eacute;paration p&eacute;cuniaire des dommages subis par le v&eacute;hicule ainsi que les dommages non indemnis&eacute;s par une autre assurance, subis par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "defense_and_appeals"
+            },
+            {
+                "title": "Protection Passagers",
+                "description": "<p>Prot&egrave;ge toutes les personnes transport&eacute;es gracieusement &agrave; bord de son v&eacute;hicule, et ce ind&eacute;pendamment de sa responsabilit&eacute; dans la survenance du sinistre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "passenger_protection"
+            },
+            {
+                "title": "Protection du Conducteur",
+                "description": "<p>Cette garantie prot&egrave;ge l'assur&eacute; &agrave; bord de son v&eacute;hicule lors d'un sinitre couvert.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "driver_protection"
+            },
+            {
+                "title": "Vol",
+                "description": "<p>La couverture vol intervient &agrave; la suite d'un vol ou d'une tentative de vol et permet d'indemniser l'assur&eacute; en cas de disparition ou de d&eacute;t&eacute;rioration du v&eacute;hicule. Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.<br />La valeur de la radio est assur&eacute;e &agrave; hauteur de 3000 Dhs.</p>",
+                "key": "theft"
+            },
+            {
+                "title": "Incendie",
+                "description": "<p>A pour objet de couvrir les dommages caus&eacute;s au v&eacute;hicule assur&eacute; suite &agrave; un incendie, un embrasement, une explosion, une simple combustion ou une chute de foudre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "fire"
+            },
+            {
+                "title": "Evènement Catastrophique",
+                "description": "<p>Garantie r&eacute;gie par la loi n&deg; 110-14 instituant le r&eacute;gime de couverture des &eacute;v&eacute;nements catastrophiques et obligatoire &agrave; effet de janvier 2020.</p>",
+                "key": "catastrophic_event"
+            },
+            {
+                "title": "Assistance : Imtyaz Assistance Plus",
+                "description": "<p><strong>- Aide au Constat amiable</strong><br /><strong>- Remorquage en cas d'accident :</strong> Remorquage illimit&eacute; vers le garage au choix de l'assur&eacute;<br /><strong>- Remorquage en cas de panne :</strong> Remorquage vers le garage de choix de l'assur&eacute; 2 fois/an<br /><strong>- Voiture de remplacement :</strong> 11 jours en cas de panne ou d'accident</p>",
+                "key": "imtyaz_assistance_plus"
+            }
+        ],
+        "key": "essentielle",
+        "annualBasePrice": 3044.42,
+        "semiAnnualBasePrice": 1693.2
+    },
+    "confort": {
+        "title": "Confort",
+        "color": "#ff8772",
+        "promoted": true,
+        "disabled": false,
+        "privileges": [
+            {
+                "title": "Responsabilité Civile",
+                "description": "<p>C'est une garantie obligatoire. Elle couvre l'indemnisation des dommages corporels et mat&eacute;riels caus&eacute;s &agrave; des tiers par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "public_liability"
+            },
+            {
+                "title": "Défense et Recours",
+                "description": "<p> Garantie la d&eacute;fense des int&eacute;r&ecirc;ts des personnes assur&eacute;es d&egrave;s lors qu'elles sont poursuivies &agrave; la suite d'un &eacute;v&eacute;nement en relation avec le v&eacute;hicule assur&eacute;. Elle permet aussi l'obtention de la r&eacute;paration p&eacute;cuniaire des dommages subis par le v&eacute;hicule ainsi que les dommages non indemnis&eacute;s par une autre assurance, subis par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "defense_and_appeals"
+            },
+            {
+                "title": "Protection Passagers",
+                "description": "<p>Prot&egrave;ge toutes les personnes transport&eacute;es gracieusement &agrave; bord de son v&eacute;hicule, et ce ind&eacute;pendamment de sa responsabilit&eacute; dans la survenance du sinistre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "passenger_protection"
+            },
+            {
+                "title": "Protection du Conducteur",
+                "description": "<p>Cette garantie prot&egrave;ge l'assur&eacute; &agrave; bord de son v&eacute;hicule lors d'un sinitre couvert.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "driver_protection"
+            },
+            {
+                "title": "Vol",
+                "description": "<p>La couverture vol intervient &agrave; la suite d'un vol ou d'une tentative de vol et permet d'indemniser l'assur&eacute; en cas de disparition ou de d&eacute;t&eacute;rioration du v&eacute;hicule. Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.<br />La valeur de la radio est assur&eacute;e &agrave; hauteur de 3000 Dhs.</p>",
+                "key": "theft"
+            },
+            {
+                "title": "Incendie",
+                "description": "<p>A pour objet de couvrir les dommages caus&eacute;s au v&eacute;hicule assur&eacute; suite &agrave; un incendie, un embrasement, une explosion, une simple combustion ou une chute de foudre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "fire"
+            },
+            {
+                "title": "Evènement Catastrophique",
+                "description": "<p>Garantie r&eacute;gie par la loi n&deg; 110-14 instituant le r&eacute;gime de couverture des &eacute;v&eacute;nements catastrophiques et obligatoire &agrave; effet de janvier 2020.</p>",
+                "key": "catastrophic_event"
+            },
+            {
+                "title": "Assistance : Imtyaz Assistance Premium",
+                "description": "<p><strong>- Aide au Constat amiable</strong><br /><strong>- Remorquage en cas d'accident :</strong> Remorquage illimit&eacute; vers le garage au choix de l'assur&eacute;<br /><strong>- Remorquage en cas de panne :</strong> Remorquage vers le garage de choix de l'assur&eacute; 3 fois/an<br /><strong>- Voiture de remplacement :</strong> 16 jours en cas de panne ou d'accident</p>",
+                "key": "imtyaz_assistance_premium"
+            }
+        ],
+        "key": "confort",
+        "annualBasePrice": 3094.42,
+        "semiAnnualBasePrice": 1743.2
+    },
+    "optimale": {
+        "title": "Collision",
+        "color": "#4bc1e1",
+        "promoted": false,
+        "disabled": false,
+        "privileges": [
+            {
+                "title": "Responsabilité Civile",
+                "description": "<p>C'est une garantie obligatoire. Elle couvre l'indemnisation des dommages corporels et mat&eacute;riels caus&eacute;s &agrave; des tiers par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "public_liability"
+            },
+            {
+                "title": "Défense et Recours",
+                "description": "<p> Garantie la d&eacute;fense des int&eacute;r&ecirc;ts des personnes assur&eacute;es d&egrave;s lors qu'elles sont poursuivies &agrave; la suite d'un &eacute;v&eacute;nement en relation avec le v&eacute;hicule assur&eacute;. Elle permet aussi l'obtention de la r&eacute;paration p&eacute;cuniaire des dommages subis par le v&eacute;hicule ainsi que les dommages non indemnis&eacute;s par une autre assurance, subis par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "defense_and_appeals"
+            },
+            {
+                "title": "Protection Passagers",
+                "description": "<p>Prot&egrave;ge toutes les personnes transport&eacute;es gracieusement &agrave; bord de son v&eacute;hicule, et ce ind&eacute;pendamment de sa responsabilit&eacute; dans la survenance du sinistre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "passenger_protection"
+            },
+            {
+                "title": "Protection du Conducteur",
+                "description": "<p>Cette garantie prot&egrave;ge l'assur&eacute; &agrave; bord de son v&eacute;hicule lors d'un sinitre couvert.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "driver_protection"
+            },
+            {
+                "title": "Vol",
+                "description": "<p>La couverture vol intervient &agrave; la suite d'un vol ou d'une tentative de vol et permet d'indemniser l'assur&eacute; en cas de disparition ou de d&eacute;t&eacute;rioration du v&eacute;hicule. Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.<br />La valeur de la radio est assur&eacute;e &agrave; hauteur de 3000 Dhs.</p>",
+                "key": "theft"
+            },
+            {
+                "title": "Incendie",
+                "description": "<p>A pour objet de couvrir les dommages caus&eacute;s au v&eacute;hicule assur&eacute; suite &agrave; un incendie, un embrasement, une explosion, une simple combustion ou une chute de foudre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "fire"
+            },
+            {
+                "title": "Dommage collision",
+                "description": "<p>la Mutuelle garantit les dommages subis par le véhicule assuré, résultant d’une collision avec tous véhicules y compris hippomobiles, cycles avec ou sans moteur, appartenant à des personnes identifiées autres que le sociétaire du présent contrat ou le propriétaire du véhicule assuré.<br />La garantie DOMMAGES COLLISIONS ne s’applique que si la collision entre les véhicules impliqués a fait l’objet d’un constat amiable validé et signé par les parties, ou d’un procès-verbal de police ou de gendarmerie.</p>",
+                "key": "damage_collision"
+            },
+            {
+                "title": "Bris de Glaces",
+                "description": "<p>Garantit les frais de r&eacute;paration et/ou de remplacement &agrave; la suite d'un bris des &eacute;l&eacute;ments en verre, glace ou verre organique suivants: pare brise, vitre arri&egrave;re, glaces lat&eacute;rales, toit (ouvrant ou non), du v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "broken_glass"
+            },
+            {
+                "title": "Evènement Catastrophique",
+                "description": "<p>Garantie r&eacute;gie par la loi n&deg; 110-14 instituant le r&eacute;gime de couverture des &eacute;v&eacute;nements catastrophiques et obligatoire &agrave; effet de janvier 2020.</p>",
+                "key": "catastrophic_event"
+            },
+            {
+                "title": "Assistance",
+                "description": "<p>Prestation optionnelle disponible 24/24 et 7j/7, qui permet de fournir une aide rapide aux assur&eacute;s en cas de difficult&eacute;s rencontr&eacute;es (en cas de panne ou d'accident ) lors des d&eacute;placements du v&eacute;hicule assur&eacute;</p>",
+                "key": "assistance"
+            },
+            {
+                "title": "Assistance Essentielle (Gratuite)",
+                "description": "<p><strong>- Aide au constat</strong><br /><strong>- Remorquage en cas d'accident :</strong> Remorquage dans un rayon de 250Km du lieu sinistre<br /><strong>- Remorquage en cas de panne :</strong> Remorquage vers la ville de l'assur&eacute; ou garage le plus proche dans la limite de 250km<br /><strong>- V&eacute;hicule de remplacement :</strong> 6 Jours Maximum<br /></p>",
+                "key": "assistance_essentielle"
+            }
+        ],
+        "key": "optimale",
+        "selects": {
+            "broken-glass": {
+                "title": "Bris de glace",
+                "name": "broken-glass",
+                "options": [
+                    {
+                        "option": "7000 Dh",
+                        "id": 7000,
+                        "default": false
+                    },
+                    {
+                        "option": "10000 Dh",
+                        "id": 10000,
+                        "default": true
+                    },
+                    {
+                        "option": "15000 Dh",
+                        "id": 15000,
+                        "default": false
+                    }
+                ]
+            },
+            "damage-collision": {
+                "title": "Dommage et collision",
+                "name": "damage-collision",
+                "options": [
+                    {
+                        "option": "20000 Dh",
+                        "id": 20000,
+                        "default": true
+                    },
+                    {
+                        "option": "30000 Dh",
+                        "id": 30000,
+                        "default": false
+                    },
+                    {
+                        "option": "50000 Dh",
+                        "id": 50000,
+                        "default": false
+                    }
+                ]
+            }
+        },
+        "annualBasePrice": 3563.19,
+        "semiAnnualBasePrice": 1931.95
+    },
+    "tout_risque": {
+        "title": "Tout risque",
+        "color": "#b21c71",
+        "promoted": false,
+        "disabled": false,
+        "privileges": [
+            {
+                "title": "Responsabilité Civile",
+                "description": "<p>C'est une garantie obligatoire. Elle couvre l'indemnisation des dommages corporels et mat&eacute;riels caus&eacute;s &agrave; des tiers par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "public_liability"
+            },
+            {
+                "title": "Défense et Recours",
+                "description": "<p> Garantie la d&eacute;fense des int&eacute;r&ecirc;ts des personnes assur&eacute;es d&egrave;s lors qu'elles sont poursuivies &agrave; la suite d'un &eacute;v&eacute;nement en relation avec le v&eacute;hicule assur&eacute;. Elle permet aussi l'obtention de la r&eacute;paration p&eacute;cuniaire des dommages subis par le v&eacute;hicule ainsi que les dommages non indemnis&eacute;s par une autre assurance, subis par le v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "defense_and_appeals"
+            },
+            {
+                "title": "Protection Passagers",
+                "description": "<p>Prot&egrave;ge toutes les personnes transport&eacute;es gracieusement &agrave; bord de son v&eacute;hicule, et ce ind&eacute;pendamment de sa responsabilit&eacute; dans la survenance du sinistre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "passenger_protection"
+            },
+            {
+                "title": "Protection du Conducteur",
+                "description": "<p>Cette garantie prot&egrave;ge l'assur&eacute; &agrave; bord de son v&eacute;hicule lors d'un sinitre couvert.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "driver_protection"
+            },
+            {
+                "title": "Vol",
+                "description": "<p>La couverture vol intervient &agrave; la suite d'un vol ou d'une tentative de vol et permet d'indemniser l'assur&eacute; en cas de disparition ou de d&eacute;t&eacute;rioration du v&eacute;hicule. Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.<br />La valeur de la radio est assur&eacute;e &agrave; hauteur de 3000 Dhs.</p>",
+                "key": "theft"
+            },
+            {
+                "title": "Incendie",
+                "description": "<p>A pour objet de couvrir les dommages caus&eacute;s au v&eacute;hicule assur&eacute; suite &agrave; un incendie, un embrasement, une explosion, une simple combustion ou une chute de foudre.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "fire"
+            },
+            {
+                "title": "Tierce",
+                "description": "<p>La Mutuelle garantit les dommages subis par le véhicule assuré, résultant de son choc avec un corps fixe ou mobile (y compris les personnes et les animaux) ainsi que son renversement sans collision préalable.<br />Toutefois cette garantie ne couvre pas les dommages subis uniquement par les pneumatiques ou les antennes sauf lorsque ceux-ci sont endommagés en même temps que d’autres parties du véhicule, lors d’une circonstance ou d’un événement assuré.</p>",
+                "key": "accident_insurance"
+            },
+            {
+                "title": "Bris de Glaces",
+                "description": "<p>Garantit les frais de r&eacute;paration et/ou de remplacement &agrave; la suite d'un bris des &eacute;l&eacute;ments en verre, glace ou verre organique suivants: pare brise, vitre arri&egrave;re, glaces lat&eacute;rales, toit (ouvrant ou non), du v&eacute;hicule assur&eacute;.<br />Dans les limites pr&eacute;vues par le contrat d'assurance Amane Auto Imtyaz.</p>",
+                "key": "broken_glass"
+            },
+            {
+                "title": "Rachat de vétusté",
+                "description": "<p>Vous pourrez changer les pi&egrave;ces endommag&eacute;s r&eacute;sultant d'un accident avec des pi&egrave;ces neuves sans rien payer en plus!</p>",
+                "key": "redemption_of_obsolescence"
+            },
+            {
+                "title": "Inondations",
+                "description": "<p>La garantie dommages tous accidents souscrites est étendue aux dommages matériels directs subis par le véhicule assuré et ayant pour cause déterminante l’intensité anormale de l’eau provoquée par le ruissèlement, l’engorgement et refoulement des égouts, les marées, les raz-de-marée, le débordement des sources, de cours d’eau, par les inondations et plus généralement par la mer et les autres plans d’eau naturels ou artificiels ainsi que par les masses de neige ou de glaces en mouvement.</p>",
+                "key": "flood"
+            },
+            {
+                "title": "Evènement Catastrophique",
+                "description": "<p>Garantie r&eacute;gie par la loi n&deg; 110-14 instituant le r&eacute;gime de couverture des &eacute;v&eacute;nements catastrophiques et obligatoire &agrave; effet de janvier 2020.</p>",
+                "key": "catastrophic_event"
+            },
+            {
+                "title": "Assistance",
+                "description": "<p>Prestation optionnelle disponible 24/24 et 7j/7, qui permet de fournir une aide rapide aux assur&eacute;s en cas de difficult&eacute;s rencontr&eacute;es (en cas de panne ou d'accident ) lors des d&eacute;placements du v&eacute;hicule assur&eacute;</p>",
+                "key": "assistance"
+            },
+            {
+                "title": "Assistance Essentielle (Gratuite)",
+                "description": "<p><strong>- Aide au constat</strong><br /><strong>- Remorquage en cas d'accident :</strong> Remorquage dans un rayon de 250Km du lieu sinistre<br /><strong>- Remorquage en cas de panne :</strong> Remorquage vers la ville de l'assur&eacute; ou garage le plus proche dans la limite de 250km<br /><strong>- V&eacute;hicule de remplacement :</strong> 6 Jours Maximum<br /></p>",
+                "key": "assistance_essentielle"
+            }
+        ],
+        "key": "tout_risque",
+        "selects": {
+            "broken-glass": {
+                "title": "Bris de glace",
+                "name": "broken-glass",
+                "options": [
+                    {
+                        "option": "7000 Dh",
+                        "id": 7000,
+                        "default": false
+                    },
+                    {
+                        "option": "10000 Dh",
+                        "id": 10000,
+                        "default": true
+                    },
+                    {
+                        "option": "15000 Dh",
+                        "id": 15000,
+                        "default": false
+                    }
+                ]
+            },
+            "franchise-tierce": {
+                "title": "Franchise Tierce",
+                "name": "franchise-tierce",
+                "options": [
+                    {
+                        "option": "3 %",
+                        "id": 3,
+                        "default": false
+                    },
+                    {
+                        "option": "5 %",
+                        "id": 5,
+                        "default": true
+                    },
+                    {
+                        "option": "10 %",
+                        "id": 10,
+                        "default": false
+                    }
+                ]
+            }
+        },
+        "annualBasePrice": 4228.53,
+        "semiAnnualBasePrice": 2291.22
+    }
+}

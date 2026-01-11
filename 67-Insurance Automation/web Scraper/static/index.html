@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparateur d'Assurance Auto - Morocco</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        axa: '#00008F',
+                        mcma: '#2fd0a7',
+                        rma: '#E31837',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'gradient': 'gradient 8s ease infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .provider-badge {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .provider-badge::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.3) 50%,
+                rgba(255,255,255,0) 100%
+            );
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .input-focus:focus {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+        
+        .best-price {
+            position: relative;
+        }
+        
+        .best-price::after {
+            content: '⭐ Meilleur Prix';
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-gray-50 min-h-screen">
+    
+    <!-- Hero Section with Gradient -->
+    <div class="gradient-bg min-h-[45vh] flex items-center justify-center relative overflow-hidden">
+        <!-- Floating shapes for visual interest -->
+        <div class="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-float"></div>
+        <div class="absolute bottom-20 right-20 w-48 h-48 bg-white/10 rounded-full blur-xl animate-float" style="animation-delay: 2s;"></div>
+        <div class="absolute top-40 right-40 w-24 h-24 bg-white/10 rounded-full blur-xl animate-float" style="animation-delay: 4s;"></div>
+        
+        <div class="text-center px-4 relative z-10">
+            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm mb-6">
+                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                3 Assureurs en temps réel
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight">
+                Comparateur d'Assurance
+                <span class="block text-white/90">Auto Maroc</span>
+            </h1>
+            <p class="text-xl text-white/80 max-w-2xl mx-auto mb-8">
+                Comparez instantanément les meilleures offres d'assurance de AXA, MCMA et RMA
+            </p>
+            
+            <!-- Provider logos -->
+            <div class="flex justify-center gap-6 mb-8">
+                <div class="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-xl flex items-center gap-3">
+                    <div class="w-10 h-10 bg-axa rounded-lg flex items-center justify-center text-white font-bold text-sm">AXA</div>
+                    <div class="w-10 h-10 bg-mcma rounded-lg flex items-center justify-center text-white font-bold text-xs">MCMA</div>
+                    <div class="w-10 h-10 bg-rma rounded-lg flex items-center justify-center text-white font-bold text-sm">RMA</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Section -->
+    <div class="max-w-4xl mx-auto px-4 -mt-20 relative z-20 mb-12">
+        <div class="glass rounded-3xl shadow-2xl p-8 md:p-10">
+            <form id="insuranceForm" class="space-y-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Valeur Neuf -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">
+                            Valeur à Neuf (MAD)
+                            <span class="text-gray-400 font-normal ml-1">- Prix d'achat neuf</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">MAD</span>
+                            <input 
+                                type="number" 
+                                id="valeurNeuf" 
+                                placeholder="ex: 250000"
+                                min="10000"
+                                max="5000000"
+                                step="1000"
+                                required
+                                class="w-full pl-16 pr-4 py-4 border-2 border-gray-200 rounded-xl text-lg font-medium 
+                                       focus:border-indigo-500 focus:outline-none input-focus transition-all duration-200
+                                       placeholder:text-gray-300"
+                            >
+                        </div>
+                        <p class="text-xs text-gray-400">Le prix original du véhicule neuf</p>
+                    </div>
+                    
+                    <!-- Valeur Venale -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">
+                            Valeur Vénale (MAD)
+                            <span class="text-gray-400 font-normal ml-1">- Valeur actuelle</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">MAD</span>
+                            <input 
+                                type="number" 
+                                id="valeurVenale" 
+                                placeholder="ex: 180000"
+                                min="5000"
+                                max="5000000"
+                                step="1000"
+                                required
+                                class="w-full pl-16 pr-4 py-4 border-2 border-gray-200 rounded-xl text-lg font-medium 
+                                       focus:border-indigo-500 focus:outline-none input-focus transition-all duration-200
+                                       placeholder:text-gray-300"
+                            >
+                        </div>
+                        <p class="text-xs text-gray-400">La valeur marchande actuelle du véhicule</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-sm text-gray-500 mr-2">Exemples rapides:</span>
+                    <button type="button" onclick="setPreset(150000, 120000)" 
+                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-colors">
+                        Citadine
+                    </button>
+                    <button type="button" onclick="setPreset(300000, 220000)" 
+                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-colors">
+                        Berline
+                    </button>
+                    <button type="button" onclick="setPreset(500000, 380000)" 
+                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-colors">
+                        SUV
+                    </button>
+                    <button type="button" onclick="setPreset(800000, 600000)" 
+                            class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-colors">
+                        Premium
+                    </button>
+                </div>
+                
+                <!-- Submit Button -->
+                <button 
+                    type="submit"
+                    id="submitBtn"
+                    class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 
+                           text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl 
+                           transform hover:scale-[1.02] transition-all duration-200 
+                           flex items-center justify-center gap-3"
+                >
+                    <svg id="searchIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <svg id="loadingIcon" class="w-6 h-6 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" 
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="btnText">Comparer les Prix</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Error Alert -->
+    <div id="errorAlert" class="hidden max-w-4xl mx-auto px-4 mb-8">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p id="errorText" class="text-red-700 font-medium"></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden pb-20">
+        <!-- Summary Banner -->
+        <div id="summaryBanner" class="bg-gradient-to-r from-green-500 to-emerald-600 py-6 mb-10">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex flex-wrap justify-center gap-8 text-white">
+                    <div class="text-center">
+                        <p class="text-green-100 text-sm">Plans trouvés</p>
+                        <p id="totalPlans" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="text-center border-l border-white/30 pl-8">
+                        <p class="text-green-100 text-sm">Meilleur prix</p>
+                        <p id="bestPrice" class="text-3xl font-bold">-- MAD</p>
+                    </div>
+                    <div class="text-center border-l border-white/30 pl-8">
+                        <p class="text-green-100 text-sm">Temps de recherche</p>
+                        <p id="fetchTime" class="text-3xl font-bold">0s</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Provider Results -->
+        <div class="max-w-7xl mx-auto px-4">
+            <div id="providersContainer" class="space-y-12">
+                <!-- Provider cards will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Skeleton -->
+    <div id="loadingSkeleton" class="hidden max-w-7xl mx-auto px-4 py-10">
+        <div class="space-y-12">
+            <!-- Skeleton for 3 providers -->
+            <div class="space-y-8">
+                <div class="h-8 w-48 shimmer rounded-lg"></div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-lg space-y-4">
+                        <div class="h-6 w-32 shimmer rounded"></div>
+                        <div class="h-12 w-full shimmer rounded"></div>
+                        <div class="space-y-2">
+                            <div class="h-4 w-full shimmer rounded"></div>
+                            <div class="h-4 w-3/4 shimmer rounded"></div>
+                            <div class="h-4 w-1/2 shimmer rounded"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-lg space-y-4">
+                        <div class="h-6 w-32 shimmer rounded"></div>
+                        <div class="h-12 w-full shimmer rounded"></div>
+                        <div class="space-y-2">
+                            <div class="h-4 w-full shimmer rounded"></div>
+                            <div class="h-4 w-3/4 shimmer rounded"></div>
+                            <div class="h-4 w-1/2 shimmer rounded"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-lg space-y-4">
+                        <div class="h-6 w-32 shimmer rounded"></div>
+                        <div class="h-12 w-full shimmer rounded"></div>
+                        <div class="space-y-2">
+                            <div class="h-4 w-full shimmer rounded"></div>
+                            <div class="h-4 w-3/4 shimmer rounded"></div>
+                            <div class="h-4 w-1/2 shimmer rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-sm">
+                Comparateur d'Assurance Auto Maroc © 2026 
+                <span class="mx-2">•</span>
+                Les tarifs affichés sont indicatifs
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Set preset values
+        function setPreset(valeurNeuf, valeurVenale) {
+            document.getElementById('valeurNeuf').value = valeurNeuf;
+            document.getElementById('valeurVenale').value = valeurVenale;
+        }
+        
+        // Format price with thousands separator
+        function formatPrice(price) {
+            return new Intl.NumberFormat('fr-MA', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(price);
+        }
+        
+        // Show/hide loading state
+        function setLoading(isLoading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const searchIcon = document.getElementById('searchIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
+            const btnText = document.getElementById('btnText');
+            const loadingSkeleton = document.getElementById('loadingSkeleton');
+            
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                searchIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+                btnText.textContent = 'Recherche en cours...';
+                loadingSkeleton.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                searchIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+                btnText.textContent = 'Comparer les Prix';
+                loadingSkeleton.classList.add('hidden');
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorAlert.classList.remove('hidden');
+        }
+        
+        // Hide error message
+        function hideError() {
+            document.getElementById('errorAlert').classList.add('hidden');
+        }
+        
+        // Create plan card HTML
+        function createPlanCard(plan, isBestPrice = false) {
+            const guaranteesHtml = plan.guarantees
+                .filter(g => g && g.trim())
+                .slice(0, 6)
+                .map(g => `
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>${g}</span>
+                    </div>
+                `).join('');
+            
+            const moreGuarantees = plan.guarantees.length > 6 
+                ? `<p class="text-xs text-gray-400 mt-2">+ ${plan.guarantees.length - 6} autres garanties</p>` 
+                : '';
+            
+            const promotedBadge = plan.is_promoted 
+                ? `<span class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                     Recommandé
+                   </span>` 
+                : '';
+            
+            const bestPriceClass = isBestPrice ? 'best-price ring-2 ring-amber-400' : '';
+            
+            return `
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-hover relative ${bestPriceClass}">
+                    ${promotedBadge}
+                    <div class="p-6">
+                        <!-- Plan Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-bold text-gray-800">${plan.plan_name}</h4>
+                            <div class="w-3 h-3 rounded-full" style="background-color: ${plan.color}"></div>
+                        </div>
+                        
+                        <!-- Price -->
+                        <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-3xl font-extrabold text-gray-900">${formatPrice(plan.total_price)}</span>
+                                <span class="text-gray-500 font-medium">MAD/an</span>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-500 mt-2">
+                                <span>Prime: ${formatPrice(plan.annual_premium)} MAD</span>
+                                <span>Taxes: ${formatPrice(plan.taxes)} MAD</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Guarantees -->
+                        <div class="space-y-2">
+                            <h5 class="text-sm font-semibold text-gray-700 mb-3">Garanties incluses</h5>
+                            ${guaranteesHtml}
+                            ${moreGuarantees}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create provider section HTML
+        function createProviderSection(provider, lowestPrice) {
+            const providerColors = {
+                'AXA Assurance': { bg: 'from-blue-600 to-blue-800', text: 'text-blue-600' },
+                'MAMDA-MCMA': { bg: 'from-teal-500 to-emerald-600', text: 'text-teal-600' },
+                'RMA Assurance': { bg: 'from-red-500 to-rose-600', text: 'text-red-600' }
+            };
+            
+            const colors = providerColors[provider.name] || { bg: 'from-gray-600 to-gray-800', text: 'text-gray-600' };
+            
+            const errorHtml = provider.error 
+                ? `<div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                     <p class="text-red-600 text-sm">⚠️ ${provider.error}</p>
+                   </div>` 
+                : '';
+            
+            const plansHtml = provider.plans.length > 0
+                ? provider.plans.map(plan => createPlanCard(plan, plan.total_price === lowestPrice)).join('')
+                : `<div class="col-span-full bg-gray-50 rounded-xl p-8 text-center">
+                     <p class="text-gray-500">Aucun plan disponible</p>
+                   </div>`;
+            
+            return `
+                <section class="provider-section">
+                    <!-- Provider Header -->
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="bg-gradient-to-r ${colors.bg} p-3 rounded-xl provider-badge">
+                            <span class="text-white font-bold text-lg">${provider.name.split(' ')[0]}</span>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">${provider.name}</h3>
+                            <p class="text-gray-500 text-sm">
+                                ${provider.plan_count} offre${provider.plan_count > 1 ? 's' : ''} disponible${provider.plan_count > 1 ? 's' : ''}
+                                <span class="mx-2">•</span>
+                                Temps: ${provider.fetch_time}s
+                            </p>
+                        </div>
+                    </div>
+                    
+                    ${errorHtml}
+                    
+                    <!-- Plans Grid -->
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        ${plansHtml}
+                    </div>
+                </section>
+            `;
+        }
+        
+        // Display results
+        function displayResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            const providersContainer = document.getElementById('providersContainer');
+            
+            // Update summary
+            document.getElementById('totalPlans').textContent = data.summary.total_plans;
+            document.getElementById('bestPrice').textContent = 
+                data.summary.cheapest_plan ? formatPrice(data.summary.cheapest_plan.total_price) + ' MAD' : '-- MAD';
+            document.getElementById('fetchTime').textContent = data.summary.total_fetch_time + 's';
+            
+            // Find lowest price for highlighting
+            const lowestPrice = data.summary.cheapest_plan ? data.summary.cheapest_plan.total_price : null;
+            
+            // Create provider sections
+            providersContainer.innerHTML = data.providers
+                .sort((a, b) => {
+                    // Sort by lowest price plan
+                    const aMin = a.plans.length > 0 ? Math.min(...a.plans.map(p => p.total_price)) : Infinity;
+                    const bMin = b.plans.length > 0 ? Math.min(...b.plans.map(p => p.total_price)) : Infinity;
+                    return aMin - bMin;
+                })
+                .map(provider => createProviderSection(provider, lowestPrice))
+                .join('');
+            
+            resultsSection.classList.remove('hidden');
+            
+            // Scroll to results
+            setTimeout(() => {
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+        
+        // Handle form submission
+        document.getElementById('insuranceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+            
+            const valeurNeuf = parseFloat(document.getElementById('valeurNeuf').value);
+            const valeurVenale = parseFloat(document.getElementById('valeurVenale').value);
+            
+            // Validation
+            if (valeurVenale > valeurNeuf) {
+                showError('La valeur vénale ne peut pas dépasser la valeur à neuf');
+                return;
+            }
+            
+            setLoading(true);
+            document.getElementById('resultsSection').classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/compare', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        valeur_neuf: valeurNeuf,
+                        valeur_venale: valeurVenale
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Une erreur est survenue');
+                }
+                
+                if (!data.success && data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displayResults(data);
+                
+            } catch (error) {
+                showError(error.message || 'Impossible de récupérer les données. Veuillez réessayer.');
+            } finally {
+                setLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

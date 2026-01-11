@@ -1,0 +1,62 @@
+[
+    {
+        "idQuotation": 59911762,
+        "dateExpiration": "10/01/2027",
+        "primeNetComptant": 3612.15,
+        "taxesComptant": 612.23,
+        "cnpacComptant": 17.0,
+        "accessoireComptant": 0.0,
+        "primeTotaleComptant": 4241.38,
+        "primeNetAnnuel": 3612.15,
+        "taxesAnnuel": 612.23,
+        "cnpacAnnuel": 17.0,
+        "accessoireAnnuel": 0.0,
+        "primeTotaleAnnuel": 4241.38,
+        "idLead": "00QbH00000QnDhuUAF"
+    },
+    {
+        "idQuotation": 59911762,
+        "dateExpiration": "10/01/2027",
+        "primeNetComptant": 3819.09,
+        "taxesComptant": 644.3,
+        "cnpacComptant": 17.0,
+        "accessoireComptant": 35.0,
+        "primeTotaleComptant": 4515.39,
+        "primeNetAnnuel": 3819.09,
+        "taxesAnnuel": 644.3,
+        "cnpacAnnuel": 17.0,
+        "accessoireAnnuel": 35.0,
+        "primeTotaleAnnuel": 4515.39,
+        "idLead": "00QbH00000QnDhuUAF"
+    },
+    {
+        "idQuotation": 59911762,
+        "dateExpiration": "10/01/2027",
+        "primeNetComptant": 4601.83,
+        "taxesComptant": 765.63,
+        "cnpacComptant": 17.0,
+        "accessoireComptant": 35.0,
+        "primeTotaleComptant": 5419.46,
+        "primeNetAnnuel": 4601.83,
+        "taxesAnnuel": 765.63,
+        "cnpacAnnuel": 17.0,
+        "accessoireAnnuel": 35.0,
+        "primeTotaleAnnuel": 5419.46,
+        "idLead": "00QbH00000QnDhuUAF"
+    },
+    {
+        "idQuotation": 59911762,
+        "dateExpiration": "10/01/2027",
+        "primeNetComptant": 5938.41,
+        "taxesComptant": 972.79,
+        "cnpacComptant": 17.0,
+        "accessoireComptant": 35.0,
+        "primeTotaleComptant": 6963.2,
+        "primeNetAnnuel": 5938.41,
+        "taxesAnnuel": 972.79,
+        "cnpacAnnuel": 17.0,
+        "accessoireAnnuel": 35.0,
+        "primeTotaleAnnuel": 6963.2,
+        "idLead": "00QbH00000QnDhuUAF"
+    }
+]
