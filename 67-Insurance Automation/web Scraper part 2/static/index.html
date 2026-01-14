@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparateur d'Assurance Auto - Maroc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.2); }
+        .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .promoted-badge { position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #F59E0B, #EF4444); color: white; font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); z-index: 10; }
+        .best-price-badge { position: absolute; top: -8px; left: -8px; background: linear-gradient(135deg, #10B981, #059669); color: white; font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 20px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); z-index: 10; }
+        .duration-toggle { display: inline-flex; background: #f3f4f6; border-radius: 9999px; padding: 4px; }
+        .duration-btn { padding: 8px 20px; border-radius: 9999px; font-size: 14px; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+        .duration-btn.active { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .select-option { padding: 6px 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+        .select-option:hover { border-color: #3B82F6; }
+        .select-option.selected { border-color: #3B82F6; background: #EFF6FF; }
+        .not-eligible { opacity: 0.5; }
+        .constraint-message { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; margin-top: 12px; border-radius: 0 8px 8px 0; font-size: 13px; color: #92400E; }
+    </style>
+</head>
+<body class="font-sans antialiased bg-gray-50 min-h-screen">
+    <!-- Hero -->
+    <div class="gradient-bg min-h-[38vh] flex items-center justify-center relative">
+        <div class="absolute inset-0 bg-black/10"></div>
+        <div class="text-center px-4 relative z-10">
+            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm mb-4">
+                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                3 Assureurs • Temps réel
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">Comparateur d'Assurance Auto</h1>
+            <p class="text-lg text-white/90">AXA • MAMDA-MCMA • RMA Assurance</p>
+        </div>
+    </div>
+    
+    <!-- Form -->
+    <div class="max-w-4xl mx-auto px-4 -mt-14 relative z-20 mb-8">
+        <div class="glass rounded-2xl shadow-2xl p-6">
+            <form id="insuranceForm" class="space-y-4">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-sm font-semibold text-gray-700">Valeur à Neuf (MAD)</label>
+                        <div class="relative">
+                            <input type="number" id="valeurNeuf" placeholder="ex: 250000" min="10000" max="5000000" step="1000" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-medium focus:border-indigo-500 focus:outline-none transition-all placeholder:text-gray-300">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MAD</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-sm font-semibold text-gray-700">Valeur Vénale (MAD)</label>
+                        <div class="relative">
+                            <input type="number" id="valeurVenale" placeholder="ex: 180000" min="5000" max="5000000" step="1000" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-medium focus:border-indigo-500 focus:outline-none transition-all placeholder:text-gray-300">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MAD</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-sm text-gray-500 mr-2 self-center">Exemples:</span>
+                    <button type="button" onclick="setPreset(150000,120000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Citadine</button>
+                    <button type="button" onclick="setPreset(300000,220000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Berline</button>
+                    <button type="button" onclick="setPreset(500000,380000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">SUV</button>
+                    <button type="button" onclick="setPreset(800000,600000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Premium</button>
+                </div>
+                <button type="submit" id="submitBtn" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-lg rounded-xl shadow-lg transform hover:scale-[1.01] transition-all flex items-center justify-center gap-3">
+                    <svg id="searchIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span id="btnText">Comparer les Prix</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Error -->
+    <div id="errorAlert" class="hidden max-w-4xl mx-auto px-4 mb-6">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+            <p id="errorText" class="text-red-700 font-medium text-sm"></p>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div id="resultsSection" class="hidden pb-16">
+        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 py-5 mb-6">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex flex-wrap justify-center gap-6 text-white">
+                    <div class="text-center"><p class="text-emerald-100 text-xs uppercase">Plans</p><p id="totalPlans" class="text-2xl font-bold">0</p></div>
+                    <div class="text-center border-l border-white/30 pl-6"><p class="text-emerald-100 text-xs uppercase">Meilleur annuel</p><p id="bestPriceAnnual" class="text-2xl font-bold">--</p></div>
+                    <div class="text-center border-l border-white/30 pl-6"><p class="text-emerald-100 text-xs uppercase">Meilleur 6 mois</p><p id="bestPriceSemi" class="text-2xl font-bold">--</p></div>
+                    <div class="text-center border-l border-white/30 pl-6"><p class="text-emerald-100 text-xs uppercase">Temps</p><p id="fetchTime" class="text-2xl font-bold">0s</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 mb-6">
+            <div class="flex justify-center">
+                <div class="duration-toggle">
+                    <button type="button" id="globalAnnualBtn" onclick="setGlobalDuration('annual')" class="duration-btn active">12 Mois (Annuel)</button>
+                    <button type="button" id="globalSemiBtn" onclick="setGlobalDuration('semi_annual')" class="duration-btn">6 Mois</button>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4"><div id="providersContainer" class="space-y-8"></div></div>
+    </div>
+    
+    <!-- Loading -->
+    <div id="loadingSkeleton" class="hidden max-w-7xl mx-auto px-4 py-8">
+        <div class="space-y-8">
+            <div class="h-8 w-48 shimmer rounded-lg"></div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl p-5 shadow space-y-3"><div class="h-5 w-24 shimmer rounded"></div><div class="h-10 w-full shimmer rounded"></div><div class="h-3 w-full shimmer rounded"></div></div>
+                <div class="bg-white rounded-xl p-5 shadow space-y-3"><div class="h-5 w-24 shimmer rounded"></div><div class="h-10 w-full shimmer rounded"></div><div class="h-3 w-full shimmer rounded"></div></div>
+                <div class="bg-white rounded-xl p-5 shadow space-y-3"><div class="h-5 w-24 shimmer rounded"></div><div class="h-10 w-full shimmer rounded"></div><div class="h-3 w-full shimmer rounded"></div></div>
+                <div class="bg-white rounded-xl p-5 shadow space-y-3"><div class="h-5 w-24 shimmer rounded"></div><div class="h-10 w-full shimmer rounded"></div><div class="h-3 w-full shimmer rounded"></div></div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bg-gray-900 text-gray-400 py-6 mt-auto"><div class="max-w-7xl mx-auto px-4 text-center"><p class="text-sm">Comparateur d'Assurance Auto Maroc © 2026</p></div></footer>
+
+<script>
+let currentDuration = 'annual';
+let resultsData = null;
+let cheapestPrices = { annual: null, semi_annual: null };
+
+function setPreset(n, v) { document.getElementById('valeurNeuf').value = n; document.getElementById('valeurVenale').value = v; }
+function formatPrice(p) { if (p == null || isNaN(p)) return '--'; return new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(p); }
+
+function setGlobalDuration(d) {
+    currentDuration = d;
+    document.getElementById('globalAnnualBtn').classList.toggle('active', d === 'annual');
+    document.getElementById('globalSemiBtn').classList.toggle('active', d === 'semi_annual');
+    if (resultsData) displayResults(resultsData);
+}
+
+function setLoading(l) {
+    const btn = document.getElementById('submitBtn');
+    document.getElementById('searchIcon').classList.toggle('hidden', l);
+    document.getElementById('loadingIcon').classList.toggle('hidden', !l);
+    document.getElementById('btnText').textContent = l ? 'Recherche...' : 'Comparer les Prix';
+    document.getElementById('loadingSkeleton').classList.toggle('hidden', !l);
+    btn.disabled = l;
+}
+
+function showError(m) { document.getElementById('errorText').textContent = m; document.getElementById('errorAlert').classList.remove('hidden'); }
+function hideError() { document.getElementById('errorAlert').classList.add('hidden'); }
+
+function getPrice(plan, type = 'prime_total') {
+    const d = currentDuration === 'annual' ? plan.annual : plan.semi_annual;
+    return d ? d[type] : 0;
+}
+
+function isBestPrice(plan) {
+    const p = getPrice(plan, 'prime_total');
+    const best = currentDuration === 'annual' ? cheapestPrices.annual : cheapestPrices.semi_annual;
+    return best && Math.abs(p - best) < 0.01;
+}
+
+function createGuaranteeHtml(g) {
+    const ic = g.is_included ? 'text-green-500' : 'text-gray-300';
+    const tc = g.is_included ? 'text-gray-700' : 'text-gray-400';
+    return `<div class="flex items-start gap-2 py-1"><svg class="w-4 h-4 ${ic} flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span class="${tc} text-sm">${g.name}</span></div>`;
+}
+
+function createSelectHtml(f, pid) {
+    const opts = f.options.map(o => `<div class="select-option ${o.is_default ? 'selected' : ''}" data-plan="${pid}" data-field="${f.name}" data-value="${o.id}">${o.label}</div>`).join('');
+    return `<div class="mt-3 pt-3 border-t border-gray-100"><p class="text-xs font-medium text-gray-500 mb-2">${f.title}</p><div class="flex flex-wrap gap-2">${opts}</div></div>`;
+}
+
+function createPlanCard(plan, pcode, idx) {
+    const eligible = plan.is_eligible !== false;
+    const best = isBestPrice(plan) && eligible;
+    const pnet = getPrice(plan, 'prime_net'), taxes = getPrice(plan, 'taxes'), ptot = getPrice(plan, 'prime_total');
+    const cnpac = plan.annual?.cnpac || 0, acc = plan.annual?.accessoires || 0;
+    
+    const gars = (plan.guarantees || []).filter(g => g.is_included).slice(0, 8);
+    const more = (plan.guarantees || []).filter(g => g.is_included).length - gars.length;
+    const gHtml = gars.map(g => createGuaranteeHtml(g)).join('');
+    const moreHtml = more > 0 ? `<p class="text-xs text-gray-400 mt-1">+ ${more} autres</p>` : '';
+    
+    const sFields = plan.selectable_fields || [];
+    const sHtml = sFields.map((f, i) => createSelectHtml(f, `${pcode}_${idx}`)).join('');
+    
+    const proBadge = plan.is_promoted && eligible ? '<span class="promoted-badge">Recommandé</span>' : '';
+    const bestBadge = best ? '<span class="best-price-badge">⭐ Meilleur</span>' : '';
+    
+    const cons = plan.extra_info?.constraints || [];
+    const conHtml = !eligible && cons.length > 0 ? `<div class="constraint-message"><p class="font-medium">Non disponible</p><p class="text-xs mt-1">${cons[0]?.message || 'Non disponible pour ce véhicule'}</p></div>` : '';
+    
+    return `
+    <div class="bg-white rounded-xl shadow-md card-hover relative ${!eligible ? 'not-eligible' : ''}">
+        <div class="absolute top-0 left-0 right-0 h-1" style="background:${plan.color}"></div>
+        ${proBadge}${bestBadge}
+        <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-base font-bold text-gray-800">${plan.plan_name}</h4>
+                <div class="w-3 h-3 rounded-full" style="background:${plan.color}"></div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                <div class="flex items-baseline gap-1">
+                    <span class="text-2xl font-extrabold" style="color:${plan.color}">${formatPrice(ptot)}</span>
+                    <span class="text-gray-500 text-sm">DH</span>
+                </div>
+                <p class="text-xs text-gray-500">${currentDuration === 'annual' ? 'Annuel TTC' : '6 mois TTC'}</p>
+            </div>
+            <div class="text-xs text-gray-500 space-y-1 mb-3 pb-3 border-b">
+                <div class="flex justify-between"><span>Prime HT</span><span>${formatPrice(pnet)} DH</span></div>
+                <div class="flex justify-between"><span>Taxes</span><span>${formatPrice(taxes)} DH</span></div>
+                ${cnpac > 0 ? `<div class="flex justify-between"><span>CNPAC</span><span>${formatPrice(cnpac)} DH</span></div>` : ''}
+                ${acc > 0 ? `<div class="flex justify-between"><span>Accessoires</span><span>${formatPrice(acc)} DH</span></div>` : ''}
+            </div>
+            <h5 class="text-xs font-semibold text-gray-500 uppercase mb-2">Garanties</h5>
+            ${gHtml}${moreHtml}${sHtml}${conHtml}
+        </div>
+    </div>`;
+}
+
+function createProviderSection(p) {
+    const styles = {
+        'axa': { g: 'from-blue-700 to-indigo-800', i: 'AXA' },
+        'mcma': { g: 'from-emerald-500 to-teal-600', i: 'MCMA' },
+        'rma': { g: 'from-blue-600 to-blue-800', i: 'RMA' }
+    };
+    const s = styles[p.code] || { g: 'from-gray-600 to-gray-800', i: p.code?.toUpperCase() };
+    
+    const errHtml = p.error ? `<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><p class="text-red-600 text-sm">⚠️ ${p.error}</p></div>` : '';
+    
+    const sorted = [...p.plans].sort((a, b) => (getPrice(a) || Infinity) - (getPrice(b) || Infinity));
+    const plansHtml = sorted.length > 0 
+        ? sorted.map((pl, i) => createPlanCard(pl, p.code, i)).join('') 
+        : '<div class="col-span-full bg-gray-50 rounded-xl p-6 text-center text-gray-500">Aucun plan</div>';
+    
+    return `
+    <section class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r ${s.g} p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 px-3 py-1.5 rounded-lg"><span class="text-white font-bold text-sm">${s.i}</span></div>
+                    <div><h3 class="text-lg font-bold text-white">${p.name}</h3><p class="text-white/80 text-xs">${p.plan_count} offre${p.plan_count > 1 ? 's' : ''} • ${p.fetch_time}s</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="p-4">${errHtml}<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">${plansHtml}</div></div>
+    </section>`;
+}
+
+function calcCheapest(providers) {
+    let mA = Infinity, mS = Infinity;
+    providers.forEach(p => p.plans.forEach(pl => {
+        if (pl.is_eligible !== false) {
+            const a = pl.annual?.prime_total || Infinity, s = pl.semi_annual?.prime_total || Infinity;
+            if (a < mA) mA = a;
+            if (s < mS) mS = s;
+        }
+    }));
+    cheapestPrices = { annual: mA < Infinity ? mA : null, semi_annual: mS < Infinity ? mS : null };
+}
+
+function displayResults(data) {
+    resultsData = data;
+    calcCheapest(data.providers);
+    
+    document.getElementById('totalPlans').textContent = data.summary.total_plans;
+    document.getElementById('bestPriceAnnual').textContent = cheapestPrices.annual ? formatPrice(cheapestPrices.annual) + ' DH' : '-- DH';
+    document.getElementById('bestPriceSemi').textContent = cheapestPrices.semi_annual ? formatPrice(cheapestPrices.semi_annual) + ' DH' : '-- DH';
+    document.getElementById('fetchTime').textContent = data.summary.total_fetch_time + 's';
+    
+    const sorted = [...data.providers].sort((a, b) => {
+        const gm = p => { const ps = p.plans.filter(x => x.is_eligible !== false).map(x => currentDuration === 'annual' ? x.annual?.prime_total : x.semi_annual?.prime_total).filter(x => x != null); return ps.length ? Math.min(...ps) : Infinity; };
+        return gm(a) - gm(b);
+    });
+    
+    document.getElementById('providersContainer').innerHTML = sorted.map(p => createProviderSection(p)).join('');
+    document.getElementById('resultsSection').classList.remove('hidden');
+    setTimeout(() => document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' }), 100);
+}
+
+document.getElementById('insuranceForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideError();
+    const vn = parseFloat(document.getElementById('valeurNeuf').value);
+    const vv = parseFloat(document.getElementById('valeurVenale').value);
+    if (vv > vn) { showError('Valeur vénale > valeur à neuf'); return; }
+    
+    setLoading(true);
+    document.getElementById('resultsSection').classList.add('hidden');
+    
+    try {
+        const r = await fetch('/api/compare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valeur_neuf: vn, valeur_venale: vv }) });
+        const d = await r.json();
+        if (!r.ok || (!d.success && d.error)) throw new Error(d.error || 'Erreur');
+        displayResults(d);
+    } catch (err) { showError(err.message || 'Erreur de connexion'); }
+    finally { setLoading(false); }
+});
+
+document.addEventListener('click', e => {
+    if (e.target.classList.contains('select-option')) {
+        e.target.parentElement.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
+        e.target.classList.add('selected');
+    }
+});
+</script>
+</body>
+</html>
