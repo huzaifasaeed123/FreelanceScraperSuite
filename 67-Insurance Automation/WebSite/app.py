@@ -11,7 +11,20 @@ from comparison_service import ComparisonService
 from database import init_database, DatabaseManager
 
 app = Flask(__name__, static_folder='static')
-CORS(app)
+
+# ✅ ENABLE CORS - Allow any website to hit this API
+# This allows external websites to call /api/compare endpoint
+CORS(app,
+     resources={
+         r"/api/*": {
+             "origins": "*",  # Allow all origins
+             "methods": ["GET", "POST", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "expose_headers": ["Content-Type"],
+             "max_age": 3600
+         }
+     }
+)
 
 # Initialize database on startup
 init_database()
@@ -212,5 +225,17 @@ def history():
 
 
 if __name__ == '__main__':
+    # Get PORT from environment (Railway sets this automatically)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+
+    # Get DEBUG mode from environment (set to False in production)
+    debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
+
+    # Run Flask app
+    # host='0.0.0.0' allows external connections (Railway requirement)
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=debug_mode,
+        use_reloader=False  # Disable reloader for Railway compatibility
+    )
