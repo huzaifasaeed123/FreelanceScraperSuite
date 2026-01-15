@@ -98,33 +98,85 @@ def init_database():
             guarantee_name TEXT NOT NULL,
             guarantee_code TEXT,
             description TEXT,
-            
+
             -- Coverage details
             capital_guarantee REAL,
             franchise TEXT,
             prime_annual REAL DEFAULT 0,
-            
+
             -- Status flags
             is_included BOOLEAN DEFAULT 1,
             is_obligatory BOOLEAN DEFAULT 0,
             is_optional BOOLEAN DEFAULT 0,
-            
+
             -- For selectable options (like Bris de glace amounts)
             has_options BOOLEAN DEFAULT 0,
             options_json TEXT,
             selected_option TEXT,
-            
+
             display_order INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (plan_id) REFERENCES insurance_plans(id)
         )
     ''')
-    
+
+    # Table 5: Selectable Fields - stores selectable field definitions for plans
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS selectable_fields (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            field_title TEXT,
+            field_order INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (plan_id) REFERENCES insurance_plans(id)
+        )
+    ''')
+
+    # Table 6: Selectable Options - stores options for each selectable field
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS selectable_options (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            field_id INTEGER NOT NULL,
+            option_id TEXT NOT NULL,
+            option_label TEXT NOT NULL,
+            is_default BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (field_id) REFERENCES selectable_fields(id)
+        )
+    ''')
+
+    # Table 7: Option Combinations Pricing - stores pricing for different option combinations
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS option_combinations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER NOT NULL,
+            combination_key TEXT NOT NULL,
+            combination_params TEXT,
+
+            -- Annual pricing
+            prime_net_annual REAL,
+            taxes_annual REAL,
+            prime_total_annual REAL,
+
+            -- Semi-annual pricing
+            prime_net_semi_annual REAL,
+            taxes_semi_annual REAL,
+            prime_total_semi_annual REAL,
+
+            is_default BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (plan_id) REFERENCES insurance_plans(id)
+        )
+    ''')
+
     # Create indexes for better query performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_requests_timestamp ON user_requests(request_timestamp)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_responses_request ON provider_responses(request_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_plans_response ON insurance_plans(response_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_guarantees_plan ON plan_guarantees(plan_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_fields_plan ON selectable_fields(plan_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_combinations_plan ON option_combinations(plan_id)')
     
     conn.commit()
     conn.close()
@@ -264,17 +316,95 @@ class DatabaseManager:
         return guarantee_id
     
     @staticmethod
+    def save_selectable_field(plan_id: int, field_name: str, field_title: str, field_order: int = 0) -> int:
+        """Save selectable field and return its ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO selectable_fields (plan_id, field_name, field_title, field_order)
+            VALUES (?, ?, ?, ?)
+        ''', (plan_id, field_name, field_title, field_order))
+
+        field_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return field_id
+
+    @staticmethod
+    def save_selectable_option(field_id: int, option_id: str, option_label: str, is_default: bool = False) -> int:
+        """Save selectable option and return its ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO selectable_options (field_id, option_id, option_label, is_default)
+            VALUES (?, ?, ?, ?)
+        ''', (field_id, option_id, option_label, is_default))
+
+        option_id_pk = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return option_id_pk
+
+    @staticmethod
+    def save_option_combination(plan_id: int, combination_key: str, combination_params: str,
+                               pricing_data: dict, is_default: bool = False) -> int:
+        """Save option combination pricing and return its ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO option_combinations
+            (plan_id, combination_key, combination_params,
+             prime_net_annual, taxes_annual, prime_total_annual,
+             prime_net_semi_annual, taxes_semi_annual, prime_total_semi_annual,
+             is_default)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            plan_id, combination_key, combination_params,
+            pricing_data.get('prime_net_annual'),
+            pricing_data.get('taxes_annual'),
+            pricing_data.get('prime_total_annual'),
+            pricing_data.get('prime_net_semi_annual'),
+            pricing_data.get('taxes_semi_annual'),
+            pricing_data.get('prime_total_semi_annual'),
+            is_default
+        ))
+
+        combination_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return combination_id
+
+    @staticmethod
+    def get_option_combinations(plan_id: int) -> List[Dict]:
+        """Get all option combinations for a plan"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT * FROM option_combinations
+            WHERE plan_id = ?
+            ORDER BY is_default DESC
+        ''', (plan_id,))
+
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    @staticmethod
     def get_request_history(limit: int = 50) -> List[Dict]:
         """Get recent request history"""
         conn = get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            SELECT * FROM user_requests 
-            ORDER BY request_timestamp DESC 
+            SELECT * FROM user_requests
+            ORDER BY request_timestamp DESC
             LIMIT ?
         ''', (limit,))
-        
+
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]

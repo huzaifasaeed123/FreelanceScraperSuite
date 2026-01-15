@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import time
 
 from scrapers import get_all_scrapers, InsurancePlan, DurationType
+from scrapers.field_mapper import FieldMapper
 from database import DatabaseManager, init_database
 
 
@@ -32,17 +33,23 @@ class ComparisonService:
         # Initialize database
         init_database()
     
-    def _fetch_from_provider(self, scraper, params: Dict[str, Any], 
-                              request_id: int = None) -> ProviderResult:
+    def _fetch_from_provider(self, scraper, params: Dict[str, Any],
+                              request_id: int = None, is_complete_form: bool = False) -> ProviderResult:
         """Fetch quotes from a single provider"""
         start_time = time.time()
-        
+
         try:
-            plans = scraper.fetch_quotes(params)
+            # Map form fields to provider-specific format if complete form
+            if is_complete_form:
+                mapped_params = FieldMapper.map_for_scraper(params, scraper.PROVIDER_CODE)
+            else:
+                mapped_params = params
+
+            plans = scraper.fetch_quotes(mapped_params)
             fetch_time = scraper.fetch_time
-            
+
             provider_info = scraper.get_provider_info()
-            
+
             # Save to database if request_id provided
             if request_id:
                 self._save_provider_data(
@@ -51,7 +58,7 @@ class ComparisonService:
                     plans=plans,
                     fetch_time=fetch_time
                 )
-            
+
             return ProviderResult(
                 provider_name=provider_info["name"],
                 provider_code=provider_info["code"],
@@ -61,7 +68,7 @@ class ComparisonService:
                 error=scraper.last_error if not plans else None,
                 fetch_time=round(fetch_time, 2)
             )
-            
+
         except Exception as e:
             return ProviderResult(
                 provider_name=scraper.PROVIDER_NAME,
@@ -73,7 +80,7 @@ class ComparisonService:
                 fetch_time=time.time() - start_time
             )
     
-    def _save_provider_data(self, request_id: int, scraper, 
+    def _save_provider_data(self, request_id: int, scraper,
                             plans: List[InsurancePlan], fetch_time: float):
         """Save provider response and plans to database"""
         try:
@@ -87,7 +94,7 @@ class ComparisonService:
                 status='success' if plans else 'error',
                 error_message=scraper.last_error
             )
-            
+
             # Save each plan
             for plan in plans:
                 plan_id = DatabaseManager.save_insurance_plan(
@@ -95,7 +102,7 @@ class ComparisonService:
                     request_id=request_id,
                     plan_data=plan.to_db_dict()
                 )
-                
+
                 # Save guarantees for each plan
                 for guarantee in plan.guarantees:
                     DatabaseManager.save_plan_guarantee(
@@ -116,43 +123,45 @@ class ComparisonService:
                             "display_order": guarantee.order
                         }
                     )
-                    
+
         except Exception as e:
             print(f"Error saving to database: {e}")
     
-    def get_all_quotes(self, params: Dict[str, Any], 
-                       ip_address: str = None, 
-                       user_agent: str = None) -> Dict[str, Any]:
+    def get_all_quotes(self, params: Dict[str, Any],
+                       ip_address: str = None,
+                       user_agent: str = None,
+                       is_complete_form: bool = False) -> Dict[str, Any]:
         """
         Fetch quotes from all providers in parallel
-        
+
         Args:
-            params: Dictionary with valeur_neuf and valeur_venale
+            params: Dictionary with form data (new format) or valeur_neuf/valeur_venale (old format)
             ip_address: Client IP address (optional)
             user_agent: Client user agent (optional)
-            
+            is_complete_form: Whether params is complete form data (True) or legacy format (False)
+
         Returns:
             Dictionary with all provider results and summary
         """
         total_start = time.time()
-        
+
         # Create database request entry
         request_id = DatabaseManager.create_request(
             valeur_neuf=params.get("valeur_neuf", 0),
-            valeur_venale=params.get("valeur_venale", 0),
+            valeur_venale=params.get("valeur_actuelle", params.get("valeur_venale", 0)),
             ip_address=ip_address,
             user_agent=user_agent
         )
-        
+
         results = []
-        
+
         # Fetch from all providers in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.scrapers)) as executor:
             future_to_scraper = {
-                executor.submit(self._fetch_from_provider, scraper, params, request_id): scraper
+                executor.submit(self._fetch_from_provider, scraper, params, request_id, is_complete_form): scraper
                 for scraper in self.scrapers
             }
-            
+
             for future in concurrent.futures.as_completed(future_to_scraper):
                 result = future.result()
                 results.append(result)

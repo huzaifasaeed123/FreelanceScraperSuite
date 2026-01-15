@@ -127,7 +127,7 @@ class InsurancePlan:
     
     # Extra metadata
     extra_info: Dict[str, Any] = field(default_factory=dict)
-    
+
     def get_price(self, duration: DurationType = DurationType.ANNUAL) -> float:
         """Get total price based on duration"""
         if duration == DurationType.SEMI_ANNUAL:
@@ -140,7 +140,7 @@ class InsurancePlan:
             "provider_code": self.provider_code,
             "plan_name": self.plan_name,
             "plan_code": self.plan_code,
-            
+
             # Annual pricing
             "annual": {
                 "prime_net": self.prime_net_annual,
@@ -151,26 +151,26 @@ class InsurancePlan:
                 "timbre": self.timbre,
                 "tax_parafiscal": self.tax_parafiscal
             },
-            
+
             # Semi-annual pricing
             "semi_annual": {
                 "prime_net": self.prime_net_semi_annual,
                 "taxes": self.taxes_semi_annual,
                 "prime_total": self.prime_total_semi_annual
             },
-            
+
             # Guarantees
             "guarantees": [g.to_dict() for g in self.guarantees],
-            
+
             # Selectable fields
             "selectable_fields": [sf.to_dict() for sf in self.selectable_fields],
-            
+
             # Display
             "color": self.color,
             "is_promoted": self.is_promoted,
             "is_eligible": self.is_eligible,
             "order": self.order,
-            
+
             # Extra
             "extra_info": self.extra_info
         }

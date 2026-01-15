@@ -50,38 +50,246 @@
     
     <!-- Form -->
     <div class="max-w-4xl mx-auto px-4 -mt-14 relative z-20 mb-8">
-        <div class="glass rounded-2xl shadow-2xl p-6">
-            <form id="insuranceForm" class="space-y-4">
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="block text-sm font-semibold text-gray-700">Valeur à Neuf (MAD)</label>
-                        <div class="relative">
-                            <input type="number" id="valeurNeuf" placeholder="ex: 250000" min="10000" max="5000000" step="1000" required
-                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-medium focus:border-indigo-500 focus:outline-none transition-all placeholder:text-gray-300">
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MAD</span>
+        <div class="glass rounded-2xl shadow-2xl p-8">
+            <!-- Form Indicators -->
+            <div class="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-slate-900">Demande de Devis Assurance Auto</h2>
+                <div class="flex gap-3 text-sm">
+                    <span id="step-indicator-1" class="px-4 py-2 rounded-full bg-indigo-600 text-white font-semibold indicator-active">1. Véhicule</span>
+                    <span id="step-indicator-2" class="px-4 py-2 rounded-full bg-gray-200 text-gray-600 font-semibold indicator-inactive">2. Infos Perso</span>
+                </div>
+            </div>
+
+            <form id="insuranceForm" class="space-y-6">
+                <!-- Step 1: Vehicle Information -->
+                <div id="form-step-1" class="form-step active space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Informations du Véhicule</h3>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Marque -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Marque <span class="text-red-500">*</span></label>
+                            <select id="marque" name="marque" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                                <option value="">Sélectionnez</option>
+                                <option value="renault">Renault</option>
+                                <option value="peugeot">Peugeot</option>
+                                <option value="citroen">Citroën</option>
+                                <option value="volkswagen">Volkswagen</option>
+                                <option value="ford">Ford</option>
+                                <option value="bmw">BMW</option>
+                                <option value="mercedes">Mercedes</option>
+                                <option value="audi">Audi</option>
+                                <option value="hyundai">Hyundai</option>
+                                <option value="kia">Kia</option>
+                                <option value="toyota">Toyota</option>
+                                <option value="dacia">Dacia</option>
+                                <option value="fiat">Fiat</option>
+                                <option value="nissan">Nissan</option>
+                                <option value="mazda">Mazda</option>
+                            </select>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Modèle -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Modèle <span class="text-red-500">*</span></label>
+                            <input type="text" id="modele" name="modele" placeholder="Ex: Clio" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Carburant -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Carburant <span class="text-red-500">*</span></label>
+                            <select id="carburant" name="carburant" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                                <option value="">Sélectionnez</option>
+                                <option value="essence">Essence</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="hybrid-e">Hybrid Essence</option>
+                                <option value="hybrid-d">Hybrid Diesel</option>
+                                <option value="electrique">Électrique</option>
+                            </select>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Nombre de places -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre de places <span class="text-red-500">*</span></label>
+                            <input type="number" id="nombre-places" name="nombre_places" placeholder="Ex: 5" min="2" max="9" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Puissance fiscale -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Puissance Fiscale <span class="text-red-500">*</span></label>
+                            <input type="number" id="puissance-fiscale" name="puissance_fiscale" placeholder="Ex: 6, 8, 11..." min="2" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Date de mise en circulation -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Date de mise en circulation <span class="text-red-500">*</span></label>
+                            <input type="date" id="date-mec" name="date_mec" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Type de plaque -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Type de plaque <span class="text-red-500">*</span></label>
+                            <select id="type-plaque" name="type_plaque" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                                <option value="">Sélectionnez</option>
+                                <option value="standard">Plaque standard</option>
+                                <option value="ww">WW</option>
+                            </select>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Immatriculation -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Immatriculation <span class="text-red-500">*</span></label>
+                            <input type="text" id="immatriculation" name="immatriculation" placeholder="Ex: WW378497" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Valeur à neuf -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Valeur à neuf (MAD) <span class="text-red-500">*</span></label>
+                            <input type="number" id="valeur-neuf" name="valeur_neuf" placeholder="Ex: 200000" min="0" step="1000" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Valeur actuelle -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Valeur actuelle (MAD) <span class="text-red-500">*</span></label>
+                            <input type="number" id="valeur-actuelle" name="valeur_actuelle" placeholder="Calculé automatiquement" min="0" step="1000" required readonly
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all bg-gray-50">
+                            <small class="text-slate-500 text-xs block mt-2">Estimation automatique, vous pouvez la modifier</small>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
                         </div>
                     </div>
-                    <div class="space-y-1">
-                        <label class="block text-sm font-semibold text-gray-700">Valeur Vénale (MAD)</label>
-                        <div class="relative">
-                            <input type="number" id="valeurVenale" placeholder="ex: 180000" min="5000" max="5000000" step="1000" required
-                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-lg font-medium focus:border-indigo-500 focus:outline-none transition-all placeholder:text-gray-300">
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">MAD</span>
+
+                    <!-- Navigation buttons -->
+                    <div class="flex justify-end pt-6 border-t border-gray-200">
+                        <button type="button" id="next-step-btn" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl flex items-center gap-2">
+                            Suivant <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Personal Information -->
+                <div id="form-step-2" class="form-step hidden space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Informations Personnelles</h3>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Nom -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nom <span class="text-red-500">*</span></label>
+                            <input type="text" id="nom" name="nom" placeholder="Ex: Alami" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Prénom -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Prénom <span class="text-red-500">*</span></label>
+                            <input type="text" id="prenom" name="prenom" placeholder="Ex: Ahmed" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Téléphone -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Téléphone <span class="text-red-500">*</span></label>
+                            <input type="tel" id="telephone" name="telephone" placeholder="06 61 65 20 22" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Email <span class="text-red-500">*</span></label>
+                            <input type="email" id="email" name="email" placeholder="nom@exemple.com" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Date de naissance -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Date de naissance <span class="text-red-500">*</span></label>
+                            <input type="date" id="date-naissance" name="date_naissance" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Date de permis -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Date de délivrance du permis <span class="text-red-500">*</span></label>
+                            <input type="date" id="date-permis" name="date_permis" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Ville -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Ville <span class="text-red-500">*</span></label>
+                            <select id="ville" name="ville" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                                <option value="">Sélectionnez votre ville</option>
+                                <option value="Casablanca">Casablanca</option>
+                                <option value="Rabat">Rabat</option>
+                                <option value="Fès">Fès</option>
+                                <option value="Marrakech">Marrakech</option>
+                                <option value="Agadir">Agadir</option>
+                                <option value="Tanger">Tanger</option>
+                                <option value="Oujda">Oujda</option>
+                                <option value="Meknès">Meknès</option>
+                                <option value="Kénitra">Kénitra</option>
+                                <option value="Salé">Salé</option>
+                                <option value="Tétouan">Tétouan</option>
+                                <option value="Settat">Settat</option>
+                                <option value="El Jadida">El Jadida</option>
+                                <option value="Essaouira">Essaouira</option>
+                                <option value="Khemisset">Khemisset</option>
+                            </select>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Assureur actuel (optional) -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Assureur actuel (optionnel)</label>
+                            <input type="text" id="assureur-actuel" name="assureur_actuel" placeholder="Ex: AXA, RMA, Sanlam..."
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+
+                        <!-- Consent -->
+                        <div class="md:col-span-2">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="consent" name="consent" required class="mt-1 w-4 h-4 accent-indigo-600">
+                                <span class="text-sm text-gray-700">J'accepte d'être contacté(e) par les courtiers agrées, partenaires de MesAssurances.ma, concernant ma demande de devis/estimation assurance auto. <span class="text-red-500">*</span></span>
+                            </label>
+                            <p class="error-message text-red-500 text-sm mt-1"></p>
+                        </div>
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="flex justify-between pt-6 border-t border-gray-200">
+                        <button type="button" id="prev-step-btn" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-xl flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Retour
+                        </button>
+                        <div class="flex gap-3">
+                            <button type="submit" id="submitBtn" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl flex items-center gap-2">
+                                <svg id="searchIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span id="btnText">Comparer les Prix</span>
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <span class="text-sm text-gray-500 mr-2 self-center">Exemples:</span>
-                    <button type="button" onclick="setPreset(150000,120000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Citadine</button>
-                    <button type="button" onclick="setPreset(300000,220000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Berline</button>
-                    <button type="button" onclick="setPreset(500000,380000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">SUV</button>
-                    <button type="button" onclick="setPreset(800000,600000)" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-600">Premium</button>
-                </div>
-                <button type="submit" id="submitBtn" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-lg rounded-xl shadow-lg transform hover:scale-[1.01] transition-all flex items-center justify-center gap-3">
-                    <svg id="searchIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    <span id="btnText">Comparer les Prix</span>
-                </button>
             </form>
         </div>
     </div>
@@ -135,9 +343,112 @@
 let currentDuration = 'annual';
 let resultsData = null;
 let cheapestPrices = { annual: null, semi_annual: null };
+let currentStep = 1;
 
-function setPreset(n, v) { document.getElementById('valeurNeuf').value = n; document.getElementById('valeurVenale').value = v; }
-function formatPrice(p) { if (p == null || isNaN(p)) return '--'; return new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(p); }
+// ============ FORM NAVIGATION ============
+function goToStep(step) {
+    if (step === 2 && !validateStep1()) return;
+
+    document.querySelectorAll('.form-step').forEach(s => s.classList.add('hidden'));
+    document.getElementById(`form-step-${step}`).classList.remove('hidden');
+
+    document.getElementById('step-indicator-1').classList.toggle('bg-indigo-600', step === 1);
+    document.getElementById('step-indicator-1').classList.toggle('bg-gray-200', step !== 1);
+    document.getElementById('step-indicator-1').classList.toggle('text-white', step === 1);
+    document.getElementById('step-indicator-1').classList.toggle('text-gray-600', step !== 1);
+
+    document.getElementById('step-indicator-2').classList.toggle('bg-indigo-600', step === 2);
+    document.getElementById('step-indicator-2').classList.toggle('bg-gray-200', step !== 2);
+    document.getElementById('step-indicator-2').classList.toggle('text-white', step === 2);
+    document.getElementById('step-indicator-2').classList.toggle('text-gray-600', step !== 2);
+
+    currentStep = step;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validateStep1() {
+    const fields = ['marque', 'modele', 'carburant', 'nombre-places', 'puissance-fiscale', 'date-mec', 'type-plaque', 'immatriculation', 'valeur-neuf', 'valeur-actuelle'];
+    let valid = true;
+
+    fields.forEach(id => {
+        const field = document.getElementById(id);
+        if (!field.value) {
+            field.closest('div').querySelector('.error-message').textContent = 'Ce champ est obligatoire';
+            valid = false;
+        } else {
+            field.closest('div').querySelector('.error-message').textContent = '';
+        }
+    });
+
+    return valid;
+}
+
+// ============ AUTO-CALCULATE CURRENT VALUE ============
+document.getElementById('valeur-neuf').addEventListener('change', () => {
+    const valeurNeuf = parseFloat(document.getElementById('valeur-neuf').value) || 0;
+    const valeurActuelle = Math.round(valeurNeuf * 0.75);
+    document.getElementById('valeur-actuelle').value = valeurActuelle;
+});
+
+// ============ STEP NAVIGATION BUTTONS ============
+document.getElementById('next-step-btn').addEventListener('click', () => goToStep(2));
+document.getElementById('prev-step-btn').addEventListener('click', () => goToStep(1));
+
+// ============ FORM SUBMISSION ============
+document.getElementById('insuranceForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideError();
+
+    if (!validateStep1()) return;
+
+    // Collect all form data
+    const formData = {
+        marque: document.getElementById('marque').value,
+        modele: document.getElementById('modele').value,
+        carburant: document.getElementById('carburant').value,
+        nombre_places: parseInt(document.getElementById('nombre-places').value),
+        puissance_fiscale: parseInt(document.getElementById('puissance-fiscale').value),
+        date_mec: document.getElementById('date-mec').value,
+        type_plaque: document.getElementById('type-plaque').value,
+        immatriculation: document.getElementById('immatriculation').value,
+        valeur_neuf: parseFloat(document.getElementById('valeur-neuf').value),
+        valeur_actuelle: parseFloat(document.getElementById('valeur-actuelle').value),
+        nom: document.getElementById('nom').value,
+        prenom: document.getElementById('prenom').value,
+        telephone: document.getElementById('telephone').value,
+        email: document.getElementById('email').value,
+        date_naissance: document.getElementById('date-naissance').value,
+        date_permis: document.getElementById('date-permis').value,
+        ville: document.getElementById('ville').value,
+        assureur_actuel: document.getElementById('assureur-actuel').value || '',
+        consent: document.getElementById('consent').checked
+    };
+
+    setLoading(true);
+    document.getElementById('resultsSection').classList.add('hidden');
+
+    try {
+        const r = await fetch('/api/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const d = await r.json();
+        if (!r.ok || (!d.success && d.error)) throw new Error(d.error || 'Erreur');
+        displayResults(d);
+    } catch (err) {
+        showError(err.message || 'Erreur de connexion');
+    } finally {
+        setLoading(false);
+    }
+});
+
+// ============ RESULTS DISPLAY ============
+function formatPrice(p) {
+    if (p == null || isNaN(p)) return '--';
+    return new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(p);
+}
 
 function setGlobalDuration(d) {
     currentDuration = d;
@@ -155,8 +466,14 @@ function setLoading(l) {
     btn.disabled = l;
 }
 
-function showError(m) { document.getElementById('errorText').textContent = m; document.getElementById('errorAlert').classList.remove('hidden'); }
-function hideError() { document.getElementById('errorAlert').classList.add('hidden'); }
+function showError(m) {
+    document.getElementById('errorText').textContent = m;
+    document.getElementById('errorAlert').classList.remove('hidden');
+}
+
+function hideError() {
+    document.getElementById('errorAlert').classList.add('hidden');
+}
 
 function getPrice(plan, type = 'prime_total') {
     const d = currentDuration === 'annual' ? plan.annual : plan.semi_annual;
@@ -176,8 +493,10 @@ function createGuaranteeHtml(g) {
 }
 
 function createSelectHtml(f, pid) {
-    const opts = f.options.map(o => `<div class="select-option ${o.is_default ? 'selected' : ''}" data-plan="${pid}" data-field="${f.name}" data-value="${o.id}">${o.label}</div>`).join('');
-    return `<div class="mt-3 pt-3 border-t border-gray-100"><p class="text-xs font-medium text-gray-500 mb-2">${f.title}</p><div class="flex flex-wrap gap-2">${opts}</div></div>`;
+    const defaultOption = f.options.find(o => o.is_default);
+    const selectedValue = defaultOption?.id || f.options[0]?.id;
+    const opts = f.options.map(o => `<option value="${o.id}" ${o.id === selectedValue ? 'selected' : ''}>${o.label}</option>`).join('');
+    return `<div class="mt-3 pt-3 border-t border-gray-100"><p class="text-xs font-medium text-gray-500 mb-2">${f.title}</p><select class="guarantee-select" data-plan="${pid}" data-field-name="${f.name}">${opts}</select></div>`;
 }
 
 function createPlanCard(plan, pcode, idx) {
@@ -185,23 +504,25 @@ function createPlanCard(plan, pcode, idx) {
     const best = isBestPrice(plan) && eligible;
     const pnet = getPrice(plan, 'prime_net'), taxes = getPrice(plan, 'taxes'), ptot = getPrice(plan, 'prime_total');
     const cnpac = plan.annual?.cnpac || 0, acc = plan.annual?.accessoires || 0;
-    
+
     const gars = (plan.guarantees || []).filter(g => g.is_included).slice(0, 8);
     const more = (plan.guarantees || []).filter(g => g.is_included).length - gars.length;
     const gHtml = gars.map(g => createGuaranteeHtml(g)).join('');
     const moreHtml = more > 0 ? `<p class="text-xs text-gray-400 mt-1">+ ${more} autres</p>` : '';
-    
+
     const sFields = plan.selectable_fields || [];
     const sHtml = sFields.map((f, i) => createSelectHtml(f, `${pcode}_${idx}`)).join('');
-    
+
     const proBadge = plan.is_promoted && eligible ? '<span class="promoted-badge">Recommandé</span>' : '';
     const bestBadge = best ? '<span class="best-price-badge">⭐ Meilleur</span>' : '';
-    
+
     const cons = plan.extra_info?.constraints || [];
     const conHtml = !eligible && cons.length > 0 ? `<div class="constraint-message"><p class="font-medium">Non disponible</p><p class="text-xs mt-1">${cons[0]?.message || 'Non disponible pour ce véhicule'}</p></div>` : '';
-    
+
+    const planKey = `${pcode}_${idx}`;
+    plan._key = planKey;  // Store key in plan object for reference
     return `
-    <div class="bg-white rounded-xl shadow-md card-hover relative ${!eligible ? 'not-eligible' : ''}">
+    <div class="bg-white rounded-xl shadow-md card-hover relative ${!eligible ? 'not-eligible' : ''}" data-plan-key="${planKey}">
         <div class="absolute top-0 left-0 right-0 h-1" style="background:${plan.color}"></div>
         ${proBadge}${bestBadge}
         <div class="p-5">
@@ -211,14 +532,14 @@ function createPlanCard(plan, pcode, idx) {
             </div>
             <div class="bg-gray-50 rounded-lg p-3 mb-3">
                 <div class="flex items-baseline gap-1">
-                    <span class="text-2xl font-extrabold" style="color:${plan.color}">${formatPrice(ptot)}</span>
+                    <span class="text-2xl font-extrabold" style="color:${plan.color}" data-price-total>${formatPrice(ptot)}</span>
                     <span class="text-gray-500 text-sm">DH</span>
                 </div>
                 <p class="text-xs text-gray-500">${currentDuration === 'annual' ? 'Annuel TTC' : '6 mois TTC'}</p>
             </div>
             <div class="text-xs text-gray-500 space-y-1 mb-3 pb-3 border-b">
-                <div class="flex justify-between"><span>Prime HT</span><span>${formatPrice(pnet)} DH</span></div>
-                <div class="flex justify-between"><span>Taxes</span><span>${formatPrice(taxes)} DH</span></div>
+                <div class="flex justify-between"><span>Prime HT</span><span data-price-net>${formatPrice(pnet)} DH</span></div>
+                <div class="flex justify-between"><span>Taxes</span><span data-price-taxes>${formatPrice(taxes)} DH</span></div>
                 ${cnpac > 0 ? `<div class="flex justify-between"><span>CNPAC</span><span>${formatPrice(cnpac)} DH</span></div>` : ''}
                 ${acc > 0 ? `<div class="flex justify-between"><span>Accessoires</span><span>${formatPrice(acc)} DH</span></div>` : ''}
             </div>
@@ -235,14 +556,14 @@ function createProviderSection(p) {
         'rma': { g: 'from-blue-600 to-blue-800', i: 'RMA' }
     };
     const s = styles[p.code] || { g: 'from-gray-600 to-gray-800', i: p.code?.toUpperCase() };
-    
+
     const errHtml = p.error ? `<div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4"><p class="text-red-600 text-sm">⚠️ ${p.error}</p></div>` : '';
-    
+
     const sorted = [...p.plans].sort((a, b) => (getPrice(a) || Infinity) - (getPrice(b) || Infinity));
-    const plansHtml = sorted.length > 0 
-        ? sorted.map((pl, i) => createPlanCard(pl, p.code, i)).join('') 
+    const plansHtml = sorted.length > 0
+        ? sorted.map((pl, i) => createPlanCard(pl, p.code, i)).join('')
         : '<div class="col-span-full bg-gray-50 rounded-xl p-6 text-center text-gray-500">Aucun plan</div>';
-    
+
     return `
     <section class="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div class="bg-gradient-to-r ${s.g} p-4">
@@ -272,47 +593,148 @@ function calcCheapest(providers) {
 function displayResults(data) {
     resultsData = data;
     calcCheapest(data.providers);
-    
+
     document.getElementById('totalPlans').textContent = data.summary.total_plans;
     document.getElementById('bestPriceAnnual').textContent = cheapestPrices.annual ? formatPrice(cheapestPrices.annual) + ' DH' : '-- DH';
     document.getElementById('bestPriceSemi').textContent = cheapestPrices.semi_annual ? formatPrice(cheapestPrices.semi_annual) + ' DH' : '-- DH';
     document.getElementById('fetchTime').textContent = data.summary.total_fetch_time + 's';
-    
+
     const sorted = [...data.providers].sort((a, b) => {
         const gm = p => { const ps = p.plans.filter(x => x.is_eligible !== false).map(x => currentDuration === 'annual' ? x.annual?.prime_total : x.semi_annual?.prime_total).filter(x => x != null); return ps.length ? Math.min(...ps) : Infinity; };
         return gm(a) - gm(b);
     });
-    
+
     document.getElementById('providersContainer').innerHTML = sorted.map(p => createProviderSection(p)).join('');
     document.getElementById('resultsSection').classList.remove('hidden');
     setTimeout(() => document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' }), 100);
 }
 
-document.getElementById('insuranceForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    hideError();
-    const vn = parseFloat(document.getElementById('valeurNeuf').value);
-    const vv = parseFloat(document.getElementById('valeurVenale').value);
-    if (vv > vn) { showError('Valeur vénale > valeur à neuf'); return; }
-    
-    setLoading(true);
-    document.getElementById('resultsSection').classList.add('hidden');
-    
-    try {
-        const r = await fetch('/api/compare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valeur_neuf: vn, valeur_venale: vv }) });
-        const d = await r.json();
-        if (!r.ok || (!d.success && d.error)) throw new Error(d.error || 'Erreur');
-        displayResults(d);
-    } catch (err) { showError(err.message || 'Erreur de connexion'); }
-    finally { setLoading(false); }
-});
+// Store plan data for option selection tracking
+const planOptionSelections = {};
 
-document.addEventListener('click', e => {
-    if (e.target.classList.contains('select-option')) {
-        e.target.parentElement.querySelectorAll('.select-option').forEach(o => o.classList.remove('selected'));
-        e.target.classList.add('selected');
+document.addEventListener('change', e => {
+    if (e.target.classList.contains('guarantee-select')) {
+        const fieldName = e.target.dataset.fieldName;
+        const selectedValue = e.target.value;
+        const planKey = `${e.target.dataset.plan}`;
+
+        // Initialize plan selections object
+        if (!planOptionSelections[planKey]) {
+            planOptionSelections[planKey] = {};
+        }
+
+        // Store selected option
+        planOptionSelections[planKey][fieldName] = selectedValue;
+
+        // Find the plan in results
+        const plan = findPlanByKey(planKey);
+        if (!plan) return;
+
+        // Get option combinations from plan's pre-loaded data
+        const optionCombinations = plan.extra_info?.option_combinations || {};
+
+        // Build combination key including ALL selectable fields
+        // Use selected values or default values from the plan
+        const allSelections = {};
+        const planSelects = plan.selectable_fields || [];
+
+        planSelects.forEach(field => {
+            // Use explicitly selected value, or fall back to default option
+            if (planOptionSelections[planKey][field.name]) {
+                allSelections[field.name] = planOptionSelections[planKey][field.name];
+            } else {
+                // Use default option value
+                const defaultOption = field.options.find(o => o.is_default);
+                if (defaultOption) {
+                    allSelections[field.name] = defaultOption.id;
+                } else if (field.options.length > 0) {
+                    // If no default, use first option
+                    allSelections[field.name] = field.options[0].id;
+                }
+            }
+        });
+
+        // Build combination key from all selections (sorted alphabetically)
+        const combinationKey = Object.keys(allSelections)
+            .sort()
+            .map(key => `${key}_${allSelections[key]}`)
+            .join('_');
+
+        // Look up pricing from pre-loaded combinations
+        const matchingCombination = optionCombinations[combinationKey];
+
+        if (matchingCombination) {
+            // Create pricing object from combination data
+            const pricing = {
+                annual: {
+                    prime_net: matchingCombination.prime_net_annual,
+                    taxes: matchingCombination.taxes_annual,
+                    prime_total: matchingCombination.prime_total_annual
+                },
+                semi_annual: {
+                    prime_net: matchingCombination.prime_net_semi_annual,
+                    taxes: matchingCombination.taxes_semi_annual,
+                    prime_total: matchingCombination.prime_total_semi_annual
+                }
+            };
+
+            // Update plan pricing in resultsData
+            if (plan) {
+                plan.annual = pricing.annual;
+                plan.semi_annual = pricing.semi_annual;
+
+                // Update the display
+                updatePlanPricing(planKey, pricing);
+
+                // Recalculate cheapest prices
+                if (resultsData) {
+                    calcCheapest(resultsData.providers);
+                    // Refresh summary
+                    document.getElementById('bestPriceAnnual').textContent = cheapestPrices.annual ? formatPrice(cheapestPrices.annual) + ' DH' : '-- DH';
+                    document.getElementById('bestPriceSemi').textContent = cheapestPrices.semi_annual ? formatPrice(cheapestPrices.semi_annual) + ' DH' : '-- DH';
+                }
+            }
+        } else {
+            console.warn(`Option combination not found for key: ${combinationKey}`);
+        }
     }
 });
+
+function findPlanByKey(planKey) {
+    if (!resultsData) return null;
+    for (const provider of resultsData.providers) {
+        for (const plan of provider.plans) {
+            if (plan._key === planKey) return plan;
+        }
+    }
+    return null;
+}
+
+function updatePlanPricing(planKey, pricing) {
+    const cardEl = document.querySelector(`[data-plan-key="${planKey}"]`);
+    if (!cardEl) return;
+
+    const duration = currentDuration === 'annual' ? pricing.annual : pricing.semi_annual;
+    if (!duration) return;
+
+    // Update price display
+    const priceEl = cardEl.querySelector('[data-price-total]');
+    if (priceEl) {
+        priceEl.textContent = formatPrice(duration.prime_total) + ' DH';
+    }
+
+    // Update net price
+    const netEl = cardEl.querySelector('[data-price-net]');
+    if (netEl) {
+        netEl.textContent = formatPrice(duration.prime_net) + ' DH';
+    }
+
+    // Update taxes
+    const taxEl = cardEl.querySelector('[data-price-taxes]');
+    if (taxEl) {
+        taxEl.textContent = formatPrice(duration.taxes) + ' DH';
+    }
+}
 </script>
 </body>
 </html>

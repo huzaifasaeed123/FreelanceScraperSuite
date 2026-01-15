@@ -182,70 +182,185 @@ class MCMAScraper(BaseScraper):
             self.fetch_time = time.time() - start_time
             return []
     
+    def _fetch_pack_details(self, pack_key: str, query_params: str = "") -> Dict[str, Any]:
+        """Fetch detailed pack information with selected options"""
+        url = f"{self.SUBSCRIPTION_URL}/{self.subscription_id}/packs/{pack_key}"
+        if query_params:
+            url += f"?{query_params}"
+
+        try:
+            response = self.session.get(
+                url,
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            return None
+
+    def _build_query_params(self, selects: Dict, selected_options: Dict) -> str:
+        """Build query parameters for pack API from selected options"""
+        params = []
+        for select_key, select_data in selects.items():
+            if select_key in selected_options:
+                # Map select key to parameter name
+                param_name = select_data.get("name", select_key)
+                # Convert snake_case to camelCase or match actual API parameter name
+                if param_name == "broken-glass":
+                    param_name = "brokenGlassValue"
+                elif param_name == "damage-collision":
+                    param_name = "damageAndCollision"
+                elif param_name == "franchise-tierce":
+                    param_name = "franchise"
+
+                params.append(f"{param_name}={selected_options[select_key]}")
+
+        return "&".join(params)
+
+    def _generate_option_combinations(self, selects: Dict) -> List[Dict[str, int]]:
+        """Generate all possible combinations of selectable options"""
+        if not selects:
+            return [{}]
+
+        import itertools
+
+        select_keys = list(selects.keys())
+        select_options = []
+
+        for key in select_keys:
+            options = []
+            for opt in selects[key].get("options", []):
+                options.append({
+                    "key": key,
+                    "id": opt.get("id"),
+                    "is_default": opt.get("default", False)
+                })
+            select_options.append(options)
+
+        # Generate all combinations
+        combinations = []
+        for combo in itertools.product(*select_options):
+            combo_dict = {}
+            for opt in combo:
+                combo_dict[opt["key"]] = opt["id"]
+            combinations.append(combo_dict)
+
+        return combinations
+
+    def _fetch_all_option_combinations(self, pack_key: str, selects: Dict) -> Dict[str, Any]:
+        """Fetch pricing for all option combinations for a pack"""
+        combinations_pricing = {}
+
+        if not selects:
+            return combinations_pricing
+
+        # Generate all possible combinations
+        all_combinations = self._generate_option_combinations(selects)
+
+        for combo_dict in all_combinations:
+            # Build query parameters
+            query_params = self._build_query_params(selects, combo_dict)
+            combination_key = "_".join([f"{k}_{v}" for k, v in sorted(combo_dict.items())])
+
+            # Fetch details for this combination
+            pack_data = self._fetch_pack_details(pack_key, query_params)
+
+            if pack_data:
+                # Extract pricing from response
+                annual_price = pack_data.get("annualBasePrice", 0)
+                semi_annual_price = pack_data.get("semiAnnualBasePrice", 0)
+
+                annual_taxes = round(annual_price * 0.165, 2)
+                semi_annual_taxes = round(semi_annual_price * 0.165, 2)
+
+                combinations_pricing[combination_key] = {
+                    "params": query_params,
+                    "prime_net_annual": annual_price,
+                    "taxes_annual": annual_taxes,
+                    "prime_total_annual": round(annual_price + annual_taxes, 2),
+                    "prime_net_semi_annual": semi_annual_price,
+                    "taxes_semi_annual": semi_annual_taxes,
+                    "prime_total_semi_annual": round(semi_annual_price + semi_annual_taxes, 2),
+                    "options": combo_dict
+                }
+
+        return combinations_pricing
+
     def _parse_response(self, response_data: Dict[str, Any]) -> List[InsurancePlan]:
-        """Parse MCMA API response into InsurancePlan objects"""
+        """Parse MCMA API response into InsurancePlan objects with detailed pricing"""
         plans = []
-        
+
         # Process packs in specific order
         pack_order = ["essentielle", "confort", "optimale", "tout_risque"]
-        
+
         for order, pack_key in enumerate(pack_order):
             if pack_key not in response_data:
                 continue
-                
+
             pack = response_data[pack_key]
-            
+
             if pack.get("disabled", False):
                 continue
-            
+
             # Parse guarantees from privileges
             guarantees = self._parse_guarantees(pack.get("privileges", []))
-            
+
             # Parse selectable fields
             selectable_fields = self._parse_selectable_fields(pack.get("selects", {}))
-            
-            # Get pricing
+
+            # Get base pricing (default option)
             annual_price = pack.get("annualBasePrice", 0)
             semi_annual_price = pack.get("semiAnnualBasePrice", 0)
-            
+
             # Calculate taxes (approximately 16.5% based on observed data)
             annual_taxes = round(annual_price * 0.165, 2)
             semi_annual_taxes = round(semi_annual_price * 0.165, 2)
-            
+
+            # Fetch all option combinations if this pack has selectable fields
+            option_combinations_pricing = {}
+            if pack.get("selects"):
+                option_combinations_pricing = self._fetch_all_option_combinations(
+                    pack.get("key", pack_key),
+                    pack.get("selects", {})
+                )
+
             plan = InsurancePlan(
                 provider=self.PROVIDER_NAME,
                 provider_code=self.PROVIDER_CODE,
                 plan_name=pack.get("title", pack_key.title()),
                 plan_code=pack.get("key", pack_key),
-                
+
                 # Annual pricing
                 prime_net_annual=annual_price,
                 taxes_annual=annual_taxes,
                 prime_total_annual=round(annual_price + annual_taxes, 2),
-                
+
                 # Semi-annual pricing
                 prime_net_semi_annual=semi_annual_price,
                 taxes_semi_annual=semi_annual_taxes,
                 prime_total_semi_annual=round(semi_annual_price + semi_annual_taxes, 2),
-                
+
                 # Guarantees
                 guarantees=guarantees,
-                
+
                 # Selectable fields
                 selectable_fields=selectable_fields,
-                
+
                 # Display
                 color=pack.get("color", self.PLAN_COLORS.get(pack_key, self.PROVIDER_COLOR)),
                 is_promoted=pack.get("promoted", False),
                 is_eligible=not pack.get("disabled", False),
                 order=order,
-                
+
                 # Extra info
                 extra_info={
                     "key": pack.get("key"),
-                    "has_selects": len(selectable_fields) > 0
+                    "has_selects": len(selectable_fields) > 0,
+                    "pack_data": pack,  # Store full pack data for later use
+                    "option_combinations": option_combinations_pricing  # All option pricing combinations
                 }
             )
             plans.append(plan)
-        
+
         return plans
