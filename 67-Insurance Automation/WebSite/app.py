@@ -182,6 +182,33 @@ def api_get_users():
         }), 500
 
 
+@app.route('/api/admin/delete-user/<int:user_id>', methods=['DELETE'])
+@admin_required
+def api_delete_user(user_id):
+    """Delete a user - admin only"""
+    try:
+        success = DatabaseManager.delete_user(user_id)
+
+        if not success:
+            return jsonify({
+                "success": False,
+                "error": "Impossible de supprimer cet utilisateur"
+            }), 400
+
+        return jsonify({
+            "success": True,
+            "message": "Utilisateur supprimé avec succès"
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Erreur serveur: {str(e)}"
+        }), 500
+
+
 @app.route('/api/compare', methods=['POST'])
 @login_required
 def compare():

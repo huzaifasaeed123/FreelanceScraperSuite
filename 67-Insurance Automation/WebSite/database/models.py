@@ -337,6 +337,35 @@ class DatabaseManager:
         conn.close()
         return [dict(row) for row in rows]
 
+    @staticmethod
+    def delete_user(user_id: int) -> bool:
+        """Delete a user by ID (cannot delete admin users)"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Check if user is admin
+            cursor.execute('SELECT is_admin FROM users WHERE id = ?', (user_id,))
+            user = cursor.fetchone()
+
+            if not user:
+                conn.close()
+                return False  # User not found
+
+            if user['is_admin']:
+                conn.close()
+                return False  # Cannot delete admin users
+
+            # Delete user
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            conn.commit()
+            deleted = cursor.rowcount > 0
+            conn.close()
+            return deleted
+        except Exception as e:
+            conn.close()
+            return False
+
     # ============ Form Submission Management ============
     @staticmethod
     def save_form_submission(user_id: int, form_data: dict, ip_address: str = None, user_agent: str = None) -> int:
