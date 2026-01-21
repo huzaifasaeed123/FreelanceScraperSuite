@@ -162,20 +162,14 @@ class FieldMapper:
     def map_to_sanlam(form_data: Dict[str, Any]) -> Dict[str, Any]:
         """Map form data to Sanlam API payload"""
         fuel = form_data.get('carburant', 'diesel').lower()
-        brand = form_data.get('marque', 'mercedes').lower()
 
         # Get dummy identity for phone/plate
         dummy = generate_random_identity()
 
-        # Format phone for Sanlam (+212 format) - remove leading 0 from 06XXXXXXXX
-        phone = dummy['phone']  # Format: 06XXXXXXXX
-        if phone.startswith('0'):
-            phone = '+212' + phone[1:]  # Remove the 0 and add +212
-        elif not phone.startswith('+212'):
+        # Format phone for Sanlam (+212 format)
+        phone = dummy['phone']
+        if not phone.startswith('+212'):
             phone = '+212' + phone
-
-        # Get brand code for Sanlam
-        brand_code = BRAND_CODE_MAPPING['sanlam'].get(brand, '10819')
 
         return {
             "driver": {
@@ -215,7 +209,7 @@ class FieldMapper:
             },
             "vehicle": {
                 "registrationNumber": dummy['plate'],
-                "brand": "8",
+                "brand": "12",
                 "horsePower": str(form_data.get('puissance_fiscale', 6)),
                 "model": "Autres",
                 "usageCode": "1",

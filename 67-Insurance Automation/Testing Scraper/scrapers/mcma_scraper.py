@@ -190,7 +190,7 @@ def scrape_mcma(params):
         return None
     result = get_mcma_packs(subscription_id, token)
     # Step 2: Get packs
-    # import json
+    import json
     # with open("save_file1.json", "w", encoding="utf-8") as f:
     #     json.dump(result, f, indent=4, ensure_ascii=False)
         # print(f"Response saved locally at {save_file}")
@@ -235,9 +235,6 @@ def scrape_mcma_with_options(params):
     if "tout_risque" in base_packs and pack_options.get("tout_risque_options"):
         base_packs["tout_risque"]["option_prices"] = pack_options["tout_risque_options"]
 
-    # with open("mcma_full_options.json", "w", encoding="utf-8") as f:
-    #     import json
-    #     json.dump(base_packs, f, indent=4, ensure_ascii=False)
     return base_packs
 
 

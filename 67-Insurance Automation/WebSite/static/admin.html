@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gestion des Utilisateurs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div class="gradient-bg py-6 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-white">Administration</h1>
+                    <p class="text-white/80 text-sm">Gestion des utilisateurs</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/"
+                        class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all">
+                        Formulaire
+                    </a>
+                    <button onclick="logout()"
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Create User Section -->
+        <div class="glass rounded-2xl shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Créer un nouvel utilisateur</h2>
+
+            <!-- Success/Error Messages -->
+            <div id="successAlert" class="hidden mb-6">
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl">
+                    <p id="successText" class="text-green-700 font-medium text-sm"></p>
+                </div>
+            </div>
+
+            <div id="errorAlert" class="hidden mb-6">
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                    <p id="errorText" class="text-red-700 font-medium text-sm"></p>
+                </div>
+            </div>
+
+            <!-- Create User Form -->
+            <form id="createUserForm" class="space-y-6">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Nom complet <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="name" name="name" required
+                            placeholder="Ex: Ahmed Alami"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        <input type="email" id="email" name="email" required
+                            placeholder="utilisateur@exemple.com"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Mot de passe <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="password" name="password" required
+                            placeholder="••••••••"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Confirmer le mot de passe <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required
+                            placeholder="••••••••"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end">
+                    <button type="submit" id="createBtn"
+                        class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-200 flex items-center gap-2">
+                        <svg id="createIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span id="btnText">Créer l'utilisateur</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Users List Section -->
+        <div class="glass rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Liste des utilisateurs</h2>
+
+            <div id="usersList" class="space-y-4">
+                <!-- Users will be loaded here -->
+                <div class="text-center py-8 text-gray-500">
+                    Chargement des utilisateurs...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const createUserForm = document.getElementById('createUserForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorText = document.getElementById('errorText');
+        const successAlert = document.getElementById('successAlert');
+        const successText = document.getElementById('successText');
+        const createBtn = document.getElementById('createBtn');
+        const createIcon = document.getElementById('createIcon');
+        const loadingIcon = document.getElementById('loadingIcon');
+        const btnText = document.getElementById('btnText');
+
+        // Load users on page load
+        loadUsers();
+
+        createUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                showError('Les mots de passe ne correspondent pas');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/admin/create-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec de la création de l\'utilisateur');
+                }
+
+                showSuccess(`Utilisateur créé avec succès: ${email}`);
+                createUserForm.reset();
+                loadUsers(); // Reload users list
+
+            } catch (error) {
+                showError(error.message || 'Erreur lors de la création de l\'utilisateur');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec du chargement des utilisateurs');
+                }
+
+                displayUsers(data.users);
+
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        Erreur lors du chargement des utilisateurs
+                    </div>
+                `;
+            }
+        }
+
+        function displayUsers(users) {
+            const usersList = document.getElementById('usersList');
+
+            if (users.length === 0) {
+                usersList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        Aucun utilisateur trouvé
+                    </div>
+                `;
+                return;
+            }
+
+            usersList.innerHTML = users.map(user => `
+                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">${user.name}</h3>
+                            <p class="text-gray-600 text-sm">${user.email}</p>
+                            <div class="mt-2 flex gap-4 text-xs text-gray-500">
+                                <span>Créé: ${new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+                                ${user.last_login ? `<span>Dernière connexion: ${new Date(user.last_login).toLocaleDateString('fr-FR')}</span>` : '<span>Jamais connecté</span>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setLoading(loading) {
+            createIcon.classList.toggle('hidden', loading);
+            loadingIcon.classList.toggle('hidden', !loading);
+            btnText.textContent = loading ? 'Création...' : 'Créer l\'utilisateur';
+            createBtn.disabled = loading;
+        }
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorAlert.classList.remove('hidden');
+            successAlert.classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            successText.textContent = message;
+            successAlert.classList.remove('hidden');
+            errorAlert.classList.add('hidden');
+        }
+
+        function hideMessages() {
+            errorAlert.classList.add('hidden');
+            successAlert.classList.add('hidden');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+
+</html>

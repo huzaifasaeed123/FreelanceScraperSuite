@@ -44,7 +44,7 @@ def fetch_axa_quotation(payload):
         return data
 
     except Exception as e:
-        print(f"AXA API Error: {str(e)} for payload: {payload}")
+        print(f"AXA API Error: {str(e)}")
         return []
 
 
@@ -68,15 +68,11 @@ def scrape_axa(params):
     semi_payload["contrat"]["modePaiement"] = "06"
     semi_result = fetch_axa_quotation(semi_payload)
 
-    result= {
+
+    return {
         "annual": annual_result,
         "semi_annual": semi_result
         }
-    
-    # with open("axa_quotations.json", "w", encoding="utf-8") as f:
-    #     import json
-    #     json.dump(result, f, indent=4, ensure_ascii=False)
-    return result
 
 # # ===== FOR LOCAL TESTING =====
 # if __name__ == "__main__":

@@ -3,47 +3,192 @@ Insurance Comparator API
 Flask backend for the insurance comparison application
 """
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
 
-from comparison_service import ComparisonService
-from database import init_database, DatabaseManager
+from comparison_service import get_all_quotes, compare_insurance
+from scrapers import SCRAPER_FUNCTIONS
+from database.models import init_database, DatabaseManager
+from auth import init_admin_user, login_required, admin_required, get_current_user, login_user, logout_user
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__, static_folder='static')
 
-# ✅ ENABLE CORS - Allow any website to hit this API
-# This allows external websites to call /api/compare endpoint
+# Set secret key for sessions
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+
+# Enable CORS - Allow any website to hit this API
 CORS(app,
      resources={
          r"/api/*": {
-             "origins": "*",  # Allow all origins
+             "origins": "*",
              "methods": ["GET", "POST", "OPTIONS"],
              "allow_headers": ["Content-Type", "Authorization"],
              "expose_headers": ["Content-Type"],
              "max_age": 3600
          }
-     }
+     },
+     supports_credentials=True
 )
 
-# Initialize database on startup
+# Initialize database and admin user
 init_database()
+init_admin_user()
 
-comparison_service = ComparisonService()
+print("Flask app initialized")
+print(f"Loaded {len(SCRAPER_FUNCTIONS)} scrapers: {list(SCRAPER_FUNCTIONS.keys())}")
 
 
 @app.route('/')
+@login_required
 def index():
-    """Serve the main HTML page"""
+    """Serve the main HTML page - requires authentication"""
     return send_from_directory('static', 'index.html')
 
 
+@app.route('/login')
+def login():
+    """Serve the login page"""
+    # If already logged in, redirect appropriately
+    user = get_current_user()
+    if user:
+        if user['is_admin']:
+            return redirect(url_for('admin'))
+        return redirect(url_for('index'))
+    return send_from_directory('static', 'login.html')
+
+
+@app.route('/admin')
+@admin_required
+def admin():
+    """Serve the admin dashboard - requires admin privileges"""
+    return send_from_directory('static', 'admin.html')
+
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    """Handle user login"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return jsonify({
+                "success": False,
+                "error": "Email et mot de passe requis"
+            }), 400
+
+        # Verify credentials
+        user = DatabaseManager.verify_user(email, password)
+
+        if not user:
+            return jsonify({
+                "success": False,
+                "error": "Email ou mot de passe incorrect"
+            }), 401
+
+        # Set session
+        login_user(user)
+
+        return jsonify({
+            "success": True,
+            "message": "Connexion réussie",
+            "is_admin": user.get('is_admin', False),
+            "name": user.get('name')
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Erreur serveur: {str(e)}"
+        }), 500
+
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    """Handle user logout"""
+    logout_user()
+    return jsonify({
+        "success": True,
+        "message": "Déconnexion réussie"
+    })
+
+
+@app.route('/api/admin/create-user', methods=['POST'])
+@admin_required
+def api_create_user():
+    """Create a new user - admin only"""
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+
+        if not name or not email or not password:
+            return jsonify({
+                "success": False,
+                "error": "Tous les champs sont requis"
+            }), 400
+
+        # Create user
+        user_id = DatabaseManager.create_user(name, email, password, is_admin=False)
+
+        if not user_id:
+            return jsonify({
+                "success": False,
+                "error": "Un utilisateur avec cet email existe déjà"
+            }), 400
+
+        return jsonify({
+            "success": True,
+            "message": "Utilisateur créé avec succès",
+            "user_id": user_id
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Erreur serveur: {str(e)}"
+        }), 500
+
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def api_get_users():
+    """Get list of all users - admin only"""
+    try:
+        users = DatabaseManager.get_all_users(exclude_admin=True)
+
+        return jsonify({
+            "success": True,
+            "users": users
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Erreur serveur: {str(e)}"
+        }), 500
+
+
 @app.route('/api/compare', methods=['POST'])
+@login_required
 def compare():
     """
-    Compare insurance quotes from all providers
+    Compare insurance quotes from all providers - requires authentication
 
-    Expected JSON body (New Format - Complete Form Data):
+    Expected JSON body (Complete Form Data):
     {
         "marque": "Renault",
         "modele": "Clio",
@@ -66,13 +211,17 @@ def compare():
         "consent": true
     }
 
-    Also supports old format for backward compatibility:
+    Also supports old/simple format:
     {
         "valeur_neuf": 65000,
         "valeur_venale": 45000
     }
     """
     try:
+        # Get current user
+        current_user = get_current_user()
+        user_id = current_user['id']
+
         data = request.get_json()
 
         if not data:
@@ -123,19 +272,25 @@ def compare():
                     "error": "Current value cannot exceed new vehicle value"
                 }), 400
 
-            # Get client info
+            # Save minimal form submission for old format
             ip_address = request.remote_addr
-            user_agent = request.headers.get('User-Agent', '')
-
-            # Fetch quotes with old format
-            result = comparison_service.get_all_quotes(
-                params={
-                    "valeur_neuf": valeur_neuf,
-                    "valeur_venale": valeur_venale
-                },
+            user_agent = request.headers.get('User-Agent')
+            minimal_form_data = {
+                'valeur_neuf': valeur_neuf,
+                'valeur_actuelle': valeur_venale
+            }
+            form_submission_id = DatabaseManager.save_form_submission(
+                user_id=user_id,
+                form_data=minimal_form_data,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
+
+            # Fetch quotes with old format
+            result = get_all_quotes({
+                "valeur_neuf": valeur_neuf,
+                "valeur_venale": valeur_venale
+            }, user_id=user_id, form_submission_id=form_submission_id)
 
             return jsonify(result)
 
@@ -176,21 +331,24 @@ def compare():
                 "error": "Current value cannot exceed new vehicle value"
             }), 400
 
-        # Get client info
+        # Save form submission to database
         ip_address = request.remote_addr
-        user_agent = request.headers.get('User-Agent', '')
+        user_agent = request.headers.get('User-Agent')
+        form_submission_id = DatabaseManager.save_form_submission(
+            user_id=user_id,
+            form_data=data,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
 
         # Fetch quotes with new format (uses field mapper internally)
-        result = comparison_service.get_all_quotes(
-            params=data,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            is_complete_form=True
-        )
+        result = get_all_quotes(data, user_id=user_id, form_submission_id=form_submission_id)
 
         return jsonify(result)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "success": False,
             "error": f"Server error: {str(e)}"
@@ -200,28 +358,30 @@ def compare():
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
-    from scrapers import SCRAPER_REGISTRY
     return jsonify({
         "status": "healthy",
-        "providers": list(SCRAPER_REGISTRY.keys())
+        "providers": list(SCRAPER_FUNCTIONS.keys())
     })
 
 
-@app.route('/api/history', methods=['GET'])
-def history():
-    """Get recent request history"""
-    try:
-        limit = request.args.get('limit', 50, type=int)
-        requests_history = DatabaseManager.get_request_history(limit)
-        return jsonify({
-            "success": True,
-            "history": requests_history
+@app.route('/api/providers', methods=['GET'])
+def providers():
+    """Get list of available providers"""
+    from comparison_service import PROVIDER_INFO
+
+    provider_list = []
+    for code, info in PROVIDER_INFO.items():
+        provider_list.append({
+            "code": code,
+            "name": info['name'],
+            "color": info['color'],
+            "logo": info['logo']
         })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+
+    return jsonify({
+        "success": True,
+        "providers": provider_list
+    })
 
 
 if __name__ == '__main__':
@@ -230,6 +390,15 @@ if __name__ == '__main__':
 
     # Get DEBUG mode from environment (set to False in production)
     debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
+
+    print(f"\n{'='*60}")
+    print(f"🚀 Starting Insurance Comparison API")
+    print(f"{'='*60}")
+    print(f"   Host: 0.0.0.0")
+    print(f"   Port: {port}")
+    print(f"   Debug: {debug_mode}")
+    print(f"   Scrapers: {', '.join(SCRAPER_FUNCTIONS.keys())}")
+    print(f"{'='*60}\n")
 
     # Run Flask app
     # host='0.0.0.0' allows external connections (Railway requirement)

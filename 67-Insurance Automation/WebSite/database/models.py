@@ -22,8 +22,83 @@ def init_database():
     """Initialize database with all required tables"""
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Table 1: User Requests - stores user input parameters
+
+    # Table 0: Users - stores user accounts
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            is_admin BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_login DATETIME
+        )
+    ''')
+
+    # Table 1: Form Submissions - stores user form submissions with all details
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS form_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+
+            -- Vehicle Information
+            marque TEXT,
+            modele TEXT,
+            carburant TEXT,
+            nombre_places INTEGER,
+            puissance_fiscale INTEGER,
+            date_mec TEXT,
+            type_plaque TEXT,
+            immatriculation TEXT,
+            valeur_neuf REAL NOT NULL,
+            valeur_actuelle REAL NOT NULL,
+
+            -- Personal Information
+            nom TEXT,
+            prenom TEXT,
+            telephone TEXT,
+            email TEXT,
+            date_naissance TEXT,
+            date_permis TEXT,
+            ville TEXT,
+            agent_key TEXT,
+            assureur_actuel TEXT,
+            consent BOOLEAN,
+
+            -- Metadata
+            submission_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            ip_address TEXT,
+            user_agent TEXT,
+
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Table 2: Scraper Results - stores results from scrapers for each form submission
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scraper_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            form_submission_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            provider_code TEXT NOT NULL,
+            provider_name TEXT NOT NULL,
+
+            -- Result data
+            raw_response TEXT,
+            plan_count INTEGER DEFAULT 0,
+            fetch_time REAL,
+            status TEXT DEFAULT 'success',
+            error_message TEXT,
+
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (form_submission_id) REFERENCES form_submissions(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Table 1: User Requests - stores user input parameters (kept for backward compatibility)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS user_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,23 +246,185 @@ def init_database():
     ''')
 
     # Create indexes for better query performance
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_form_submissions_user ON form_submissions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_scraper_results_form ON scraper_results(form_submission_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_scraper_results_user ON scraper_results(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_requests_timestamp ON user_requests(request_timestamp)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_responses_request ON provider_responses(request_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_plans_response ON insurance_plans(response_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_guarantees_plan ON plan_guarantees(plan_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_fields_plan ON selectable_fields(plan_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_combinations_plan ON option_combinations(plan_id)')
-    
+
     conn.commit()
     conn.close()
-    print("✅ Database initialized successfully")
+    print("Database initialized successfully")
 
 
 class DatabaseManager:
     """Manager class for database operations"""
-    
+
+    # ============ User Management ============
     @staticmethod
-    def create_request(valeur_neuf: float, valeur_venale: float, 
+    def create_user(name: str, email: str, password: str, is_admin: bool = False) -> int:
+        """Create a new user and return its ID"""
+        import hashlib
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Hash the password
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        try:
+            cursor.execute('''
+                INSERT INTO users (name, email, password, is_admin)
+                VALUES (?, ?, ?, ?)
+            ''', (name, email, password_hash, is_admin))
+
+            user_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            return user_id
+        except sqlite3.IntegrityError:
+            conn.close()
+            return None  # Email already exists
+
+    @staticmethod
+    def get_user_by_email(email: str) -> Optional[Dict]:
+        """Get user by email"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        row = cursor.fetchone()
+        conn.close()
+
+        return dict(row) if row else None
+
+    @staticmethod
+    def verify_user(email: str, password: str) -> Optional[Dict]:
+        """Verify user credentials and return user data if valid"""
+        import hashlib
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password_hash))
+        row = cursor.fetchone()
+
+        if row:
+            # Update last login
+            cursor.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (row['id'],))
+            conn.commit()
+
+        conn.close()
+        return dict(row) if row else None
+
+    @staticmethod
+    def get_all_users(exclude_admin: bool = False) -> List[Dict]:
+        """Get all users"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        if exclude_admin:
+            cursor.execute('SELECT id, name, email, created_at, last_login FROM users WHERE is_admin = 0 ORDER BY created_at DESC')
+        else:
+            cursor.execute('SELECT id, name, email, is_admin, created_at, last_login FROM users ORDER BY created_at DESC')
+
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    # ============ Form Submission Management ============
+    @staticmethod
+    def save_form_submission(user_id: int, form_data: dict, ip_address: str = None, user_agent: str = None) -> int:
+        """Save form submission and return its ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO form_submissions
+            (user_id, marque, modele, carburant, nombre_places, puissance_fiscale,
+             date_mec, type_plaque, immatriculation, valeur_neuf, valeur_actuelle,
+             nom, prenom, telephone, email, date_naissance, date_permis, ville,
+             agent_key, assureur_actuel, consent, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            user_id,
+            form_data.get('marque'),
+            form_data.get('modele'),
+            form_data.get('carburant'),
+            form_data.get('nombre_places'),
+            form_data.get('puissance_fiscale'),
+            form_data.get('date_mec'),
+            form_data.get('type_plaque'),
+            form_data.get('immatriculation'),
+            form_data.get('valeur_neuf'),
+            form_data.get('valeur_actuelle'),
+            form_data.get('nom'),
+            form_data.get('prenom'),
+            form_data.get('telephone'),
+            form_data.get('email'),
+            form_data.get('date_naissance'),
+            form_data.get('date_permis'),
+            form_data.get('ville'),
+            form_data.get('agent_key'),
+            form_data.get('assureur_actuel'),
+            form_data.get('consent'),
+            ip_address,
+            user_agent
+        ))
+
+        submission_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return submission_id
+
+    @staticmethod
+    def save_scraper_result(form_submission_id: int, user_id: int, provider_code: str,
+                           provider_name: str, raw_response: dict, plan_count: int,
+                           fetch_time: float, status: str = 'success', error_message: str = None) -> int:
+        """Save scraper result and return its ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO scraper_results
+            (form_submission_id, user_id, provider_code, provider_name, raw_response,
+             plan_count, fetch_time, status, error_message)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            form_submission_id, user_id, provider_code, provider_name,
+            json.dumps(raw_response, ensure_ascii=False) if raw_response else None,
+            plan_count, fetch_time, status, error_message
+        ))
+
+        result_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return result_id
+
+    @staticmethod
+    def get_user_submissions(user_id: int, limit: int = 50) -> List[Dict]:
+        """Get form submissions for a user"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT * FROM form_submissions
+            WHERE user_id = ?
+            ORDER BY submission_timestamp DESC
+            LIMIT ?
+        ''', (user_id, limit))
+
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def create_request(valeur_neuf: float, valeur_venale: float,
                        ip_address: str = None, user_agent: str = None) -> int:
         """Create a new user request and return its ID"""
         conn = get_connection()

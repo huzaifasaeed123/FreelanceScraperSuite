@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Comparateur d'Assurance Auto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-gray-50 min-h-screen">
+    <!-- Background -->
+    <div class="gradient-bg min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="absolute inset-0 bg-black/10"></div>
+
+        <!-- Login Card -->
+        <div class="glass rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10">
+            <!-- Logo/Title -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Connexion</h1>
+                <p class="text-gray-600">Comparateur d'Assurance Auto</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorAlert" class="hidden mb-6">
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                    <p id="errorText" class="text-red-700 font-medium text-sm"></p>
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-6">
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" id="email" name="email" required
+                        placeholder="votre@email.com"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Mot de passe <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" id="password" name="password" required
+                        placeholder="••••••••"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" id="loginBtn"
+                        class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                        <svg id="loginIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                        <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span id="btnText">Se connecter</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Footer -->
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                    Contactez l'administrateur pour obtenir un compte
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorText = document.getElementById('errorText');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginIcon = document.getElementById('loginIcon');
+        const loadingIcon = document.getElementById('loadingIcon');
+        const btnText = document.getElementById('btnText');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                // Redirect based on user role
+                if (data.is_admin) {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/';
+                }
+
+            } catch (error) {
+                showError(error.message || 'Erreur de connexion');
+                setLoading(false);
+            }
+        });
+
+        function setLoading(loading) {
+            loginIcon.classList.toggle('hidden', loading);
+            loadingIcon.classList.toggle('hidden', !loading);
+            btnText.textContent = loading ? 'Connexion...' : 'Se connecter';
+            loginBtn.disabled = loading;
+        }
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorAlert.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorAlert.classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

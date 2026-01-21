@@ -6,7 +6,7 @@ Simple functional style - each scraper has a main function to call.
 
 # Import the main scraper functions
 from .axa_scraper import scrape_axa, fetch_axa_quotation
-from .mcma_scraper import scrape_mcma_with_options, create_mcma_subscription, get_mcma_packs
+from .mcma_scraper import scrape_mcma, create_mcma_subscription, get_mcma_packs
 # from .rma_scraper import scrape_rma, fetch_rma_offers
 from .sanlam_scraper import scrape_sanlam, fetch_all_formulas
 
@@ -23,7 +23,7 @@ from .base import (
 # Registry of scraper functions
 SCRAPER_FUNCTIONS = {
     'axa': scrape_axa,
-    'mcma': scrape_mcma_with_options,
+    'mcma': scrape_mcma,
     # 'rma': scrape_rma,
     'sanlam': scrape_sanlam,
 }

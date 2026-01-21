@@ -18,12 +18,20 @@ def create_subscription():
     }
 
     # 🔹 Hardcoded but editable payload
+    # payload = {
+    #     "dateOfCirculation": "2023-02-15",
+    #     "horsePower": 6,
+    #     "fuel": "Diesel",
+    #     "valueOfVehicle": 30000,
+    #     "valueOfNewVehicle": 80000,
+    #     "agreeToTerms": True
+    # }
     payload = {
-        "dateOfCirculation": "2023-02-15",
+        "dateOfCirculation": "2023-01-01",
         "horsePower": 6,
-        "fuel": "Diesel",
-        "valueOfVehicle": 30000,
-        "valueOfNewVehicle": 80000,
+        "fuel": "Essence",
+        "valueOfVehicle": 300000,
+        "valueOfNewVehicle": 400000,
         "agreeToTerms": True
     }
 
