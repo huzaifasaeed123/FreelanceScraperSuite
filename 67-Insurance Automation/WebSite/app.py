@@ -121,6 +121,13 @@ def api_logout():
     })
 
 
+@app.route('/logout')
+def logout():
+    """Logout and redirect to login page"""
+    logout_user()
+    return redirect(url_for('login'))
+
+
 @app.route('/api/admin/create-user', methods=['POST'])
 @admin_required
 def api_create_user():
