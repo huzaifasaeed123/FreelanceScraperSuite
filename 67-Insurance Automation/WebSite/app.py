@@ -382,6 +382,94 @@ def compare():
         }), 500
 
 
+@app.route('/api/axa/update-quote', methods=['POST'])
+@login_required
+def update_axa_quote():
+    """
+    Update AXA quotation with selected options
+
+    Expected JSON body:
+    {
+        "base_payload": {...},  // Original payload (contrat, vehicule, leadInfos)
+        "quotation_id": 60273806,
+        "id_lead": "00QbH00000RFPeTUAX",
+        "pack_id": 3,  // 2=Basique, 3=Basique+, 4=Optimale, 5=Premium
+        "user_selections": {  // Optional: user-selected option values by guarantee code
+            "20": 2,  // Defense et Recours
+            "500": 5  // P.F.C.P
+        },
+        "duration": "annual"  // "annual" or "semi"
+    }
+    """
+    try:
+        from scrapers.axa_scraper import update_axa_quotation, build_garanties_payload
+        import copy
+
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required"
+            }), 400
+
+        # Extract required fields
+        base_payload = data.get('base_payload')
+        quotation_id = data.get('quotation_id')
+        id_lead = data.get('id_lead')
+        pack_id = data.get('pack_id')
+        user_selections = data.get('user_selections', {})
+        duration = data.get('duration', 'annual')
+
+        if not base_payload or not quotation_id or not pack_id:
+            return jsonify({
+                "success": False,
+                "error": "base_payload, quotation_id, and pack_id are required"
+            }), 400
+
+        # Build the update payload
+        update_payload = copy.deepcopy(base_payload)
+
+        # Set modePaiement based on duration
+        if duration == 'annual':
+            update_payload["contrat"]["modePaiement"] = "12"
+        else:
+            update_payload["contrat"]["modePaiement"] = "06"
+
+        # Add required fields for update request
+        update_payload["idQuotation"] = quotation_id
+        update_payload["idPack"] = pack_id
+        update_payload["idLead"] = id_lead
+
+        # Build garanties based on pack and user selections
+        garanties = build_garanties_payload(pack_id, user_selections)
+        update_payload["garanties"] = garanties
+
+        # Make the API call
+        result = update_axa_quotation(quotation_id, update_payload)
+
+        if result:
+            return jsonify({
+                "success": True,
+                "data": result,
+                "pack_id": pack_id,
+                "duration": duration
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to update AXA quotation"
+            }), 500
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        }), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""

@@ -321,16 +321,22 @@ def parse_rma_response(data):
 
 
 def parse_axa_response(data):
-    """Parse AXA API response to frontend format"""
-    # Handle scraper returning {'annual': [...], 'semi_annual': [...]}
+    """Parse AXA API response to frontend format with selectable options"""
+    from scrapers.axa_scraper import get_pack_selectable_fields, get_pack_fixed_guarantees
+
+    # Handle scraper returning {'annual': [...], 'semi_annual': [...], 'base_payload': {...}}
     if isinstance(data, dict) and 'annual' in data:
         annual_data = data.get('annual', [])
         semi_annual_data = data.get('semi_annual', [])
-        
+        base_payload = data.get('base_payload')
+        id_quotation = data.get('id_quotation')
+        id_lead = data.get('id_lead')
+
         if not annual_data or not isinstance(annual_data, list):
-            return []
-        
+            return [], None
+
         plan_names = ["Basique", "Basique+", "Optimale", "Premium"]
+        pack_ids = [2, 3, 4, 5]  # Pack IDs corresponding to each plan
         colors = ['#1a472a', '#00008F', '#003d7a', '#0066FF']  # AXA blues
         plans = []
 
@@ -340,6 +346,11 @@ def parse_axa_response(data):
 
             # Get semi-annual quote for the same plan index
             semi_quote = semi_annual_data[idx] if idx < len(semi_annual_data) else quote
+            pack_id = pack_ids[idx] if idx < len(pack_ids) else idx + 2
+
+            # Get selectable fields and fixed guarantees for this pack
+            selectable_fields = get_pack_selectable_fields(pack_id)
+            fixed_guarantees = get_pack_fixed_guarantees(pack_id)
 
             plan = {
                 "plan_name": plan_names[idx] if idx < len(plan_names) else f"Plan {idx + 1}",
@@ -347,28 +358,43 @@ def parse_axa_response(data):
                 "provider": "AXA Assurance",
                 "provider_code": "axa",
                 "color": colors[idx % len(colors)],
+                "pack_id": pack_id,
                 "annual": {
-                    "prime_net": quote.get("primeNetComptant", 0),
-                    "taxes": quote.get("taxesComptant", 0),
-                    "prime_total": quote.get("primeTotaleComptant", 0)
+                    "prime_net": quote.get("primeNetAnnuel", 0),
+                    "taxes": quote.get("taxesAnnuel", 0),
+                    "cnpac": quote.get("cnpacAnnuel", 0),
+                    "accessoire": quote.get("accessoireAnnuel", 0),
+                    "prime_total": quote.get("primeTotaleAnnuel", 0)
                 },
                 "semi_annual": {
                     "prime_net": semi_quote.get("primeNetComptant", 0),
                     "taxes": semi_quote.get("taxesComptant", 0),
+                    "cnpac": semi_quote.get("cnpacComptant", 0),
+                    "accessoire": semi_quote.get("accessoireComptant", 0),
                     "prime_total": semi_quote.get("primeTotaleComptant", 0)
                 },
-                "guarantees": [],
+                "guarantees": fixed_guarantees,
+                "selectable_fields": selectable_fields,
                 "is_eligible": True,
                 "order": idx
             }
             plans.append(plan)
 
-        return plans
+        # Return plans and extra data for AXA updates
+        axa_session_data = {
+            "base_payload": base_payload,
+            "id_quotation": id_quotation,
+            "id_lead": id_lead
+        } if base_payload else None
+
+        return plans, axa_session_data
+
     elif not data or not isinstance(data, list):
-        return []
+        return [], None
 
     # Fallback for old format
     plan_names = ["Basique", "Basique+", "Optimale", "Premium"]
+    pack_ids = [2, 3, 4, 5]
     colors = ['#1a472a', '#00008F', '#003d7a', '#0066FF']
     plans = []
 
@@ -376,29 +402,39 @@ def parse_axa_response(data):
         if not quote:
             continue
 
+        pack_id = pack_ids[idx] if idx < len(pack_ids) else idx + 2
+        selectable_fields = get_pack_selectable_fields(pack_id)
+        fixed_guarantees = get_pack_fixed_guarantees(pack_id)
+
         plan = {
             "plan_name": plan_names[idx] if idx < len(plan_names) else f"Plan {idx + 1}",
             "plan_code": f"axa_{idx}",
             "provider": "AXA Assurance",
             "provider_code": "axa",
             "color": colors[idx % len(colors)],
+            "pack_id": pack_id,
             "annual": {
-                "prime_net": quote.get("primeNetComptant", 0),
-                "taxes": quote.get("taxesComptant", 0),
-                "prime_total": quote.get("primeTotaleComptant", 0)
+                "prime_net": quote.get("primeNetAnnuel", 0),
+                "taxes": quote.get("taxesAnnuel", 0),
+                "cnpac": quote.get("cnpacAnnuel", 0),
+                "accessoire": quote.get("accessoireAnnuel", 0),
+                "prime_total": quote.get("primeTotaleAnnuel", 0)
             },
             "semi_annual": {
-                "prime_net": quote.get("primeNetComptant", 0) * 0.52,
-                "taxes": quote.get("taxesComptant", 0) * 0.52,
-                "prime_total": quote.get("primeTotaleComptant", 0) * 0.52
+                "prime_net": quote.get("primeNetComptant", 0),
+                "taxes": quote.get("taxesComptant", 0),
+                "cnpac": quote.get("cnpacComptant", 0),
+                "accessoire": quote.get("accessoireComptant", 0),
+                "prime_total": quote.get("primeTotaleComptant", 0)
             },
-            "guarantees": [],
+            "guarantees": fixed_guarantees,
+            "selectable_fields": selectable_fields,
             "is_eligible": True,
             "order": idx
         }
         plans.append(plan)
 
-    return plans
+    return plans, None
 
 
 def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=None):
@@ -435,6 +471,7 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
         fetch_time = time.time() - start_time
 
         # Parse response based on provider
+        axa_session_data = None
         if provider_code == 'sanlam':
             plans = parse_sanlam_response(raw_data)
         elif provider_code == 'mcma':
@@ -442,19 +479,29 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
         elif provider_code == 'rma':
             plans = parse_rma_response(raw_data)
         elif provider_code == 'axa':
-            plans = parse_axa_response(raw_data)
+            plans, axa_session_data = parse_axa_response(raw_data)
         else:
             plans = []
 
         # Save scraper result to database if user_id and form_submission_id are provided
         if user_id and form_submission_id:
             try:
+                # For AXA, don't save base_payload to database (it's large and session-specific)
+                save_data = raw_data
+                if provider_code == 'axa' and isinstance(raw_data, dict):
+                    save_data = {
+                        'annual': raw_data.get('annual'),
+                        'semi_annual': raw_data.get('semi_annual'),
+                        'id_quotation': raw_data.get('id_quotation'),
+                        'id_lead': raw_data.get('id_lead')
+                    }
+
                 DatabaseManager.save_scraper_result(
                     form_submission_id=form_submission_id,
                     user_id=user_id,
                     provider_code=provider_code,
                     provider_name=provider_meta.get('name', provider_code),
-                    raw_response=raw_data,
+                    raw_response=save_data,
                     plan_count=len(plans),
                     fetch_time=fetch_time,
                     status='success',
@@ -463,7 +510,7 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
             except Exception as db_error:
                 print(f"⚠️  Failed to save scraper result to database: {db_error}")
 
-        return {
+        result = {
             'provider_name': provider_meta.get('name', provider_code),
             'provider_code': provider_code,
             'provider_color': provider_meta.get('color', '#000000'),
@@ -473,6 +520,12 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
             'error': None if plans else 'No plans returned',
             'fetch_time': round(fetch_time, 2)
         }
+
+        # Include AXA session data for subsequent update requests
+        if axa_session_data:
+            result['axa_session_data'] = axa_session_data
+
+        return result
 
     except Exception as e:
         import traceback
@@ -541,6 +594,7 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
     # Build response
     providers = []
     errors = []
+    axa_session_data = None
 
     for result in results:
         provider_data = {
@@ -557,19 +611,30 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
             provider_data["error"] = result['error']
             errors.append(f"{result['provider_name']}: {result['error']}")
 
+        # Extract AXA session data if available
+        if result['provider_code'] == 'axa' and result.get('axa_session_data'):
+            axa_session_data = result['axa_session_data']
+
         providers.append(provider_data)
 
-    return {
+    response = {
         "success": len(errors) < len(provider_codes),
         "params": params,
         "providers": providers,
         "summary": {
             "total_providers": len(results),
             "providers_with_results": sum(1 for r in results if r.get('plans')),
+            "total_plans": sum(len(r.get('plans', [])) for r in results),
             "total_fetch_time": round(total_time, 2),
         },
         "errors": errors if errors else None
     }
+
+    # Include AXA session data for frontend to use in update requests
+    if axa_session_data:
+        response["axa_session_data"] = axa_session_data
+
+    return response
 
 
 def compare_insurance(valeur_neuf: float, valeur_venale: float) -> Dict[str, Any]:
