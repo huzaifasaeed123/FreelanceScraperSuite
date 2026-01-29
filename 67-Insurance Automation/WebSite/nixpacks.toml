@@ -1,42 +1,37 @@
 [phases.setup]
-nixPkgs = [
-  "python39",
-  "firefox",
-  "gtk3",
-  "glib",
-  "nss",
-  "freetype",
-  "harfbuzz",
-  "fontconfig",
-  "ca-certificates",
-  "ttf-freefont",
-  "liberation_ttf",
-  "libdrm",
-  "mesa",
-  "dbus",
-  "at-spi2-atk",
-  "at-spi2-core",
-  "cups",
-  "libxkbcommon",
-  "pango",
-  "cairo",
-  "alsa-lib",
-  "xorg.libX11",
-  "xorg.libXcomposite",
-  "xorg.libXdamage",
-  "xorg.libXext",
-  "xorg.libXfixes",
-  "xorg.libXrandr",
-  "gdk-pixbuf",
-  "libnotify",
-  "libsecret",
-  "systemd"
+nixPkgs = ["python39"]
+aptPkgs = [
+  "libgtk-3-0",
+  "libdbus-glib-1-2",
+  "libxt6",
+  "libxcomposite1",
+  "libxdamage1",
+  "libxrandr2",
+  "libgbm1",
+  "libasound2",
+  "libpangocairo-1.0-0",
+  "libpango-1.0-0",
+  "libcairo2",
+  "libatspi2.0-0",
+  "libatk1.0-0",
+  "libatk-bridge2.0-0",
+  "libcups2",
+  "libdrm2",
+  "libxkbcommon0",
+  "libxshmfence1",
+  "fonts-liberation",
+  "fonts-noto-color-emoji",
+  "xdg-utils",
+  "libnss3"  # Added this - it's essential for Firefox/Camoufox
 ]
 
 [phases.install]
 cmds = [
-  "pip install -r requirements.txt"
+  "pip install -r requirements.txt",
+  "playwright install firefox",
+  "playwright install-deps"
 ]
 
 [start]
-cmd = "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app"
+# Important: I reduced workers to 1 below. See the explanation.
+cmd = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app:app"
