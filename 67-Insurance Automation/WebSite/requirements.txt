@@ -12,5 +12,5 @@ python-dotenv>=1.0.0
 reportlab>=4.0.0
 
 # Browser Automation (for RMA scraper)
-camoufox>=0.4.0
+camoufox[geoip]>=0.4.0
 playwright>=1.40.0
