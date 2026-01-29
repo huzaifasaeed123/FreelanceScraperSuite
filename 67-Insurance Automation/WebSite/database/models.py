@@ -873,7 +873,7 @@ class DatabaseManager:
         conn.commit()
         cursor.close()
         conn.close()
-    return response_id
+        return response_id
     
     @staticmethod
     def save_insurance_plan(response_id: int, request_id: int, plan_data: dict) -> int:
@@ -912,7 +912,7 @@ class DatabaseManager:
         conn.commit()
         cursor.close()
         conn.close()
-    return plan_id
+        return plan_id
     
     @staticmethod
     def save_plan_guarantee(plan_id: int, guarantee_data: dict) -> int:
@@ -948,7 +948,7 @@ class DatabaseManager:
         conn.commit()
         cursor.close()
         conn.close()
-    return guarantee_id
+        return guarantee_id
     
     @staticmethod
     def save_selectable_field(plan_id: int, field_name: str, field_title: str, field_order: int = 0) -> int:
@@ -965,7 +965,7 @@ class DatabaseManager:
         conn.commit()
         cursor.close()
         conn.close()
-    return field_id
+        return field_id
 
     @staticmethod
     def save_selectable_option(field_id: int, option_id: str, option_label: str, is_default: bool = False) -> int:
@@ -982,7 +982,7 @@ class DatabaseManager:
         conn.commit()
         cursor.close()
         conn.close()
-    return option_id_pk
+        return option_id_pk
 
     @staticmethod
     def save_option_combination(plan_id: int, combination_key: str, combination_params: str,
