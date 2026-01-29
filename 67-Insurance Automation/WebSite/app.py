@@ -3,20 +3,21 @@ Insurance Comparator API
 Flask backend for the insurance comparison application
 """
 
+# CRITICAL: Load environment variables FIRST before any other imports
+# This ensures DB connection can read MySQL credentials from .env
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, url_for
 from flask_cors import CORS
 import os
 from datetime import datetime
-from dotenv import load_dotenv
 
 from comparison_service import get_all_quotes, compare_insurance
 from scrapers import SCRAPER_FUNCTIONS, shutdown_rma_manager
 from database.models import init_database, DatabaseManager
 from auth import init_admin_user, login_required, admin_required, api_key_or_login_required, get_current_user, login_user, logout_user
 import atexit
-
-# Load environment variables
-load_dotenv()
 
 app = Flask(__name__, static_folder='static')
 

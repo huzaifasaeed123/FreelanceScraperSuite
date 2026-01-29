@@ -163,8 +163,15 @@ def fetch_axa_quotation(payload):
             headers=get_axa_headers(),
             timeout=30
         )
-        response.raise_for_status()
 
+        # Check for errors and capture response body
+        if response.status_code != 200:
+            error_body = response.text
+            print(f"AXA API Error: {response.status_code} - {error_body}")
+            print(f"Request payload: {payload}")
+            return []
+
+        response.raise_for_status()
         data = response.json()
         return data
 
@@ -193,8 +200,15 @@ def update_axa_quotation(quotation_id, payload):
             headers=get_axa_headers(),
             timeout=30
         )
-        response.raise_for_status()
 
+        # Check for errors and capture response body
+        if response.status_code != 200:
+            error_body = response.text
+            print(f"AXA Update API Error: {response.status_code} - {error_body}")
+            print(f"Request payload: {payload}")
+            return None
+
+        response.raise_for_status()
         data = response.json()
         return data
 
