@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: insurance_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: insurance_db
+      MYSQL_USER: insurance_user
+      MYSQL_PASSWORD: insurance_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - insurance_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Flask Application
+  web:
+    build: .
+    container_name: insurance_web
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # Flask Configuration
+      SECRET_KEY: dev-secret-key-change-in-production
+      FLASK_ENV: development
+
+      # MySQL Configuration
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: insurance_user
+      MYSQL_PASSWORD: insurance_pass
+      MYSQL_DATABASE: insurance_db
+
+      # Admin Credentials
+      ADMIN_EMAIL: admin@insurance.com
+      ADMIN_PASSWORD: admin123
+      ADMIN_NAME: Admin
+
+      # Port
+      PORT: 8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - insurance_network
+    volumes:
+      - ./static/uploads:/app/static/uploads
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  insurance_network:
+    driver: bridge

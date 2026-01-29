@@ -1,7 +1,10 @@
 # Core Flask dependencies
-flask>=2.3.0
+flask>=3.0.0
 flask-cors>=4.0.0
 gunicorn>=21.2.0
+
+# Database
+mysql-connector-python>=8.2.0
 
 # HTTP and utilities
 requests>=2.31.0
@@ -10,6 +13,9 @@ python-dotenv>=1.0.0
 
 # PDF Generation
 reportlab>=4.0.0
+
+# Excel Generation
+openpyxl>=3.1.0
 
 # Browser Automation (for RMA scraper)
 camoufox[geoip]>=0.4.0

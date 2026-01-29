@@ -1072,6 +1072,46 @@ def upload_logo():
         }), 500
 
 
+@app.route('/api/admin/export-database', methods=['GET'])
+@admin_required
+def export_database():
+    """Export complete database to Excel - Admin only"""
+    try:
+        import tempfile
+        from datetime import datetime
+        from database.models import DatabaseManager
+
+        # Create temporary file for Excel
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        temp_dir = tempfile.gettempdir()
+        excel_file = os.path.join(temp_dir, f'insurance_database_{timestamp}.xlsx')
+
+        # Export database to Excel
+        success = DatabaseManager.export_database_to_excel(excel_file)
+
+        if not success:
+            return jsonify({
+                "success": False,
+                "error": "Failed to export database"
+            }), 500
+
+        # Send file to client
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=f'insurance_database_{timestamp}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        }), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
