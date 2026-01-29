@@ -41,7 +41,7 @@ class RMABrowserManager:
         self._browser_config = {
             "headless": True,
             "humanize": True,
-            "os": "windows",
+            "os": "linux",
             "geoip": True
         }
 
