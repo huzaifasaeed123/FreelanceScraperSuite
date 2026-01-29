@@ -1062,13 +1062,13 @@ class DatabaseManager:
 
             # Get list of all tables
             cursor.execute("""
-                SELECT table_name
+                SELECT TABLE_NAME
                 FROM information_schema.tables
                 WHERE table_schema = %s
-                ORDER BY table_name
+                ORDER BY TABLE_NAME
             """, (DB_CONFIG['database'],))
 
-            tables = [row['table_name'] for row in cursor.fetchall()]
+            tables = [row['TABLE_NAME'] for row in cursor.fetchall()]
 
             # Create Excel workbook
             wb = openpyxl.Workbook()
