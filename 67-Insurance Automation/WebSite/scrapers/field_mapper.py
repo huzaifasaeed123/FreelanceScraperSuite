@@ -299,89 +299,35 @@ class FieldMapper:
 
     @staticmethod
     def map_to_rma(form_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Map form data to RMA API payload"""
-        fuel = form_data.get('carburant', 'diesel').lower()
-        future_date = datetime.now().strftime("%d-%m-%Y")
-        next_year = (datetime.now().replace(year=datetime.now().year + 1)).strftime("%d-%m-%Y")
-
-        # Get dummy identity for phone/plate
+        """
+        Map form data to RMA browser-based scraper payload
+        
+        This function now maps website form data directly to RMA scraper parameters.
+        The RMA scraper uses browser automation to fill the form, so we pass the form data
+        directly without API payload transformation.
+        
+        Args:
+            form_data: Form data from website
+        
+        Returns:
+            Dictionary suitable for RMA scraper (rma_scraper.scrape_rma)
+        """
         dummy = generate_random_identity()
-
         return {
-            "nomOrRaisonSociale": form_data.get('nom', 'Client'),
+            "nom": form_data.get('nom', 'Client'),
             "prenom": form_data.get('prenom', 'Test'),
-            "titreCivilite": "1",
-            "typePieceIdentite": "1",
-            "situationFamiliale": "C",
-            "telephone": dummy['phone'],
-            "dateNaissance": format_date(form_data.get('date_naissance'), "DD-MM-YYYY"),
-            "idVilleAdresse": "6",
-            "dateObtentionPermis": "01-01-2023",
-            "sexeConducteur": "M",
-            "sexe": "M",
-            "idPaysPermisConducteur": "212",
-            "idPaysPermis": "212",
-            "professionConducteur": "99",
-            "profession": "99",
-            "numeroClient": "308268499",
-            "numeroClientConducteur": "308268499",
-            "telephoneConducteur": dummy['phone'],
-            "nomOrRaisonSocialeConducteur": form_data.get('nom', 'Client'),
-            "prenomConducteur": form_data.get('prenom', 'Test'),
-            "situationFamilialeConducteur": "C",
-            "dateNaissanceConducteur": format_date(form_data.get('date_naissance'), "DD-MM-YYYY"),
-            "idVilleAdresseConducteur": "6",
-            "titreCiviliteConducteur": "1",
-            "dateObtentionPermisConducteur": "01-01-2023",
-            "typePieceIdentiteConducteur": "1",
-            "nombreEnfant": "0",
-            "codeUsageVehicule": "1",
-            "idGenre": "1",
-            "typeImmatriculation": "3",
+            "carburant": form_data.get('carburant', 'diesel'),
+            "puissance_fiscale": form_data.get('puissance_fiscale', 6),
+            "date_mec": form_data.get('date_mec', '2020-01-01'),
+            "type_plaque": "standard",
             "immatriculation": dummy['plate'],
-            "tauxCRM": 1,
-            "crmFMSAR": 1,
-            "carburant": FUEL_MAPPING['rma'].get(fuel, '2'),
-            "puissanceFiscale": str(form_data.get('puissance_fiscale', 6)),
-            "dateMiseEnCirculation": "01-01-2012",
-            "heureMiseEnCirculation": "00",
-            "nombrePlace": form_data.get('nombre_places', 5),
-            "valeurANeuf": str(form_data.get('valeur_neuf', 400000)),
-            "valeurVenale": str(form_data.get('valeur_actuelle', 300000)),
-            "referenceCRMFMSAR": "14E9999/26/36551",
-            "avecBaremeConventionnel": "off",
-            "natureContrat": "F",
-            "dateEffet": future_date,
-            "heureEffet": 3,
-            "dateEcheance": next_year,
-            "heureEcheance": 3,
-            "dateEvenement": future_date,
-            "heureEvenement": 3,
-            "duree": "12",
-            "dureeContratEnJour": 365,
-            "dateEtablissement": future_date,
-            "typeContrat": 1,
-            "modePaiement": "8",
-            "modePaiementCanalDirect": "8",
-            "typeLivraison": "home",
-            "typeCouverture": "1",
-            "clientConducteur": "on",
-            "vehiculeAgarage": "off",
-            "avecDelegation": "off",
-            "dateEffetInitiale": future_date,
-            "formatAttestation": "3",
-            "avecReductionSaharienne": "off",
-            "typeCanal": 3,
-            "idUtilisateur": 3405,
-            "idProduit": "1",
-            "idIntermediaire": "8714",
-            "typeClient": "1",
-            "typeConducteur": "1",
-            "numeroDevis": "202026032437",
-            "typeEvenement": "100",
-            "avecAntivole": "on",
-            "intermediaryChanged": "off",
-            "specialOffer": "Z200-AA"
+            "valeur_neuf": form_data.get('valeur_neuf', 200000),
+            "valeur_actuelle": form_data.get('valeur_actuelle', 150000),
+            "nombre_places": form_data.get('nombre_places', 5),
+            "date_naissance": form_data.get('date_naissance', '1990-01-01'),
+            "telephone": dummy['phone'],
+            "date_permis": form_data.get('date_permis', '2010-01-01'),
+            "ville": form_data.get('ville', 'CASABLANCA')
         }
 
     @staticmethod

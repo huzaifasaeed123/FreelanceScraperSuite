@@ -18,28 +18,36 @@
         }
     </script>
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
         .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 min-h-screen">
+<body class="font-sans antialiased bg-slate-50 min-h-screen">
     <!-- Background -->
     <div class="gradient-bg min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="absolute inset-0 bg-black/10"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/5"></div>
 
         <!-- Login Card -->
-        <div class="glass rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10">
+        <div class="glass rounded-2xl shadow-2xl p-10 w-full max-w-md relative z-10">
             <!-- Logo/Title -->
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Connexion</h1>
-                <p class="text-gray-600">Comparateur d'Assurance Auto</p>
+            <div class="text-center mb-10">
+                <div class="inline-block mb-4">
+                    <span class="text-3xl font-bold text-blue-600">MesAssurances.ma</span>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">Connexion</h1>
+                <p class="text-slate-600 text-sm">Accédez à votre espace comparateur</p>
             </div>
 
             <!-- Error Message -->
@@ -58,7 +66,7 @@
                     </label>
                     <input type="email" id="email" name="email" required
                         placeholder="votre@email.com"
-                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                 </div>
 
                 <!-- Password -->
@@ -68,13 +76,13 @@
                     </label>
                     <input type="password" id="password" name="password" required
                         placeholder="••••••••"
-                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                 </div>
 
                 <!-- Submit Button -->
                 <div>
                     <button type="submit" id="loginBtn"
-                        class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                        class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02]">
                         <svg id="loginIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">

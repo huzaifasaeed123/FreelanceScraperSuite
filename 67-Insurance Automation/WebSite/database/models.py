@@ -41,6 +41,8 @@ def init_database():
         CREATE TABLE IF NOT EXISTS form_submissions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
+            user_name TEXT,
+            user_email TEXT,
 
             -- Vehicle Information
             marque TEXT,
@@ -74,6 +76,27 @@ def init_database():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
+
+    # Migration: Add user_name and user_email columns if they don't exist
+    try:
+        cursor.execute("SELECT user_name FROM form_submissions LIMIT 1")
+    except:
+        # Column doesn't exist, add it
+        try:
+            cursor.execute("ALTER TABLE form_submissions ADD COLUMN user_name TEXT")
+            print("Added user_name column to form_submissions table")
+        except:
+            pass
+
+    try:
+        cursor.execute("SELECT user_email FROM form_submissions LIMIT 1")
+    except:
+        # Column doesn't exist, add it
+        try:
+            cursor.execute("ALTER TABLE form_submissions ADD COLUMN user_email TEXT")
+            print("Added user_email column to form_submissions table")
+        except:
+            pass
 
     # Table 2: Scraper Results - stores results from scrapers for each form submission
     cursor.execute('''
@@ -245,6 +268,60 @@ def init_database():
         )
     ''')
 
+    # Table 8: User Settings - stores user-specific settings for PDF generation
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            company_name TEXT,
+            logo_filename TEXT,
+            footer_text TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Table 9: Scraper Settings - stores admin settings for enabling/disabling scrapers
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scraper_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scraper_code TEXT NOT NULL UNIQUE,
+            scraper_name TEXT NOT NULL,
+            is_enabled BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Initialize default scrapers if table is empty
+    cursor.execute('SELECT COUNT(*) FROM scraper_settings')
+    if cursor.fetchone()[0] == 0:
+        default_scrapers = [
+            ('axa', 'AXA Assurance'),
+            ('sanlam', 'Sanlam'),
+            ('mcma', 'MCMA (MAMDA)'),
+            ('rma', 'RMA Watanya')
+        ]
+        cursor.executemany('''
+            INSERT INTO scraper_settings (scraper_code, scraper_name, is_enabled)
+            VALUES (?, ?, 1)
+        ''', default_scrapers)
+
+    # Table 10: API Keys - stores API keys for external access
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key TEXT NOT NULL UNIQUE,
+            description TEXT,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_used DATETIME,
+            created_by INTEGER,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+    ''')
+
     # Create indexes for better query performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_form_submissions_user ON form_submissions(user_id)')
@@ -256,6 +333,9 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_guarantees_plan ON plan_guarantees(plan_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_fields_plan ON selectable_fields(plan_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_combinations_plan ON option_combinations(plan_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_settings_user ON user_settings(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_scraper_settings_code ON scraper_settings(scraper_code)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key)')
 
     conn.commit()
     conn.close()
@@ -366,22 +446,240 @@ class DatabaseManager:
             conn.close()
             return False
 
+    # ============ User Settings Management ============
+    @staticmethod
+    def get_user_settings(user_id: int) -> Optional[Dict]:
+        """Get user settings by user ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM user_settings WHERE user_id = ?', (user_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        return dict(row) if row else None
+
+    @staticmethod
+    def save_user_settings(user_id: int, company_name: str = None, logo_filename: str = None, footer_text: str = None) -> bool:
+        """Save or update user settings"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Check if settings exist
+            cursor.execute('SELECT id FROM user_settings WHERE user_id = ?', (user_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                # Update existing
+                cursor.execute('''
+                    UPDATE user_settings
+                    SET company_name = ?, logo_filename = ?, footer_text = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (company_name, logo_filename, footer_text, user_id))
+            else:
+                # Insert new
+                cursor.execute('''
+                    INSERT INTO user_settings (user_id, company_name, logo_filename, footer_text)
+                    VALUES (?, ?, ?, ?)
+                ''', (user_id, company_name, logo_filename, footer_text))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            conn.close()
+            return False
+
+    @staticmethod
+    def update_user_logo(user_id: int, logo_filename: str) -> bool:
+        """Update only the logo filename for a user"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Check if settings exist
+            cursor.execute('SELECT id FROM user_settings WHERE user_id = ?', (user_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                cursor.execute('''
+                    UPDATE user_settings SET logo_filename = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?
+                ''', (logo_filename, user_id))
+            else:
+                cursor.execute('''
+                    INSERT INTO user_settings (user_id, logo_filename) VALUES (?, ?)
+                ''', (user_id, logo_filename))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            conn.close()
+            return False
+
+    # ============ Scraper Settings Management ============
+    @staticmethod
+    def get_all_scrapers() -> List[Dict]:
+        """Get all scrapers with their enabled status"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM scraper_settings ORDER BY scraper_code')
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_enabled_scrapers() -> List[str]:
+        """Get list of enabled scraper codes"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT scraper_code FROM scraper_settings WHERE is_enabled = 1')
+        rows = cursor.fetchall()
+        conn.close()
+        return [row[0] for row in rows]
+
+    @staticmethod
+    def is_scraper_enabled(scraper_code: str) -> bool:
+        """Check if a specific scraper is enabled"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT is_enabled FROM scraper_settings WHERE scraper_code = ?', (scraper_code,))
+        row = cursor.fetchone()
+        conn.close()
+        return bool(row[0]) if row else False
+
+    @staticmethod
+    def toggle_scraper(scraper_code: str, is_enabled: bool) -> bool:
+        """Enable or disable a scraper"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE scraper_settings
+                SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE scraper_code = ?
+            ''', (is_enabled, scraper_code))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error toggling scraper {scraper_code}: {e}")
+            conn.close()
+            return False
+
+    # ============ API Key Management ============
+    @staticmethod
+    def create_api_key(description: str = None, created_by: int = None) -> Optional[str]:
+        """Create a new API key and return it"""
+        import secrets
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Generate a secure random API key
+        api_key = secrets.token_urlsafe(32)
+
+        try:
+            cursor.execute('''
+                INSERT INTO api_keys (api_key, description, created_by)
+                VALUES (?, ?, ?)
+            ''', (api_key, description, created_by))
+            conn.commit()
+            conn.close()
+            return api_key
+        except Exception as e:
+            print(f"Error creating API key: {e}")
+            conn.close()
+            return None
+
+    @staticmethod
+    def validate_api_key(api_key: str) -> bool:
+        """Validate an API key and update last_used timestamp"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('''
+                SELECT is_active FROM api_keys WHERE api_key = ?
+            ''', (api_key,))
+            result = cursor.fetchone()
+
+            if result and result[0]:  # Key exists and is active
+                # Update last_used timestamp
+                cursor.execute('''
+                    UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE api_key = ?
+                ''', (api_key,))
+                conn.commit()
+                conn.close()
+                return True
+            else:
+                conn.close()
+                return False
+        except Exception as e:
+            print(f"Error validating API key: {e}")
+            conn.close()
+            return False
+
+    @staticmethod
+    def get_all_api_keys() -> List[Dict]:
+        """Get all API keys (admin only)"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, api_key, description, is_active, created_at, last_used FROM api_keys ORDER BY created_at DESC')
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def toggle_api_key(api_key: str, is_active: bool) -> bool:
+        """Enable or disable an API key"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE api_keys SET is_active = ? WHERE api_key = ?
+            ''', (is_active, api_key))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error toggling API key: {e}")
+            conn.close()
+            return False
+
+    @staticmethod
+    def delete_api_key(api_key: str) -> bool:
+        """Delete an API key"""
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('DELETE FROM api_keys WHERE api_key = ?', (api_key,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error deleting API key: {e}")
+            conn.close()
+            return False
+
     # ============ Form Submission Management ============
     @staticmethod
-    def save_form_submission(user_id: int, form_data: dict, ip_address: str = None, user_agent: str = None) -> int:
+    def save_form_submission(user_id: int, form_data: dict, ip_address: str = None, user_agent: str = None, user_name: str = None, user_email: str = None) -> int:
         """Save form submission and return its ID"""
         conn = get_connection()
         cursor = conn.cursor()
 
         cursor.execute('''
             INSERT INTO form_submissions
-            (user_id, marque, modele, carburant, nombre_places, puissance_fiscale,
+            (user_id, user_name, user_email, marque, modele, carburant, nombre_places, puissance_fiscale,
              date_mec, type_plaque, immatriculation, valeur_neuf, valeur_actuelle,
              nom, prenom, telephone, email, date_naissance, date_permis, ville,
              agent_key, assureur_actuel, consent, ip_address, user_agent)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             user_id,
+            user_name,
+            user_email,
             form_data.get('marque'),
             form_data.get('modele'),
             form_data.get('carburant'),

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramètres - Comparateur d'Assurance Auto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .file-upload-area {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-area:hover {
+            border-color: #3b82f6;
+            background-color: #f1f5f9;
+        }
+
+        .file-upload-area.drag-over {
+            border-color: #10b981;
+            background-color: #ecfdf5;
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-slate-50 min-h-screen">
+    <!-- Header -->
+    <div class="gradient-bg py-8 shadow-lg border-b border-blue-700">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-2xl font-bold text-white mb-1 block">MesAssurances.ma</span>
+                    <h1 class="text-3xl font-extrabold text-white">Paramètres</h1>
+                    <p class="text-white/90 text-sm mt-1">Configuration pour la génération de PDF</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Formulaire
+                    </a>
+                    <button onclick="logout()"
+                        class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Success/Error Messages -->
+        <div id="successAlert" class="hidden mb-6">
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl">
+                <p id="successText" class="text-green-700 font-medium text-sm"></p>
+            </div>
+        </div>
+
+        <div id="errorAlert" class="hidden mb-6">
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                <p id="errorText" class="text-red-700 font-medium text-sm"></p>
+            </div>
+        </div>
+
+        <!-- Logo Upload Section -->
+        <div class="glass rounded-2xl shadow-lg p-8 mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Logo de l'Entreprise</h2>
+
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-4">Ce logo apparaîtra en haut de vos PDF générés</p>
+
+                <!-- Current Logo Preview -->
+                <div id="logoPreviewContainer" class="mb-4 hidden">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Logo actuel :</p>
+                    <div class="bg-gray-100 rounded-lg p-4 inline-block">
+                        <img id="logoPreview" src="" alt="Logo" class="max-h-24 max-w-xs object-contain">
+                    </div>
+                </div>
+
+                <!-- File Upload Area -->
+                <div id="fileUploadArea" class="file-upload-area rounded-xl p-8 text-center cursor-pointer">
+                    <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml" class="hidden">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-600">
+                        <span class="font-semibold text-indigo-600">Cliquez pour télécharger</span> ou glissez-déposez
+                    </p>
+                    <p class="text-xs text-gray-500">PNG, JPG, GIF, SVG jusqu'à 5MB</p>
+                </div>
+
+                <button id="uploadLogoBtn" onclick="uploadLogo()" disabled
+                    class="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed hidden">
+                    <span id="uploadBtnText">Télécharger le Logo</span>
+                    <svg id="uploadSpinner" class="hidden inline w-4 h-4 ml-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Form Section -->
+        <div class="glass rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Informations de l'Entreprise</h2>
+
+            <form id="settingsForm" class="space-y-6">
+                <!-- Company Name -->
+                <div>
+                    <label for="companyName" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Nom de l'Entreprise
+                    </label>
+                    <input type="text" id="companyName" name="companyName"
+                        placeholder="Ex: ABC Assurances"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                </div>
+
+                <!-- Footer Text -->
+                <div>
+                    <label for="footerText" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Texte du Pied de Page
+                    </label>
+                    <textarea id="footerText" name="footerText" rows="3"
+                        placeholder="Ce texte apparaîtra en bas de vos PDF générés"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"></textarea>
+                    <p class="mt-1 text-xs text-gray-500">Laissez vide pour utiliser le texte par défaut</p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end">
+                    <button type="submit" id="saveSettingsBtn"
+                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl text-white font-bold rounded-xl transition-all duration-200 flex items-center gap-2">
+                        <svg id="saveIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <svg id="saveSpinner" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="saveBtnText">Enregistrer les Paramètres</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Load settings on page load
+        loadSettings();
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const data = await response.json();
+
+                if (data.success && data.settings) {
+                    const settings = data.settings;
+
+                    // Populate form
+                    document.getElementById('companyName').value = settings.company_name || '';
+                    document.getElementById('footerText').value = settings.footer_text || '';
+
+                    // Show logo if exists
+                    if (settings.logo_filename) {
+                        document.getElementById('logoPreview').src = `/static/uploads/${settings.logo_filename}`;
+                        document.getElementById('logoPreviewContainer').classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        // File Upload Handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const logoFileInput = document.getElementById('logoFileInput');
+        const uploadLogoBtn = document.getElementById('uploadLogoBtn');
+
+        fileUploadArea.addEventListener('click', () => {
+            logoFileInput.click();
+        });
+
+        logoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+
+        // Drag and drop
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('drag-over');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('drag-over');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleFileSelect(file);
+            } else {
+                showError('Veuillez sélectionner un fichier image valide');
+            }
+        });
+
+        function handleFileSelect(file) {
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showError('Le fichier est trop volumineux. Taille maximale: 5MB');
+                return;
+            }
+
+            selectedFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('logoPreview').src = e.target.result;
+                document.getElementById('logoPreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+
+            // Enable upload button
+            uploadLogoBtn.disabled = false;
+            uploadLogoBtn.classList.remove('hidden');
+        }
+
+        async function uploadLogo() {
+            if (!selectedFile) {
+                showError('Aucun fichier sélectionné');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('logo', selectedFile);
+
+            // Show loading
+            document.getElementById('uploadBtnText').textContent = 'Téléchargement...';
+            document.getElementById('uploadSpinner').classList.remove('hidden');
+            uploadLogoBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/upload-logo', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSuccess('Logo téléchargé avec succès!');
+                    selectedFile = null;
+                    uploadLogoBtn.classList.add('hidden');
+                } else {
+                    showError(data.error || 'Échec du téléchargement');
+                }
+            } catch (error) {
+                showError('Erreur lors du téléchargement: ' + error.message);
+            } finally {
+                document.getElementById('uploadBtnText').textContent = 'Télécharger le Logo';
+                document.getElementById('uploadSpinner').classList.add('hidden');
+                uploadLogoBtn.disabled = false;
+            }
+        }
+
+        // Settings Form Submission
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+
+            const companyName = document.getElementById('companyName').value;
+            const footerText = document.getElementById('footerText').value;
+
+            // Show loading
+            document.getElementById('saveIcon').classList.add('hidden');
+            document.getElementById('saveSpinner').classList.remove('hidden');
+            document.getElementById('saveBtnText').textContent = 'Enregistrement...';
+            document.getElementById('saveSettingsBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_name: companyName, footer_text: footerText })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSuccess('Paramètres enregistrés avec succès!');
+                } else {
+                    showError(data.error || 'Échec de l\'enregistrement');
+                }
+            } catch (error) {
+                showError('Erreur lors de l\'enregistrement: ' + error.message);
+            } finally {
+                document.getElementById('saveIcon').classList.remove('hidden');
+                document.getElementById('saveSpinner').classList.add('hidden');
+                document.getElementById('saveBtnText').textContent = 'Enregistrer les Paramètres';
+                document.getElementById('saveSettingsBtn').disabled = false;
+            }
+        });
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorAlert').classList.remove('hidden');
+            document.getElementById('successAlert').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showSuccess(message) {
+            document.getElementById('successText').textContent = message;
+            document.getElementById('successAlert').classList.remove('hidden');
+            document.getElementById('errorAlert').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function hideMessages() {
+            document.getElementById('errorAlert').classList.add('hidden');
+            document.getElementById('successAlert').classList.add('hidden');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+
+</html>

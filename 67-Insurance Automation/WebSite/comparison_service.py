@@ -126,19 +126,77 @@ def parse_sanlam_response(data):
 
 
 def parse_mcma_response(data):
-    """Parse MCMA API response to frontend format"""
+    """
+    Parse MCMA API response to frontend format.
+    Now handles new format with session data for subsequent update requests.
+
+    Returns tuple: (plans, mcma_session_data)
+    """
     if not data or not isinstance(data, dict):
-        return []
+        return [], None
+
+    # Handle new format: {packs: {...}, subscription_id: ..., token: ...}
+    packs_data = data.get("packs", data)  # Fallback to data if no "packs" key
+    subscription_id = data.get("subscription_id")
+    token = data.get("token")
 
     plans = []
     pack_order = ["essentielle", "confort", "optimale", "tout_risque"]
     colors = ['#2fd0a7', '#1ba88e', '#0d8f75', '#00765c']  # MCMA teals/greens
 
+    # Static selectable fields configuration (options fetched on demand)
+    MCMA_SELECTABLE_CONFIG = {
+        "optimale": [
+            {
+                "code": "brokenGlassValue",
+                "title": "Bris de Glaces",
+                "options": [
+                    {"label": "7 000 DH", "value": 7000},
+                    {"label": "10 000 DH", "value": 10000},
+                    {"label": "15 000 DH", "value": 15000}
+                ],
+                "default": 7000
+            },
+            {
+                "code": "damageAndCollision",
+                "title": "Dommages-Collision",
+                "options": [
+                    {"label": "20 000 DH", "value": 20000},
+                    {"label": "30 000 DH", "value": 30000},
+                    {"label": "50 000 DH", "value": 50000}
+                ],
+                "default": 20000
+            }
+        ],
+        "tout_risque": [
+            {
+                "code": "brokenGlassValue",
+                "title": "Bris de Glaces",
+                "options": [
+                    {"label": "7 000 DH", "value": 7000},
+                    {"label": "10 000 DH", "value": 10000},
+                    {"label": "15 000 DH", "value": 15000}
+                ],
+                "default": 7000
+            },
+            {
+                "code": "franchise",
+                "title": "Franchise",
+                "options": [
+                    {"label": "3%", "value": 3},
+                    {"label": "5%", "value": 5},
+                    {"label": "10%", "value": 10}
+                ],
+                "default": 5
+            }
+        ]
+    }
+
     for idx, pack_key in enumerate(pack_order):
-        if pack_key not in data:
+        if pack_key not in packs_data:
             continue
 
-        pack = data[pack_key]
+        pack = packs_data[pack_key]
         if pack.get("disabled", False):
             continue
 
@@ -147,101 +205,8 @@ def parse_mcma_response(data):
         annual_taxes = round(annual_price * 0.165, 2)
         semi_annual_taxes = round(semi_annual_price * 0.165, 2)
 
-        # Build selectable fields from option_prices if available
-        selectable_fields = []
-        option_prices = pack.get("option_prices", [])
-        
-        if option_prices and pack_key == "optimale":
-            # For optimale: extract brokenGlassValue and damageAndCollision
-            broken_glass_options = {}
-            damage_collision_options = {}
-            
-            # Get unique values and their prices for broken glass
-            for opt in option_prices:
-                bg = opt.get("brokenGlassValue")
-                if bg and bg not in broken_glass_options:
-                    # Store with default damageAndCollision value
-                    broken_glass_options[bg] = {
-                        "value": bg,
-                        "price": None  # Will be filled from any combination
-                    }
-            
-            # Get unique values and their prices for damage and collision
-            for opt in option_prices:
-                dc = opt.get("damageAndCollision")
-                if dc and dc not in damage_collision_options:
-                    damage_collision_options[dc] = {
-                        "value": dc,
-                        "price": None  # Will be filled from any combination
-                    }
-            
-            # Fill in any prices (from first found combination)
-            for opt in option_prices:
-                bg = opt.get("brokenGlassValue")
-                dc = opt.get("damageAndCollision")
-                if bg in broken_glass_options and broken_glass_options[bg]["price"] is None:
-                    broken_glass_options[bg]["price"] = opt.get("annualPrice", 0)
-                if dc in damage_collision_options and damage_collision_options[dc]["price"] is None:
-                    damage_collision_options[dc]["price"] = opt.get("annualPrice", 0)
-            
-            if broken_glass_options:
-                selectable_fields.append({
-                    "title": "Bris de Glaces",
-                    "options": list(broken_glass_options.values()),
-                    "is_default": 7000
-                })
-            
-            if damage_collision_options:
-                selectable_fields.append({
-                    "title": "Dommages-Collision",
-                    "options": list(damage_collision_options.values()),
-                    "is_default": 20000
-                })
-        
-        elif option_prices and pack_key == "tout_risque":
-            # For tout_risque: extract brokenGlassValue and franchise
-            broken_glass_options = {}
-            franchise_options = {}
-            
-            # Get unique values
-            for opt in option_prices:
-                bg = opt.get("brokenGlassValue")
-                if bg and bg not in broken_glass_options:
-                    broken_glass_options[bg] = {
-                        "value": bg,
-                        "price": None
-                    }
-            
-            for opt in option_prices:
-                fr = opt.get("franchise")
-                if fr and fr not in franchise_options:
-                    franchise_options[fr] = {
-                        "value": fr,
-                        "price": None
-                    }
-            
-            # Fill in any prices
-            for opt in option_prices:
-                bg = opt.get("brokenGlassValue")
-                fr = opt.get("franchise")
-                if bg in broken_glass_options and broken_glass_options[bg]["price"] is None:
-                    broken_glass_options[bg]["price"] = opt.get("annualPrice", 0)
-                if fr in franchise_options and franchise_options[fr]["price"] is None:
-                    franchise_options[fr]["price"] = opt.get("annualPrice", 0)
-            
-            if broken_glass_options:
-                selectable_fields.append({
-                    "title": "Bris de Glaces",
-                    "options": list(broken_glass_options.values()),
-                    "is_default": 7000
-                })
-            
-            if franchise_options:
-                selectable_fields.append({
-                    "title": "Franchise",
-                    "options": list(franchise_options.values()),
-                    "is_default": 5
-                })
+        # Get selectable fields config for this pack (options fetched on demand)
+        selectable_fields = MCMA_SELECTABLE_CONFIG.get(pack_key, [])
 
         plan = {
             "plan_name": pack.get("title", pack_key.title()),
@@ -267,21 +232,111 @@ def parse_mcma_response(data):
             ],
             "selectable_fields": selectable_fields,
             "is_eligible": not pack.get("disabled", False),
-            "order": idx,
-            "extra_info": {
-                "option_combinations": option_prices  # Pass all combinations for frontend lookup
-            }
+            "order": idx
         }
         plans.append(plan)
 
-    return plans
+    # Return plans and session data for subsequent update requests
+    mcma_session_data = {
+        "subscription_id": subscription_id,
+        "token": token
+    } if subscription_id and token else None
+
+    return plans, mcma_session_data
 
 
 def parse_rma_response(data):
     """Parse RMA API response to frontend format"""
+    # Handle new filtered format: {success, annual: [...], semi_annual: [...]}
+    if isinstance(data, dict) and 'annual' in data:
+        annual_data = data.get('annual', [])
+        semi_annual_data = data.get('semi_annual', [])
+
+        if not annual_data or not isinstance(annual_data, list):
+            return []
+
+        colors = ['#1E3A8A', '#1e40af', '#2563eb', '#3b82f6']
+        plans = []
+
+        for idx, offer in enumerate(annual_data):
+            if not offer:
+                continue
+
+            # Get semi-annual offer for the same plan index
+            semi_offer = semi_annual_data[idx] if idx < len(semi_annual_data) else None
+
+            # Check if this is filtered format (has 'points') or full format (has 'garanties')
+            is_filtered = 'points' in offer
+
+            if is_filtered:
+                # Filtered format
+                annual_total = offer.get('primeTotalTTC', 0) or 0
+                semi_total = semi_offer.get('primeTotalTTC', 0) if semi_offer else round(annual_total * 0.52, 2)
+
+                plan = {
+                    "plan_name": offer.get("libelle", f"Plan {idx + 1}"),
+                    "plan_code": f"rma_{idx}",
+                    "provider": "RMA Assurance",
+                    "provider_code": "rma",
+                    "color": colors[idx % len(colors)],
+                    "annual": {
+                        "prime_total": annual_total
+                    },
+                    "semi_annual": {
+                        "prime_total": semi_total
+                    },
+                    "guarantees": [
+                        {"name": point, "included": True}
+                        for point in offer.get('points', [])
+                    ],
+                    "is_eligible": True,
+                    "order": idx
+                }
+            else:
+                # Full format (original)
+                prime_net = offer.get("primeAnnuelleHT", 0) or 0
+                taxes = (offer.get("taxes", 0) or 0) + (offer.get("taxeParafiscal", 0) or 0)
+                prime_total = offer.get("primeAnnuelleTTC", 0) or 0
+
+                semi_prime_net = semi_offer.get("primeAnnuelleHT", 0) if semi_offer else round(prime_net * 0.52, 2)
+                semi_taxes = ((semi_offer.get("taxes", 0) or 0) + (semi_offer.get("taxeParafiscal", 0) or 0)) if semi_offer else round(taxes * 0.52, 2)
+                semi_prime_total = semi_offer.get("primeAnnuelleTTC", 0) if semi_offer else round(prime_total * 0.52, 2)
+
+                plan = {
+                    "plan_name": offer.get("libelle", f"Plan {idx + 1}"),
+                    "plan_code": str(offer.get("id", idx)),
+                    "provider": "RMA Assurance",
+                    "provider_code": "rma",
+                    "color": colors[idx % len(colors)],
+                    "annual": {
+                        "prime_net": prime_net,
+                        "taxes": taxes,
+                        "prime_total": prime_total
+                    },
+                    "semi_annual": {
+                        "prime_net": semi_prime_net,
+                        "taxes": semi_taxes,
+                        "prime_total": semi_prime_total
+                    },
+                    "guarantees": [
+                        {
+                            "name": g.get("libelle", ""),
+                            "included": g.get("included", False)
+                        } for g in offer.get("garanties", []) if g.get("included", False)
+                    ],
+                    "is_eligible": offer.get("eligible", True),
+                    "order": idx
+                }
+
+            plans.append(plan)
+
+        return plans
+
+    # Handle old format (list only)
     if not data or not isinstance(data, list):
         return []
 
+    colors = ['#1E3A8A', '#1e40af', '#2563eb', '#3b82f6']
     plans = []
     for idx, offer in enumerate(data):
         if not offer:
@@ -296,6 +351,7 @@ def parse_rma_response(data):
             "plan_code": str(offer.get("id", idx)),
             "provider": "RMA Assurance",
             "provider_code": "rma",
+            "color": colors[idx % len(colors)],
             "annual": {
                 "prime_net": prime_net,
                 "taxes": taxes,
@@ -472,10 +528,11 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
 
         # Parse response based on provider
         axa_session_data = None
+        mcma_session_data = None
         if provider_code == 'sanlam':
             plans = parse_sanlam_response(raw_data)
         elif provider_code == 'mcma':
-            plans = parse_mcma_response(raw_data)
+            plans, mcma_session_data = parse_mcma_response(raw_data)
         elif provider_code == 'rma':
             plans = parse_rma_response(raw_data)
         elif provider_code == 'axa':
@@ -525,6 +582,10 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
         if axa_session_data:
             result['axa_session_data'] = axa_session_data
 
+        # Include MCMA session data for subsequent update requests
+        if mcma_session_data:
+            result['mcma_session_data'] = mcma_session_data
+
         return result
 
     except Exception as e:
@@ -561,7 +622,7 @@ def fetch_from_provider(provider_code, params, user_id=None, form_submission_id=
         }
 
 
-def get_all_quotes(params, user_id=None, form_submission_id=None):
+def get_all_quotes(params, user_id=None, form_submission_id=None, selected_scrapers=None):
     """
     Fetch quotes from all providers in parallel
 
@@ -569,6 +630,8 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
         params: Dictionary with request parameters
         user_id: Optional user ID for database logging
         form_submission_id: Optional form submission ID for database logging
+        selected_scrapers: Optional list of scraper codes to query (e.g., ['axa', 'sanlam'])
+                          If None or empty, all available scrapers will be queried
 
     Returns:
         Dictionary with all provider results
@@ -577,7 +640,13 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
     results = []
 
     # Fetch from all providers in parallel
-    provider_codes = list(SCRAPER_FUNCTIONS.keys())
+    all_provider_codes = list(SCRAPER_FUNCTIONS.keys())
+
+    # Filter providers based on selected scrapers if provided
+    if selected_scrapers and isinstance(selected_scrapers, list) and len(selected_scrapers) > 0:
+        provider_codes = [code for code in all_provider_codes if code in selected_scrapers]
+    else:
+        provider_codes = all_provider_codes
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(provider_codes)) as executor:
         future_to_provider = {
@@ -595,6 +664,7 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
     providers = []
     errors = []
     axa_session_data = None
+    mcma_session_data = None
 
     for result in results:
         provider_data = {
@@ -615,6 +685,10 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
         if result['provider_code'] == 'axa' and result.get('axa_session_data'):
             axa_session_data = result['axa_session_data']
 
+        # Extract MCMA session data if available
+        if result['provider_code'] == 'mcma' and result.get('mcma_session_data'):
+            mcma_session_data = result['mcma_session_data']
+
         providers.append(provider_data)
 
     response = {
@@ -633,6 +707,10 @@ def get_all_quotes(params, user_id=None, form_submission_id=None):
     # Include AXA session data for frontend to use in update requests
     if axa_session_data:
         response["axa_session_data"] = axa_session_data
+
+    # Include MCMA session data for frontend to use in update requests
+    if mcma_session_data:
+        response["mcma_session_data"] = mcma_session_data
 
     return response
 

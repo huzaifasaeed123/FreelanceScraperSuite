@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Scrapers - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #10b981;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-slate-50 min-h-screen">
+    <!-- Header -->
+    <div class="gradient-bg py-8 shadow-lg border-b border-blue-700">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-2xl font-bold text-white mb-1 block">MesAssurances.ma</span>
+                    <h1 class="text-3xl font-extrabold text-white">Gestion des Scrapers</h1>
+                    <p class="text-white/90 text-sm mt-1">Activer ou désactiver les scrapers d'assurance</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/admin"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Utilisateurs
+                    </a>
+                    <a href="/settings"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Paramètres
+                    </a>
+                    <a href="/"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Formulaire
+                    </a>
+                    <button onclick="logout()"
+                        class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg">
+                        Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Success/Error Messages -->
+        <div id="successAlert" class="hidden mb-6">
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-xl">
+                <p id="successText" class="text-green-700 font-medium text-sm"></p>
+            </div>
+        </div>
+
+        <div id="errorAlert" class="hidden mb-6">
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                <p id="errorText" class="text-red-700 font-medium text-sm"></p>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="glass rounded-2xl shadow-lg p-6 mb-6">
+            <div class="flex items-start gap-3">
+                <svg class="w-6 h-6 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-1">Information importante</h3>
+                    <p class="text-sm text-gray-600">
+                        Les scrapers désactivés ne seront pas visibles pour les utilisateurs et ne seront pas exécutés lors des comparaisons.
+                        Les utilisateurs ne pourront sélectionner que les scrapers actifs.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrapers List -->
+        <div class="glass rounded-2xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Scrapers disponibles</h2>
+
+            <div id="scrapersList" class="space-y-4">
+                <!-- Scrapers will be loaded here -->
+                <div class="text-center py-8 text-gray-500">
+                    Chargement des scrapers...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load scrapers on page load
+        loadScrapers();
+
+        async function loadScrapers() {
+            try {
+                const response = await fetch('/api/admin/scrapers');
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec du chargement des scrapers');
+                }
+
+                displayScrapers(data.scrapers);
+
+            } catch (error) {
+                document.getElementById('scrapersList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        Erreur lors du chargement des scrapers
+                    </div>
+                `;
+            }
+        }
+
+        function displayScrapers(scrapers) {
+            const scrapersList = document.getElementById('scrapersList');
+
+            if (scrapers.length === 0) {
+                scrapersList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        Aucun scraper trouvé
+                    </div>
+                `;
+                return;
+            }
+
+            // Scraper icons mapping
+            const icons = {
+                'axa': '🏢',
+                'sanlam': '🛡️',
+                'mcma': '🏛️',
+                'rma': '🔰'
+            };
+
+            scrapersList.innerHTML = scrapers.map(scraper => `
+                <div class="bg-white rounded-lg shadow p-6 border-l-4 ${scraper.is_enabled ? 'border-green-500' : 'border-gray-300'}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="text-4xl">${icons[scraper.scraper_code] || '📊'}</div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">${scraper.scraper_name}</h3>
+                                <p class="text-sm text-gray-500">Code: <span class="font-mono font-semibold">${scraper.scraper_code}</span></p>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    ${scraper.is_enabled ?
+                                        '<span class="text-green-600 font-semibold">✓ Actif</span>' :
+                                        '<span class="text-gray-500">✗ Désactivé</span>'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="toggle-switch">
+                                <input type="checkbox"
+                                    ${scraper.is_enabled ? 'checked' : ''}
+                                    onchange="toggleScraper('${scraper.scraper_code}', this.checked)"
+                                    id="toggle_${scraper.scraper_code}">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function toggleScraper(scraperCode, isEnabled) {
+            hideMessages();
+
+            try {
+                const response = await fetch('/api/admin/toggle-scraper', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        scraper_code: scraperCode,
+                        is_enabled: isEnabled
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec de la mise à jour');
+                }
+
+                showSuccess(`Scraper ${scraperCode.toUpperCase()} ${isEnabled ? 'activé' : 'désactivé'} avec succès`);
+
+                // Reload to reflect changes
+                setTimeout(() => {
+                    loadScrapers();
+                }, 1000);
+
+            } catch (error) {
+                showError(error.message || 'Erreur lors de la mise à jour du scraper');
+                // Revert the toggle
+                document.getElementById(`toggle_${scraperCode}`).checked = !isEnabled;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorAlert').classList.remove('hidden');
+            document.getElementById('successAlert').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showSuccess(message) {
+            document.getElementById('successText').textContent = message;
+            document.getElementById('successAlert').classList.remove('hidden');
+            document.getElementById('errorAlert').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function hideMessages() {
+            document.getElementById('errorAlert').classList.add('hidden');
+            document.getElementById('successAlert').classList.add('hidden');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -4,7 +4,7 @@ Handles user authentication and session management
 """
 
 from functools import wraps
-from flask import session, redirect, url_for, request
+from flask import session, redirect, url_for, request, jsonify
 from database.models import DatabaseManager
 import os
 
@@ -50,6 +50,38 @@ def admin_required(f):
             return redirect(url_for('login'))
         if not session.get('is_admin', False):
             return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def api_key_or_login_required(f):
+    """Decorator to require either valid API key OR login for API routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check for API key in headers
+        api_key = request.headers.get('X-API-Key')
+
+        if api_key:
+            # Validate API key
+            if DatabaseManager.validate_api_key(api_key):
+                # API key is valid, allow access
+                # Set a flag to indicate API key auth was used (for logging purposes)
+                request.api_key_auth = True
+                return f(*args, **kwargs)
+            else:
+                # Invalid API key
+                return jsonify({
+                    "success": False,
+                    "error": "Invalid or inactive API key"
+                }), 401
+
+        # No API key, check for session login
+        if 'user_id' not in session:
+            return jsonify({
+                "success": False,
+                "error": "Authentication required. Provide X-API-Key header or login."
+            }), 401
+
         return f(*args, **kwargs)
     return decorated_function
 

@@ -18,33 +18,47 @@
         }
     </script>
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
         .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 min-h-screen">
+<body class="font-sans antialiased bg-slate-50 min-h-screen">
     <!-- Header -->
-    <div class="gradient-bg py-6 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
+    <div class="gradient-bg py-8 shadow-lg border-b border-blue-700">
+        <div class="max-w-7xl mx-auto px-6">
             <div class="flex justify-between items-center">
                 <div>
+                    <span class="text-2xl font-bold text-white mb-1 block">MesAssurances.ma</span>
                     <h1 class="text-3xl font-extrabold text-white">Administration</h1>
-                    <p class="text-white/80 text-sm">Gestion des utilisateurs</p>
+                    <p class="text-white/90 text-sm mt-1">Gestion des utilisateurs</p>
                 </div>
                 <div class="flex gap-3">
+                    <a href="/admin/scrapers"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Scrapers
+                    </a>
+                    <a href="/settings"
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
+                        Paramètres
+                    </a>
                     <a href="/"
-                        class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all">
+                        class="px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20 backdrop-blur-sm">
                         Formulaire
                     </a>
                     <button onclick="logout()"
-                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all">
+                        class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg">
                         Déconnexion
                     </button>
                 </div>
@@ -81,7 +95,7 @@
                         </label>
                         <input type="text" id="name" name="name" required
                             placeholder="Ex: Ahmed Alami"
-                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                     </div>
 
                     <!-- Email -->
@@ -91,7 +105,7 @@
                         </label>
                         <input type="email" id="email" name="email" required
                             placeholder="utilisateur@exemple.com"
-                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                     </div>
 
                     <!-- Password -->
@@ -101,7 +115,7 @@
                         </label>
                         <input type="password" id="password" name="password" required
                             placeholder="••••••••"
-                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                     </div>
 
                     <!-- Confirm Password -->
@@ -111,14 +125,14 @@
                         </label>
                         <input type="password" id="confirmPassword" name="confirmPassword" required
                             placeholder="••••••••"
-                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all">
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
                     </div>
                 </div>
 
                 <!-- Submit Button -->
                 <div class="flex justify-end">
                     <button type="submit" id="createBtn"
-                        class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-200 flex items-center gap-2">
+                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl text-white font-bold rounded-xl transition-all duration-200 flex items-center gap-2">
                         <svg id="createIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>

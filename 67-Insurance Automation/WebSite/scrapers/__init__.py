@@ -6,8 +6,9 @@ Simple functional style - each scraper has a main function to call.
 
 # Import the main scraper functions
 from .axa_scraper import scrape_axa, fetch_axa_quotation
-from .mcma_scraper import scrape_mcma_with_options, create_mcma_subscription, get_mcma_packs
-# from .rma_scraper import scrape_rma, fetch_rma_offers
+from .mcma_scraper import scrape_mcma, update_mcma_quote, create_mcma_subscription, get_mcma_packs
+from .rma_scraper import scrape_rma, filter_rma_response
+from .rma_browser_manager import scrape_rma_queued, shutdown_rma_manager
 from .sanlam_scraper import scrape_sanlam, fetch_all_formulas
 
 # Import base classes (kept for compatibility with existing code)
@@ -21,10 +22,12 @@ from .base import (
 )
 
 # Registry of scraper functions
+# RMA uses the queued version for browser reuse and request queueing
+# MCMA uses base scraper (no options) - options fetched on demand via update endpoint
 SCRAPER_FUNCTIONS = {
     'axa': scrape_axa,
-    'mcma': scrape_mcma_with_options,
-    # 'rma': scrape_rma,
+    'mcma': scrape_mcma,
+    'rma': scrape_rma_queued,
     'sanlam': scrape_sanlam,
 }
 
@@ -49,14 +52,19 @@ __all__ = [
     'scrape_axa',
     'scrape_mcma',
     'scrape_rma',
+    'scrape_rma_queued',
     'scrape_sanlam',
 
     # Individual scraper functions
     'fetch_axa_quotation',
+    'update_mcma_quote',
     'create_mcma_subscription',
     'get_mcma_packs',
-    'fetch_rma_offers',
+    'filter_rma_response',
     'fetch_all_formulas',
+
+    # Browser manager
+    'shutdown_rma_manager',
 
     # Registry
     'SCRAPER_FUNCTIONS',

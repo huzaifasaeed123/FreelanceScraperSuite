@@ -116,6 +116,41 @@ def get_mcma_pack_with_options(subscription_id, token, pack_name, broken_glass_v
         return None
 
 
+def update_mcma_quote(subscription_id, token, pack_name, broken_glass_value, second_option_value):
+    """
+    Update MCMA quote with specific option values.
+    Called when user selects different options in the frontend.
+
+    Args:
+        subscription_id: Subscription ID from initial scrape
+        token: Auth token from initial scrape
+        pack_name: 'optimale' or 'tout_risque'
+        broken_glass_value: Value for brokenGlassValue (7000, 10000, 15000)
+        second_option_value: For optimale: damageAndCollision (20000, 30000, 50000)
+                            For tout_risque: franchise (3, 5, 10)
+
+    Returns:
+        Dictionary with updated pricing or error
+    """
+    pack_data = get_mcma_pack_with_options(subscription_id, token, pack_name, broken_glass_value, second_option_value)
+
+    if pack_data:
+        return {
+            "success": True,
+            "pack_name": pack_name,
+            "broken_glass_value": broken_glass_value,
+            "second_option_value": second_option_value,
+            "annual_price": pack_data.get("annualBasePrice"),
+            "semi_annual_price": pack_data.get("semiAnnualBasePrice"),
+            "raw_data": pack_data
+        }
+    else:
+        return {
+            "success": False,
+            "error": f"Failed to fetch {pack_name} options"
+        }
+
+
 def get_mcma_all_pack_options(subscription_id, token):
     """
     Fetch all option combinations for optimale and tout_risque packs
@@ -169,12 +204,14 @@ def get_mcma_all_pack_options(subscription_id, token):
 def scrape_mcma(params):
     """
     Main function to scrape MCMA - Can be called from website
+    Returns only base packs (no option variations) along with session data
+    for subsequent update requests.
 
     Args:
         params: Dictionary with keys like valeur_neuf, valeur_venale, etc.
 
     Returns:
-        Packs data from MCMA API
+        Dictionary with base packs and session data (subscription_id, token)
     """
     # Import FieldMapper to use mapped payload
     from .field_mapper import FieldMapper
@@ -183,18 +220,23 @@ def scrape_mcma(params):
     payload = FieldMapper.map_for_scraper(params, "mcma")
 
     # Step 1: Create subscription
-    # print(payload)
     subscription_id, token = create_mcma_subscription(payload)
 
     if not subscription_id or not token:
         return None
-    result = get_mcma_packs(subscription_id, token)
-    # Step 2: Get packs
-    # import json
-    # with open("save_file1.json", "w", encoding="utf-8") as f:
-    #     json.dump(result, f, indent=4, ensure_ascii=False)
-        # print(f"Response saved locally at {save_file}")
-    return result
+
+    # Step 2: Get base packs only (no option fetching)
+    base_packs = get_mcma_packs(subscription_id, token)
+
+    if not base_packs:
+        return None
+
+    # Return packs with session data for subsequent update requests
+    return {
+        "packs": base_packs,
+        "subscription_id": subscription_id,
+        "token": token
+    }
 
 
 def scrape_mcma_with_options(params):
