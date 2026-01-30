@@ -4,35 +4,76 @@ Uses API with curl_cffi
 """
 
 from curl_cffi import requests
-from datetime import datetime
-
+import re
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 URL = "https://www.enligne.parionssport.fdj.fr/lvs-api/next/50/p59097045,p59097046,p59097047,p59097049,p59097050,p59097051,p59097052,p59097053,p59096999,p59097001,p59097003,p59096223,p59097009,p59097005,p59096959,p59096955,p59096957,p59096958,p59096929,p58482479,p58245556,p58429681,p58421879,p58422124,p58450232,p58557545,p58425119,p58422320,p58422324,p58406581,p58499583,p58470484,p58421212,p58559769,p58559623,p58429444,p58416562,p58474788,p58598438,p58712243?lineId=1&originId=3&breakdownEventsIntoDays=true&pageIndex=0&showPromotions=true"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "X-Lvs-Hstoken": "xuZ5UW04G20t0obtP-nCoIKBq38_l1oV_pk6R3-SX-2QWOVss_GEspEwmVPyfZRECJhH6ncwMpx0E4NF2AU8KmuBiQJHsiAEpZyB2IJvs4EajKwbKlaOUjJkRK7C3dcn-1BxvJNgyl8hPG7C7RK8yQ==",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Accept-Language": "en-US,en;q=0.9",
     "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
-    "Origin": "https://www.enligne.parionssport.fdj.fr",
-    "Referer": "https://www.enligne.parionssport.fdj.fr/paris-sportifs/cotes-boostees",
-    "X-Lvs-Hst": "RWFgXd8wY89JYZXjpX2EtIa-3aOZ2z5yOQAWJ_ppKagItJiANvqmWzodSylSO0e_Ps0UH530cphxp1l_PMkP4WcHLjIR4oBgG2UvENI4YhgbKlqCWw5KTk3tjuz6GBGVGkWNG4xphxgjTuy8cQkCTw=="
+    "Sec-Ch-Ua": '"Chromium";v="143", "Not A(Brand";v="24"',
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    "Referer": "https://www.enligne.parionssport.fdj.fr/cotes-boostees",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Priority": "u=1, i"
 }
 
 
 def parse_ps_date(date_str):
     """
-    ParionsSport uses a format like '2601050100' (YYMMDDHHMM) in the 'start' field.
+    ParionsSport uses a format like '2601192000' (YYMMDDHHMM) in the 'start' field.
+    This function treats it as UTC and converts it to France local time.
     """
     try:
+        # Parse as naive datetime
         dt = datetime.strptime(date_str, "%y%m%d%H%M")
-        return dt.strftime("%d/%m %H:%M")
+
+        # Attach UTC timezone
+        dt_utc = dt.replace(tzinfo=timezone.utc)
+
+        # Convert to France time
+        france_dt = dt_utc.astimezone(ZoneInfo("Europe/Paris"))
+
+        return france_dt.strftime("%d/%m %H:%M")
     except Exception:
         return date_str
 
+def clean_bet_name(bet_name):
+    """
+    Clean the bet name by:
+    1. Removing everything before the first '-' at the beginning (consistently)
+    2. Removing ALL parentheses () content throughout the string
+    3. Removing '?' from the end
 
-def scrape_parionssport():
-    """Main scraper function for ParionsSport"""
-    print("[PARIONSSPORT] Fetching data...")
+    Examples:
+    - "CB - Match info" -> "Match info"
+    - "CB NBA - Match info" -> "Match info"
+    - "Buteur(s) (remboursé) (Max 20€)" -> "Buteur"
+    """
+    # 1. Remove everything before the first '-' at the beginning (if pattern exists)
+    # This handles "CB -", "CB NBA -", "XYZ -", etc. consistently
+    bet_name = re.sub(r"^.*?\s*-\s*", "", bet_name, count=1).strip()
+
+    # 2. Remove ALL parentheses content throughout the string
+    bet_name = re.sub(r"\s*\([^)]*\)", "", bet_name).strip()
+
+    # 3. Remove "?" from the end
+    bet_name = re.sub(r"\s*\?\s*$", "", bet_name).strip()
+
+    return bet_name
+
+
+def scrape_psel():
+    """Main scraper function for PSEL"""
+    print("[PSEL] Fetching data...")
     
     max_retries = 500
     for attempt in range(max_retries):
@@ -40,21 +81,23 @@ def scrape_parionssport():
             response = requests.get(
                 URL, 
                 headers=HEADERS, 
-                impersonate="chrome",
-                timeout=30
+                # impersonate="chrome",
+                # timeout=30
             )
             
             if response.status_code == 401:
-                print(f"[PARIONSSPORT] Auth failed (attempt {attempt+1}/{max_retries})")
+                print(f"[PSEL] Auth failed (attempt {attempt+1}/{max_retries})")
                 continue
             
             if response.status_code != 200:
-                print(f"[PARIONSSPORT] Failed: Status {response.status_code}")
+                print(f"[PSEL] Failed: Status {response.status_code}")
                 continue
 
             data = response.json()
             items = data.get("items", {})
-            
+            # with open("psel_debug.json", "w", encoding="utf-8") as f:
+            #     import json
+            #     json.dump(data, f, ensure_ascii=False, indent=4)
             # Organize items by type
             events = {}
             markets = {}
@@ -90,11 +133,12 @@ def scrape_parionssport():
                     sport = event.get("path", {}).get("Sport", "Unknown")
                     match_name = event.get("desc", "-")
                     bet_name = market.get("desc", "")
+                    bet_name = clean_bet_name(bet_name)
                     cote_str = outcome.get("price", "0").replace(",", ".")
                     
                     rows.append({
                         "Time": start_time,
-                        "Site": "ParionsSport",
+                        "Site": "PSEL",
                         "Sport": sport,
                         "Match": match_name,
                         "Bet": bet_name,
@@ -104,17 +148,17 @@ def scrape_parionssport():
                 except Exception as e:
                     continue
                     
-            print(f"[PARIONSSPORT] Scraped {len(rows)} rows")
+            print(f"[PSEL] Scraped {len(rows)} rows")
             return rows
 
         except Exception as e:
-            print(f"[PARIONSSPORT] Error: {e}")
+            print(f"[PSEL] Error: {e}")
             continue
     
     return []
 
 
 if __name__ == "__main__":
-    data = scrape_parionssport()
+    data = scrape_psel()
     for row in data[:5]:
         print(row)

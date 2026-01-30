@@ -1,0 +1,118 @@
+{
+    "items": {
+        "p58245558": {
+            "parent": "p58245556",
+            "tag": "League",
+            "nextEventDate": "2026-01-19",
+            "noOfEventsForNextDate": 1,
+            "desc": "Cotes Boostées Premier League",
+            "pos": 101,
+            "promos": [
+                {
+                    "campaignPromotionId": 48806,
+                    "type": "comb.boost",
+                    "name": "Combi Booste Defaut V19 5-20 legs",
+                    "description": null,
+                    "rewards": []
+                }
+            ],
+            "code": "FOOT",
+            "path": {
+                "Sport": "Football",
+                "Category": "Cotes Boostées"
+            }
+        },
+        "e3310639": {
+            "parent": "p58245558",
+            "opponentAId": 39587,
+            "opponentBId": 39582,
+            "tvChannel": "Canal+ Foot",
+            "streamId": 0,
+            "streamRef": null,
+            "stats": null,
+            "lmt": null,
+            "inRunningCalendar": false,
+            "betBuilderEnabled": false,
+            "cashout": false,
+            "onTv": true,
+            "conditionalBetEnabled": false,
+            "desc": "Brighton Hove vs Bournemouth",
+            "pos": 0,
+            "promos": [
+                {
+                    "campaignPromotionId": 48806,
+                    "type": "comb.boost",
+                    "name": "Combi Booste Defaut V19 5-20 legs",
+                    "description": null,
+                    "rewards": []
+                }
+            ],
+            "start": "2601192000",
+            "pdesc": "Cotes Boostées Premier League",
+            "count": 1,
+            "a": "Brighton Hove",
+            "b": "Bournemouth",
+            "path": {
+                "League": "Cotes Boostées Premier League",
+                "Sport": "Football",
+                "Category": "Cotes Boostées"
+            },
+            "code": "FOOT",
+            "eType": "G"
+        },
+        "m176288585": {
+            "parent": "e3310639",
+            "cashout": false,
+            "marketStyleTemplateId": 1192,
+            "conditionalBetEnabled": false,
+            "markettypeId": 100001414,
+            "periodId": 100,
+            "desc": "CB - Une des 2 équipes marque sur penalty ? (3,10→3,55 / Mise max 25 €)",
+            "pos": 999,
+            "promos": [
+                {
+                    "campaignPromotionId": 48806,
+                    "type": "comb.boost",
+                    "name": "Combi Booste Defaut V19 5-20 legs",
+                    "description": null,
+                    "rewards": []
+                }
+            ],
+            "style": "PROPOSITION",
+            "period": "90 Mins"
+        },
+        "o643435846": {
+            "parent": "m176288585",
+            "price": "3,55",
+            "spread": 0,
+            "spread2": 0,
+            "preferred": false,
+            "conditionalBetEnabled": false,
+            "desc": "Oui",
+            "pos": 1
+        },
+        "o643435905": {
+            "parent": "m176288585",
+            "price": "1,01",
+            "flags": [
+                "hidden"
+            ],
+            "preferred": false,
+            "conditionalBetEnabled": false,
+            "desc": ".",
+            "pos": 2
+        }
+    },
+    "toBasket": 199630607493,
+    "marketStyleTemplates": {
+        "1192": {
+            "id": 1192,
+            "key": "TEMPLATE_1ROW_1COL_FOOT_AA",
+            "properties": "{ \"kind\":\"TEMPLATE_1ROW_1COL\", \"encaps\": true,\"showName\" : true,  \"columns\": { \"sort\": {\"dir\": \"ASC\", \"field\": \"pos\"}}}",
+            "description": "CB - But sur penalty",
+            "sportCode": "FOOT"
+        }
+    },
+    "numberOfEvents": 1,
+    "nextEventId": null
+}

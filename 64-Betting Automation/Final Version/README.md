@@ -8,7 +8,7 @@ A unified scraper for 8 French betting websites with Google Sheets integration a
 2. **Genybet** - API scraper
 3. **Olybet** - API scraper
 4. **Betsson** - Selenium scraper
-5. **ParionsSport** - API scraper
+5. **PSEL** - API scraper
 6. **PMU** - API scraper
 7. **Unibet** - API scraper
 8. **Winamax** - Selenium scraper
@@ -57,7 +57,7 @@ python main.py
 # Test single scraper
 python -m scrapers.pmu
 python -m scrapers.unibet
-python -m scrapers.parionssport
+python -m scrapers.psel
 python -m scrapers.netbet_genybet_olybet
 ```
 
@@ -97,7 +97,7 @@ betting_scraper/
     ├── __init__.py
     ├── netbet_genybet_olybet.py
     ├── betsson.py
-    ├── parionssport.py
+    ├── psel.py
     ├── pmu.py
     ├── unibet.py
     └── winamax.py

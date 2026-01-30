@@ -1,11 +1,6 @@
-"""
-Scraper for Unibet
-Uses API with curl_cffi
-"""
-
 from curl_cffi import requests
-from datetime import datetime
-
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 URL = "https://www.unibet.fr/zones/v1/offer/scbs.json"
 
@@ -18,15 +13,20 @@ HEADERS = {
 
 
 def format_timestamp(timestamp_ms):
-    """Convert millisecond timestamp to DD/MM HH:MM"""
+    """Convert millisecond UTC timestamp to France local time DD/MM HH:MM"""
     try:
         if not timestamp_ms:
             return ""
-        dt = datetime.fromtimestamp(timestamp_ms / 1000)
-        return dt.strftime("%d/%m %H:%M")
+
+        # Create UTC datetime from milliseconds
+        dt_utc = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+
+        # Convert to France time
+        france_dt = dt_utc.astimezone(ZoneInfo("Europe/Paris"))
+
+        return france_dt.strftime("%d/%m %H:%M")
     except Exception:
         return ""
-
 
 def calculate_decimal_odd(up, down):
     """
@@ -63,7 +63,9 @@ def scrape_unibet():
         all_bets = []
 
         markets_by_type = data.get("marketsByType", [])
-        
+        # with open("unibet_debug.json", "w", encoding="utf-8") as f:
+        #     import json
+        #     json.dump(data, f, ensure_ascii=False, indent=4)
         for market_type in markets_by_type:
             days = market_type.get("days", [])
             

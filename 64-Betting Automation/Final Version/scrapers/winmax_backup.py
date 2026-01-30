@@ -1,21 +1,16 @@
-
-
 """
 Scraper for Winamax - Final Excel Ready Version
 - Aligns with Excel format (DATE, SITE, SPORT, MATCH, BET, COTE)
 - Forces 2 decimal places with comma for odds
 - Replaces 'vs' with '-'
 - Captures only the final (best) odd
-- Uses shared browser manager (no new Chrome instance per run)
 """
+import undetected_chromedriver as uc
 import time
 from datetime import datetime, timedelta
 import re
 import os
 from bs4 import BeautifulSoup
-
-# Import shared browser manager
-from scrapers.browser_manager import browser_manager
 
 # Map specific element classes to sport names
 SPORT_CLASS_MAP = {
@@ -106,21 +101,32 @@ def get_sport_from_card(card_soup):
 def scrape_winamax():
     URL = "https://www.winamax.fr/paris-sportifs/sports/100000"
 
-    print("[WINAMAX] Using shared browser instance...")
+    options = uc.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--start-maximized")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-    # Use shared browser manager - opens in new tab then closes tab
-    html = browser_manager.navigate_and_get_source(
-        url=URL,
-        wait_time=10,
-        scroll_down=False,
-        scroll_wait=0
-    )
+    print("[WINAMAX] Launching Chrome...")
+    driver = None
 
-    if not html:
-        print(f"[WINAMAX] Failed to get page content")
+    try:
+        driver = uc.Chrome(options=options)
+        print(f"[WINAMAX] Opening {URL}...")
+        driver.get(URL)
+
+        print("[WINAMAX] Waiting for content...")
+        time.sleep(10) # Wait for load
+
+        html = driver.page_source
+        print("[WINAMAX] HTML captured.")
+
+    except Exception as e:
+        print(f"[WINAMAX] Browser error: {e}")
         return []
-
-    print("[WINAMAX] HTML captured.")
+    finally:
+        if driver:
+            driver.quit()
 
     soup = BeautifulSoup(html, "html.parser")
     

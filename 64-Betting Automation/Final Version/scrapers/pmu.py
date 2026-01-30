@@ -5,6 +5,7 @@ Uses API with curl_cffi
 
 from curl_cffi import requests
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 URL = "https://sports.pmu.fr/sportsbook/rest/v2/matches/?marketGroup=boost&featureType=boost&sportId=1&sportId=2&sportId=3&sportId=12&sportId=29&sportId=7&sportId=55&sportId=24&sportId=16&sportId=8&sportId=25&sportId=10&sportId=56&sportId=26&sportId=5&sportId=52&sportId=27&sportId=18&sportId=14&ln=fr"
@@ -19,11 +20,13 @@ HEADERS = {
 
 def format_pmu_date(date_str):
     """
-    Converts PMU ISO date '2026-01-06T20:00:00.000+0000' to '06/01 20:00'
+    Converts PMU ISO date '2026-01-06T20:00:00.000+0000'
+    to France local time in format '06/01 21:00'
     """
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
-        return dt.strftime("%d/%m %H:%M")
+        france_dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+        return france_dt.strftime("%d/%m %H:%M")
     except Exception:
         return date_str
 
@@ -56,12 +59,19 @@ def scrape_pmu():
             return []
 
         data = response.json()
+        # with open("pmu_debug.json", "w", encoding="utf-8") as f:
+        #     import json
+            # json.dump(data, f, ensure_ascii=False, indent=4)    
         all_bets = []
 
         for match in data:
             try:
                 match_name = match.get("name", "Unknown")
                 sport_name = match.get("sportName", "Unknown")
+                if sport_name=="Unknown":
+                    sport_id = match.get("sportId", 2)
+                    if sport_id==2:
+                        sport_name="Tennis"
                 start_date_raw = match.get("startDate", "")
                 time_str = format_pmu_date(start_date_raw)
 
