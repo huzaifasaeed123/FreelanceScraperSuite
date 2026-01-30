@@ -4,7 +4,12 @@ Maps form fields to provider-specific requirements with transformations
 """
 
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # Fallback for Python < 3.9
+    from pytz import timezone as ZoneInfo
 import random
 import string
 
@@ -242,7 +247,10 @@ class FieldMapper:
     def map_to_axa(form_data: Dict[str, Any]) -> Dict[str, Any]:
         """Map form data to AXA API payload"""
         fuel = form_data.get('carburant', 'diesel').lower()
-        future_date = datetime.now().strftime("%d-%m-%Y")
+        # Get today's date in Morocco timezone (Africa/Casablanca) - where AXA servers are located
+        morocco_tz = ZoneInfo('Africa/Casablanca')
+        morocco_now = datetime.now(morocco_tz)
+        future_date = morocco_now.strftime("%d-%m-%Y")
 
         # Get dummy identity for phone/plate
         dummy = generate_random_identity()
