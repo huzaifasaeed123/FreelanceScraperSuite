@@ -55,8 +55,8 @@ Our platform currently compares quotes from these major Moroccan insurance provi
 ## 📸 Platform Screenshots
 
 ### Main Insurance Comparison Form
-<!-- Add screenshot of the main form here -->
-![Main Form](docs/screenshots/main-form.png)
+
+<img width="1253" height="869" alt="image" src="https://github.com/user-attachments/assets/a187330a-9fe8-4cbb-9683-1303cb60c5c8" />
 
 *Simple form where you enter vehicle and driver details*
 
@@ -64,23 +64,23 @@ Our platform currently compares quotes from these major Moroccan insurance provi
 
 ### Comparison Results Dashboard
 <!-- Add screenshot of results page here -->
-![Results Dashboard](docs/screenshots/results-page.png)
+<img width="1375" height="887" alt="image" src="https://github.com/user-attachments/assets/abfee621-d118-41e4-92ee-2eb6894e766d" />
+
 
 *All insurance quotes displayed side-by-side for easy comparison*
 
 ---
 
 ### Professional PDF Reports
-<!-- Add screenshot of PDF report here -->
-![PDF Report](docs/screenshots/pdf-report.png)
+<img width="1051" height="727" alt="image" src="https://github.com/user-attachments/assets/f859a824-f476-4aaf-ae6a-eb8c2dfab0d1" />
+
 
 *Generate branded PDF reports for your clients*
 
 ---
 
 ### Admin Dashboard
-<!-- Add screenshot of admin panel here -->
-![Admin Panel](docs/screenshots/admin-panel.png)
+<img width="1278" height="870" alt="image" src="https://github.com/user-attachments/assets/cf236896-407c-41e1-ae4c-d2c28d066935" />
 
 *Manage users, track submissions, and export data*
 
