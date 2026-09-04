@@ -1,0 +1,36 @@
+[Unit]
+Description=Google Maps parallel scraper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/maps-scraper
+Environment=PYTHONIOENCODING=utf-8
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/maps-scraper/venv/bin/python /opt/maps-scraper/run_parallel.py --workers 4 --export-every 300
+
+# Resume-safe: every completed (city, keyword) combo is checkpointed to its
+# own file, so a restart skips finished work rather than redoing it - safe
+# to Ctrl+C, restart, or reboot at any time.
+Restart=on-failure
+RestartSec=60
+
+# Chrome grows through each combo (~20-50 min depending on country/keyword
+# language). 4 workers peak around 7GB observed. MemoryHigh throttles and
+# reclaims before the hard cap instead of a sudden OOM-kill that discards
+# whatever combo was mid-flight - this pairing (throttle + swap, see
+# DEPLOYMENT.md) is what took the original run from an OOM-kill every ~13
+# minutes to a stable multi-week run with zero kills.
+MemoryHigh=7500M
+MemoryMax=9G
+
+StandardOutput=append:/opt/maps-scraper/logs/runner.log
+StandardError=append:/opt/maps-scraper/logs/runner.log
+
+# Reap any orphaned Chrome processes when the service stops.
+KillMode=control-group
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

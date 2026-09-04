@@ -1,0 +1,30 @@
+[Unit]
+Description=Google Maps Missing-Coverage Week 4 scraper (parallel)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/maps-scraper-week4
+Environment=PYTHONIOENCODING=utf-8
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/maps-scraper/venv/bin/python /opt/maps-scraper-week4/run_parallel.py --workers 4 --export-every 300
+
+# Resume-safe: every completed (city, keyword) combo is checkpointed to its
+# own file, so a restart skips finished work rather than redoing it.
+Restart=on-failure
+RestartSec=60
+
+# Chrome grows through each ~30min combo. 4 workers peak ~7GB; throttle and
+# reclaim at 7.5G rather than hard-killing at 9G (proven on the week1-3 run).
+MemoryHigh=7500M
+MemoryMax=9G
+
+StandardOutput=append:/opt/maps-scraper-week4/logs/runner.log
+StandardError=append:/opt/maps-scraper-week4/logs/runner.log
+
+KillMode=control-group
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

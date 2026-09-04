@@ -1,0 +1,30 @@
+# --- build artifacts ---
+__pycache__/
+*.pyc
+
+# --- runtime output (created by the scraper when it runs) ---
+output/
+logs/
+state/
+snapshots/
+
+# --- job-specific target lists (real client/job data, not reusable code) ---
+# client-delivery/ keeps every countries/ folder as historical record on
+# disk, but none of it is committed - it's the client's business-category
+# and city data, not code.
+client-delivery/**/countries/
+
+# general-scraper/countries/ ships only the template as reusable starter
+# code - any real target list dropped in for an actual job stays local.
+general-scraper/countries/*
+!general-scraper/countries/_TEMPLATE.py
+
+# --- safety net: scraped/exported data is always one of these, repo-wide ---
+*.json
+*.jsonl
+*.xlsx
+*.zip
+
+# --- not part of this project (see README.md) ---
+/ahmed.py
+/UHS SLip 2026/

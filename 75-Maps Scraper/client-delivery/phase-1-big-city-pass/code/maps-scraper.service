@@ -1,0 +1,31 @@
+[Unit]
+Description=Google Maps Big City Pass scraper (parallel)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/maps-scraper
+Environment=PYTHONIOENCODING=utf-8
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/maps-scraper/venv/bin/python /opt/maps-scraper/run_parallel.py --workers 6 --export-every 300
+
+# The run is resume-safe: every completed (city, keyword) combo is checkpointed
+# to its own file, so a restart re-scans and skips finished work rather than
+# redoing it. Restarting on failure is therefore always safe.
+Restart=on-failure
+RestartSec=60
+
+# Chrome leaks memory over long runs; cap it so a runaway worker can't take
+# the box down, and let systemd restart the run instead.
+MemoryMax=9G
+
+StandardOutput=append:/opt/maps-scraper/logs/runner.log
+StandardError=append:/opt/maps-scraper/logs/runner.log
+
+# Reap any orphaned Chrome processes when the service stops.
+KillMode=control-group
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target
