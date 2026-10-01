@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='.55' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EJ%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-view" class="login-wrap hidden">
+  <form id="login-form" class="login-card">
+    <div class="login-brand"><div class="logo">J</div><div><div class="brand-name">Account Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div></div>
+    <h1>Welcome back</h1>
+    <p class="muted">Sign in to manage your bots.</p>
+    <label>Username<input name="username" autocomplete="username" required></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary lg block" type="submit">Sign in</button>
+    <p id="login-error" class="error"></p>
+  </form>
+</div>
+
+<!-- App -->
+<div id="app-view" class="shell hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="logo">J</div>
+      <div><div class="brand-name">Account Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div>
+    </div>
+
+    <nav class="sb-nav" id="tabs">
+      <div class="sb-section" data-i18n="sec.overview">Übersicht</div>
+      <button data-tab="dashboard"><i data-icon="dashboard"></i><span data-i18n="nav.dashboard">Dashboard</span><span class="sb-badge" id="nav-running"></span></button>
+      <button data-tab="accounts"><i data-icon="heart"></i><span data-i18n="nav.accounts">Jaumo Accounts</span><span class="sb-badge" id="nav-accounts"></span></button>
+
+      <div class="sb-section" data-i18n="sec.automation">Automatisierung</div>
+      <button data-tab="configs"><i data-icon="sliders"></i><span data-i18n="nav.configs">Konfigurationen</span><span class="sb-badge warn" id="nav-apk"></span></button>
+      <button data-tab="proxies"><i data-icon="globe"></i><span data-i18n="nav.proxies">Proxys</span></button>
+      <button data-tab="photos"><i data-icon="image"></i><span data-i18n="nav.photos">Fotos</span></button>
+
+      <div class="sb-section" data-i18n="sec.system">System</div>
+      <button data-tab="runs"><i data-icon="terminal"></i><span data-i18n="nav.logs">Logs</span></button>
+      <button data-tab="settings"><i data-icon="settings"></i><span data-i18n="nav.settings">Einstellungen</span></button>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="sys-box">
+        <div class="sys-line"><span id="ws-status" class="dot"></span><b id="ws-label">…</b></div>
+        <div class="sys-ver" data-i18n="sys.version">Version 1.0</div>
+      </div>
+      <!-- kept for the user menu / scripts -->
+      <span id="sb-username" hidden></span><span id="sb-avatar" hidden></span>
+      <button id="logout-btn" hidden></button>
+    </div>
+  </aside>
+  <div class="sb-backdrop" id="sb-backdrop"></div>
+
+  <div class="main">
+
+    <header class="topbar">
+      <button class="icon-btn top-ic mobile-only" id="sb-toggle" title="Menu"><i data-icon="menu"></i></button>
+      <div class="logo sm mobile-only">J</div>
+      <div class="top-search"><i data-icon="search"></i>
+        <input id="top-search" type="search" data-i18n-ph="top.search" placeholder="Accounts suchen"></div>
+      <div class="top-right">
+        <div class="top-pop">
+          <button class="icon-btn top-ic" id="top-bell" data-i18n-title="top.notifications"><i data-icon="bell"></i><span class="dot-count" id="notif-count"></span></button>
+          <div class="pop hidden" id="notif-panel"><div class="pop-title" data-i18n="top.notifications">Benachrichtigungen</div><div id="notif-list"></div></div>
+        </div>
+        <div class="top-pop">
+          <button class="top-user" id="top-user">
+            <span class="avatar" id="top-avatar">A</span>
+            <span class="top-user-text"><b id="top-username">admin</b><small><span class="dot" id="top-dot"></span><span id="top-status">Online</span></small></span>
+            <i data-icon="chevronDown"></i>
+          </button>
+          <div class="pop menu-pop hidden" id="user-menu">
+            <button id="menu-theme"><i data-icon="moon"></i><span data-i18n="top.theme">Hell / Dunkel</span></button>
+            <button id="menu-lang"><i data-icon="languages"></i><span data-i18n="top.lang">English</span></button>
+            <hr><button id="menu-logout" class="danger"><i data-icon="logout"></i><span data-i18n="top.logout">Abmelden</span></button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="outdated-banner hidden" id="outdated-banner"><i data-icon="alert"></i><span data-i18n="outdated">Der Server läuft noch mit altem Code.</span>
+      <code>python -m uvicorn api.main:app --port 8000</code></div>
+
+    <main class="content">
+      <!-- Dashboard -->
+      <section id="tab-dashboard" class="tab">
+        <div class="page-head">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Live overview of account creation, accounts and infrastructure</p>
+          </div>
+          <div class="page-actions">
+            <span class="live-chip" id="live-chip"><span class="pulse"></span>Live</span>
+            <button class="btn danger-soft" id="stop-all-btn"><i data-icon="stop"></i>Stop all</button>
+          </div>
+        </div>
+
+        <div id="apk-warnings"></div>
+        <div id="kpis" class="kpi-grid"></div>
+
+        <div class="grid-12">
+          <div class="card span-8">
+            <div class="card-head">
+              <div>
+                <h2>Accounts created</h2>
+                <p class="card-sub">Per day · hover a bar for the outcome breakdown</p>
+              </div>
+              <div class="seg" id="chart-range">
+                <button data-days="7">7D</button><button data-days="14" class="active">14D</button><button data-days="30">30D</button>
+              </div>
+            </div>
+            <div class="chart-summary" id="chart-summary"></div>
+            <div id="daily-chart" class="chart"></div>
+          </div>
+
+          <div class="card span-4 launch-card">
+            <div class="card-head">
+              <div>
+                <h2>Create accounts</h2>
+                <p class="card-sub" id="launch-capacity">&nbsp;</p>
+              </div>
+              <div class="icon-bubble accent"><i data-icon="rocket"></i></div>
+            </div>
+            <form id="launch-form">
+              <label>Configuration<select name="config_id" id="launch-config" required></select></label>
+              <div id="launch-config-info" class="config-info"></div>
+              <label>Accounts to create
+                <div class="stepper">
+                  <button type="button" data-step="-1" aria-label="Fewer">−</button>
+                  <input name="count" type="number" min="1" max="500" value="1" required>
+                  <button type="button" data-step="1" aria-label="More">+</button>
+                </div>
+              </label>
+              <details class="names-details">
+                <summary>Custom names <span class="muted">(optional)</span></summary>
+                <textarea name="names" rows="3" placeholder="One per line — used in order, the rest are picked from the name pool"></textarea>
+              </details>
+              <button class="btn primary lg block" type="submit"><i data-icon="play"></i><span id="launch-submit-label">Create accounts</span></button>
+            </form>
+          </div>
+        </div>
+
+        <div class="grid-12">
+          <div class="card span-4">
+            <div class="card-head"><div><h2>Account status</h2><p class="card-sub" id="status-sub">All accounts</p></div></div>
+            <div id="status-breakdown"></div>
+          </div>
+          <div class="card span-4">
+            <div class="card-head"><div><h2>Engagement</h2><p class="card-sub">All-time swiping and messaging</p></div></div>
+            <div id="engagement"></div>
+          </div>
+          <div class="card span-4">
+            <div class="card-head"><div><h2>Infrastructure</h2><p class="card-sub">Capacity, proxies and APK profiles</p></div></div>
+            <div id="infra"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Accounts in progress</h2>
+              <p class="card-sub">What each worker is doing right now — click one for its live log</p>
+            </div>
+            <div class="seg" id="live-filter">
+              <button data-filter="active" class="active">In progress <span class="seg-count" id="cnt-active">0</span></button>
+              <button data-filter="recent">Recent <span class="seg-count" id="cnt-recent">0</span></button>
+              <button data-filter="all">All</button>
+            </div>
+          </div>
+          <div id="live-cards" class="bot-grid"></div>
+        </div>
+      </section>
+
+      <!-- Runs -->
+      <section id="tab-runs" class="tab hidden">
+        <div class="page-head">
+          <div><h1>Runs &amp; logs</h1><p>Every signup and messaging run with its full log</p></div>
+          <div class="page-actions">
+            <button class="btn" id="runs-refresh"><i data-icon="refresh"></i>Refresh</button>
+            <button class="btn" id="runs-cleanup"><i data-icon="trash"></i>Clean old logs…</button>
+          </div>
+        </div>
+        <div class="card toolbar-card">
+          <div class="row wrap">
+            <label>Status<select id="runs-status">
+              <option value="">All</option><option>queued</option><option>running</option><option>done</option>
+              <option>blocked</option><option>failed</option><option>stopped</option><option>interrupted</option>
+            </select></label>
+            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option></select></label>
+          </div>
+        </div>
+        <div class="card table-card">
+          <table class="table" id="runs-table"></table>
+          <div class="pager" id="runs-pager"></div>
+        </div>
+      </section>
+
+      <!-- Configs -->
+      <section id="tab-configs" class="tab hidden">
+        <div class="page-head">
+          <div><h1>Configurations</h1><p>Presets for new accounts and the APK credentials they use</p></div>
+          <div class="page-actions">
+            <button class="btn" id="new-apk-btn"><i data-icon="key"></i>New APK profile</button>
+            <button class="btn primary" id="new-config-btn"><i data-icon="plus"></i>New configuration</button>
+          </div>
+        </div>
+        <div class="card table-card">
+          <div class="card-head padded"><div><h2>Configurations</h2></div></div>
+          <table class="table" id="configs-table"></table>
+        </div>
+        <div class="card table-card">
+          <div class="card-head padded">
+            <div><h2>APK profiles</h2>
+              <p class="card-sub">client_id, sign_secret and User-Agent must come from the same APK build. Health is updated by every
+                signup run. When a profile expires or gets banned: disable it and switch its configs to another profile.</p></div>
+          </div>
+          <table class="table" id="apk-table"></table>
+        </div>
+      </section>
+
+      <!-- Proxies -->
+      <section id="tab-proxies" class="tab hidden">
+        <div class="page-head">
+          <div><h1>Proxies</h1><p>Shared rotating gateways or dedicated sticky sessions</p></div>
+          <div class="page-actions"><button class="btn" id="proxy-test-all"><i data-icon="zap"></i>Test all</button></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Add proxies</h2></div></div>
+          <form id="proxy-bulk-form">
+            <label><span>Paste proxy lines (one per line) — <code>host:port:user:pass</code>, <code>user:pass@host:port</code> or <code>http://user:pass@host:port</code></span>
+              <textarea name="text" rows="5" required placeholder="ultra.marsproxies.com:44443:user:pass_country-de"></textarea></label>
+            <div class="row wrap">
+              <fieldset class="radio-group">
+                <legend>Mode</legend>
+                <label class="inline"><input type="radio" name="shared" value="1" checked> Shared — rotating gateway, all bots may use the same line</label>
+                <label class="inline"><input type="radio" name="shared" value="0"> Dedicated — sticky session, one account per line at a time</label>
+              </fieldset>
+              <label>Label<input name="label" placeholder="e.g. Mars DE"></label>
+              <label class="inline"><input type="checkbox" name="replace"> Replace all existing proxies</label>
+              <div class="actions"><button class="btn primary" type="submit"><i data-icon="plus"></i>Add</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="card table-card">
+          <div class="card-head padded">
+            <div><h2>Proxy list</h2></div>
+            <div class="actions" id="proxy-bulk-actions">
+              <span class="muted" id="proxy-selected">0 selected</span>
+              <button class="btn small" data-action="test">Test</button>
+              <button class="btn small" data-action="enable">Enable</button>
+              <button class="btn small" data-action="disable">Disable</button>
+              <button class="btn small" data-action="shared">Mark shared</button>
+              <button class="btn small" data-action="dedicated">Mark dedicated</button>
+              <button class="btn small danger" data-action="delete">Delete</button>
+            </div>
+          </div>
+          <table class="table" id="proxies-table"></table>
+        </div>
+      </section>
+
+      <!-- Photos -->
+      <section id="tab-photos" class="tab hidden">
+        <div class="page-head">
+          <div><h1>Photo library</h1><p>Profile photos for new accounts — each photo is used by one account only</p></div>
+          <div class="page-actions"><button class="btn primary" id="photo-pick-files"><i data-icon="imagePlus"></i>Upload photos</button></div>
+        </div>
+        <div id="photo-stats" class="kpi-grid"></div>
+
+        <div class="card dropzone" id="dropzone">
+          <input type="file" id="photo-files" multiple accept="image/*,.zip" hidden>
+          <input type="file" id="photo-folder" webkitdirectory directory multiple hidden>
+          <input type="file" id="photo-zip" accept=".zip,application/zip" multiple hidden>
+          <div class="dz-icon"><i data-icon="upload"></i></div>
+          <div class="dz-title">Drop photos, folders or ZIP files here</div>
+          <div class="dz-sub">JPG · PNG · WebP · BMP · GIF · TIFF · ZIP — phone rotation fixed, hidden metadata (GPS) removed,
+            resized to max 1600px, duplicates skipped automatically</div>
+          <div class="dz-actions">
+            <button class="btn" id="dz-files" type="button"><i data-icon="image"></i>Choose photos</button>
+            <button class="btn" id="dz-folder" type="button"><i data-icon="folder"></i>Choose folder</button>
+            <button class="btn" id="dz-zip" type="button"><i data-icon="archive"></i>Choose ZIP</button>
+          </div>
+        </div>
+        <div class="card upload-panel hidden" id="upload-panel"></div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="seg" id="photo-filter">
+              <button data-filter="all" class="active">All <span class="seg-count"></span></button>
+              <button data-filter="available">Available <span class="seg-count"></span></button>
+              <button data-filter="reserved">Reserved <span class="seg-count"></span></button>
+              <button data-filter="used">Used <span class="seg-count"></span></button>
+            </div>
+            <div class="actions">
+              <span class="muted" id="photo-selected"></span>
+              <button class="btn small" id="photo-select-all"><i data-icon="check"></i>Select all available</button>
+              <button class="btn small danger" id="photo-bulk-delete" disabled><i data-icon="trash"></i>Delete selected</button>
+            </div>
+          </div>
+          <div id="photo-grid" class="photo-lib"></div>
+        </div>
+      </section>
+
+      <!-- Account detail -->
+      <section id="tab-account" class="tab hidden">
+        <div id="account-page"></div>
+      </section>
+
+      <!-- Settings -->
+      <section id="tab-settings" class="tab hidden">
+        <div class="page-head">
+          <div><h1>Settings</h1><p>Workers and identity rules for account creation</p></div>
+        </div>
+        <div id="settings-body" class="settings-body"></div>
+      </section>
+
+      <!-- Accounts -->
+      <section id="tab-accounts" class="tab hidden">
+        <div class="acc-toolbar">
+          <div class="tb-search"><i data-icon="search"></i><input id="acc-search" type="search" data-i18n-ph="top.search" placeholder=""></div>
+          <select id="flt-state">
+            <option value="" data-i18n="acc.allStatus">Alle Status</option>
+            <option value="active" data-i18n="state.active">Aktiv</option>
+            <option value="working" data-i18n="state.working">Arbeitet</option>
+            <option value="blocked" data-i18n="state.blocked">Gesperrt</option>
+            <option value="error" data-i18n="state.error">Fehler</option>
+            <option value="stopped" data-i18n="state.stopped">Gestoppt</option>
+          </select>
+          <select id="flt-worker"></select>
+          <div class="top-pop">
+            <button class="btn" id="flt-toggle" type="button"><i data-icon="filter"></i><span data-i18n="acc.filter">Filter</span><span class="seg-count" id="flt-count"></span></button>
+            <div class="pop filter-pop hidden" id="flt-panel">
+              <label><span data-i18n="filter.location">Standort</span><select id="flt-location"></select></label>
+              <label><span data-i18n="filter.from">Erstellt ab</span><input type="date" id="flt-from"></label>
+              <label><span data-i18n="filter.to">Erstellt bis</span><input type="date" id="flt-to"></label>
+              <label><span data-i18n="filter.sort">Sortierung</span><select id="flt-sort">
+                <option value="newest" data-i18n="sort.newest">Neueste zuerst</option>
+                <option value="activity" data-i18n="sort.activity">Letzte Aktivität</option>
+                <option value="likes" data-i18n="sort.likes">Meiste Likes</option>
+                <option value="matches" data-i18n="sort.matches">Meiste Matches</option>
+                <option value="oldest" data-i18n="sort.oldest">Älteste zuerst</option>
+              </select></label>
+              <div class="pop-actions"><button class="btn ghost small" id="flt-reset" type="button" data-i18n="filter.reset">Zurücksetzen</button>
+                <button class="btn primary small" id="flt-apply" type="button" data-i18n="filter.apply">Anwenden</button></div>
+            </div>
+          </div>
+          <button class="btn primary" id="acc-new"><i data-icon="plus"></i><span data-i18n="acc.new">Neuer Account</span></button>
+        </div>
+
+        <div class="acc-panel">
+          <div class="acc-panel-head">
+            <div class="acc-panel-title">
+              <div class="acc-logo"><i data-icon="heart"></i></div>
+              <div><h1 data-i18n="acc.title">Jaumo Accounts</h1><p data-i18n="acc.sub">Verwalte und überwache alle Jaumo Accounts</p></div>
+            </div>
+            <div class="acc-summary" id="acc-summary"></div>
+          </div>
+
+          <div class="bulk-bar hidden" id="acc-bulk">
+            <b id="acc-bulk-count"></b>
+            <button class="btn small" id="bulk-message"><i data-icon="send"></i><span data-i18n="bulk.message">Matches anschreiben</span></button>
+            <button class="btn small" id="bulk-export"><i data-icon="download"></i><span data-i18n="bulk.export">Exportieren</span></button>
+            <button class="btn small ghost" id="bulk-clear"><i data-icon="x"></i><span data-i18n="bulk.clear">Auswahl aufheben</span></button>
+          </div>
+
+          <div class="acc-table-wrap">
+            <table class="acc-table" id="acc-table">
+              <thead><tr>
+                <th class="cb"><input type="checkbox" id="acc-all"></th>
+                <th data-i18n="col.account">Account</th>
+                <th data-i18n="col.stats">Statistiken</th>
+                <th data-i18n="col.status">Status</th>
+                <th data-i18n="col.worker">Worker</th>
+                <th data-i18n="col.last">Letzte Aktivität</th>
+                <th data-i18n="col.actions">Aktionen</th>
+              </tr></thead>
+              <tbody id="acc-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="acc-foot">
+            <span id="acc-showing"></span>
+            <div class="pages" id="acc-pages"></div>
+            <select id="acc-per"></select>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-title"></h2><button class="icon-btn" id="modal-close" title="Close"><i data-icon="x"></i></button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="chart-tip" class="chart-tip hidden"></div>
+<div id="toasts"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

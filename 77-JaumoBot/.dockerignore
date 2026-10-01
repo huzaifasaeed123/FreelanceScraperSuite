@@ -1,0 +1,8 @@
+.env
+.git
+storage/
+__pycache__/
+*.pyc
+PLAN.md
+decoded apk/
+*.apk

@@ -1,0 +1,597 @@
+"""
+Runs bots in a global thread pool, persists their events and fans them out
+to WebSocket subscribers.
+
+Requires a single uvicorn worker: run state, the proxy pool and WebSocket
+subscribers live in this process's memory.
+"""
+
+import asyncio
+import random
+import threading
+from collections import Counter, deque
+from concurrent.futures import ThreadPoolExecutor
+
+from sqlalchemy import update as sa_update
+from sqlmodel import Session, select
+
+from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StopRequested
+
+from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, RunLog,
+                     engine, iso, utcnow)
+from .photolib import pick_photos
+from .proxies import NoProxyAvailable, ProxyPool, proxy_display, proxy_url
+from .settings import PHOTOS_DIR
+
+ACTIVE_STATUSES = ("queued", "running")
+
+
+IDENTITY_DEFAULTS = {"unique_names": True, "unique_photos": True}
+BOT_DEFAULTS = {"parallel_accounts": 1}
+THREAD_CAP = 64  # internal worker threads; the admin's parallel setting is the real limit
+
+
+def get_bot_settings(s: Session) -> dict:
+    row = s.get(AppSetting, "bot")
+    return {**BOT_DEFAULTS, **(row.value if row else {})}
+
+
+def get_identity(s: Session) -> dict:
+    """Global identity rules — apply to every configuration and every launch."""
+    row = s.get(AppSetting, "identity")
+    return {**IDENTITY_DEFAULTS, **(row.value if row else {})}
+
+
+def event_public(e: AccountEvent) -> dict:
+    return {"id": e.id, "run_id": e.run_id, "ts": iso(e.ts), "kind": e.kind, "user_id": e.user_id, "detail": e.detail}
+
+
+def _key(name: str) -> str:
+    return name.strip().casefold()
+
+
+def name_usage(s: Session) -> Counter:
+    """
+    How often each name is taken: every account's name, plus names reserved by
+    queued/running signup runs that have not created their account yet.
+    """
+    usage = Counter(_key(n) for n in s.exec(select(Account.name)).all() if n)
+    reserved = s.exec(select(BotRun.requested_name).where(
+        BotRun.kind == "signup", BotRun.status.in_(ACTIVE_STATUSES),
+        BotRun.account_id.is_(None), BotRun.requested_name.is_not(None))).all()
+    usage.update(_key(n) for n in reserved)
+    return usage
+
+
+def name_pool_for(settings: dict) -> list[str]:
+    if settings.get("name_source", "auto") == "auto":
+        pool = AUTO_FEMALE_NAMES
+    else:
+        pool = settings.get("name_pool") or []
+    seen, out = set(), []
+    for n in pool:
+        if n.strip() and _key(n) not in seen:
+            seen.add(_key(n))
+            out.append(n.strip())
+    return out
+
+
+def pick_names(usage: Counter, settings: dict, count: int, manual: list[str], unique: bool = True) -> list[str]:
+    """Typed names first (in order), then least-used names from the pool."""
+    manual = manual[:count]
+    if unique:
+        taken = [n for n in manual if usage[_key(n)]]
+        repeated = [n for n, c in Counter(_key(n) for n in manual).items() if c > 1]
+        if taken or repeated:
+            parts = []
+            if taken:
+                parts.append("already used: " + ", ".join(taken))
+            if repeated:
+                parts.append("typed more than once: " + ", ".join(repeated))
+            raise ValueError("Names must be unique (Settings) — " + "; ".join(parts))
+    names = []
+    for n in manual:
+        names.append(n)
+        usage[_key(n)] += 1
+    pool = name_pool_for(settings)
+    for _ in range(count - len(names)):
+        if not pool:
+            raise ValueError("The name list is empty — add names or switch names to auto")
+        low = min(usage[_key(n)] for n in pool)
+        if unique and low > 0:
+            raise ValueError(
+                f"Not enough unused names: only {len(names)} of {count} could be assigned. "
+                "Add names to the list, switch to auto names, or allow name reuse in Settings.")
+        name = random.choice([n for n in pool if usage[_key(n)] == low])
+        names.append(name)
+        usage[_key(name)] += 1
+    return names
+
+
+def run_public(run: BotRun) -> dict:
+    d = run.model_dump(exclude={"config_snapshot"})
+    for k in ("created_at", "started_at", "finished_at"):
+        if d.get(k):
+            d[k] = iso(d[k])
+    return d
+
+
+class Hub:
+    """Thread-safe pub/sub into asyncio queues owned by WebSocket handlers."""
+
+    def __init__(self):
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self.subs: dict[str, set[asyncio.Queue]] = {}
+
+    def subscribe(self, channel: str) -> asyncio.Queue:
+        q = asyncio.Queue(maxsize=2000)
+        self.subs.setdefault(channel, set()).add(q)
+        return q
+
+    def unsubscribe(self, channel: str, q: asyncio.Queue):
+        subs = self.subs.get(channel)
+        if subs:
+            subs.discard(q)
+            if not subs:
+                self.subs.pop(channel, None)
+
+    def _deliver(self, channel, msg):
+        for q in list(self.subs.get(channel, ())):
+            try:
+                q.put_nowait(msg)
+            except asyncio.QueueFull:
+                pass  # slow client — drop
+
+    def publish(self, channel: str, msg: dict):
+        if self.loop and channel in self.subs:
+            self.loop.call_soon_threadsafe(self._deliver, channel, msg)
+
+
+class RunManager:
+    """
+    One bot with a FIFO queue of account sessions (signup runs and messaging runs).
+    `parallel` (admin setting) is how many accounts it works on at the same time.
+    """
+
+    def __init__(self, hub: Hub):
+        self.hub = hub
+        self.parallel = BOT_DEFAULTS["parallel_accounts"]
+        self.executor = ThreadPoolExecutor(max_workers=THREAD_CAP, thread_name_prefix="bot")
+        self.gate = threading.Condition()
+        self.waiting: deque[int] = deque()   # run ids in launch order
+        self.working = 0
+        self.slots: dict[int, int] = {}      # worker slot -> run id
+        self.pool = ProxyPool()
+        self.stop_events: dict[int, threading.Event] = {}
+        self.lock = threading.Lock()
+        self.name_lock = threading.Lock()  # name pick + reserve must be atomic across launches
+
+    # --- startup / shutdown -----------------------------------------------
+
+    def mark_interrupted(self):
+        with Session(engine) as s:
+            for run in s.exec(select(BotRun).where(BotRun.status.in_(ACTIVE_STATUSES))).all():
+                run.status = "interrupted"
+                run.reason = "server restarted while run was active"
+                run.finished_at = run.finished_at or utcnow()
+                s.add(run)
+                if run.account_id:
+                    acc = s.get(Account, run.account_id)
+                    if acc and acc.status in ("signing_up",):
+                        acc.status = "failed"
+                        s.add(acc)
+            s.commit()
+
+    def set_parallel(self, n: int):
+        with self.gate:
+            self.parallel = max(1, int(n))
+            self.gate.notify_all()
+
+    def _wait_turn(self, run_id: int, ev: threading.Event) -> bool:
+        """Block until it is this run's turn (FIFO) and a parallel slot is free."""
+        with self.gate:
+            while True:
+                if ev.is_set():
+                    return False
+                if self.working < self.parallel and self.waiting and self.waiting[0] == run_id:
+                    self.waiting.popleft()
+                    self.working += 1
+                    slot = next(i for i in range(1, len(self.slots) + 2) if i not in self.slots)
+                    self.slots[slot] = run_id
+                    return True
+                self.gate.wait(1)
+
+    def _leave(self, run_id: int, had_slot: bool):
+        with self.gate:
+            try:
+                self.waiting.remove(run_id)
+            except ValueError:
+                pass
+            if had_slot:
+                self.working -= 1
+                for k in [k for k, v in self.slots.items() if v == run_id]:
+                    del self.slots[k]
+            self.gate.notify_all()
+
+    def shutdown(self):
+        for ev in list(self.stop_events.values()):
+            ev.set()
+        self.pool.notify()
+        self.executor.shutdown(wait=False, cancel_futures=True)
+
+    # --- launching ---------------------------------------------------------
+
+    def _snapshot(self, s: Session, config: BotConfig) -> dict:
+        apk = s.get(ApkProfile, config.apk_profile_id) if config.apk_profile_id else None
+        if not apk:
+            raise ValueError("config has no APK profile — set one before launching")
+        if not apk.enabled:
+            raise ValueError(f"APK profile '{apk.name}' is disabled — switch the config to another APK profile")
+        return {
+            "settings": dict(config.settings),
+            "apk": apk.credentials(),
+            "apk_profile_id": apk.id,
+            "apk_profile_name": apk.name,
+        }
+
+    def _submit(self, run_id: int, fn):
+        ev = threading.Event()
+        with self.lock:
+            self.stop_events[run_id] = ev
+        with self.gate:
+            self.waiting.append(run_id)
+        self.executor.submit(self._guard, run_id, fn, ev)
+
+    def launch_signup(self, config_id: int, count: int, names: list[str]) -> list[int]:
+        names = [n.strip() for n in names if n and n.strip()]
+        with self.name_lock, Session(engine) as s:
+            config = s.get(BotConfig, config_id)
+            if not config:
+                raise LookupError("config not found")
+            snap = self._snapshot(s, config)
+            rules = get_identity(s)
+            assigned = pick_names(name_usage(s), snap["settings"], count, names, rules["unique_names"])
+            photos = pick_photos(s, snap["settings"], count, rules["unique_photos"])
+            runs = []
+            for name, photo in zip(assigned, photos):
+                run = BotRun(kind="signup", config_id=config.id, config_name=config.name,
+                             config_snapshot=snap, requested_name=name, photo=photo)
+                s.add(run)
+                runs.append(run)
+            s.commit()
+            ids = [r.id for r in runs]
+            payloads = [run_public(r) for r in runs]
+        for rid, p in zip(ids, payloads):
+            self.hub.publish("events", {"type": "run", "run": p})
+            self._submit(rid, self._signup_worker)
+        return ids
+
+    def launch_messages(self, config_id: int, account_ids: list[int]) -> list[int]:
+        with Session(engine) as s:
+            config = s.get(BotConfig, config_id)
+            if not config:
+                raise LookupError("config not found")
+            if not (config.settings or {}).get("messaging_enabled", False):
+                raise ValueError(f"Messaging is turned off in configuration '{config.name}' — "
+                                 "enable it under Configurations → Messaging")
+            snap = self._snapshot(s, config)
+            q = select(Account).where(Account.status.in_(("active", "legacy")))
+            if account_ids:
+                q = select(Account).where(Account.id.in_(account_ids))
+            accounts = s.exec(q).all()
+            busy = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES))).all())
+            runs = []
+            for acc in accounts:
+                if acc.id in busy or not (acc.refresh_token or acc.access_token):
+                    continue
+                pending = set(map(str, acc.matches or [])) - set(map(str, acc.messaged or []))
+                if not pending:
+                    continue
+                run = BotRun(kind="message", config_id=config.id, config_name=config.name,
+                             config_snapshot=snap, account_id=acc.id, requested_name=acc.name)
+                s.add(run)
+                runs.append(run)
+            s.commit()
+            ids = [r.id for r in runs]
+            payloads = [run_public(r) for r in runs]
+        for rid, p in zip(ids, payloads):
+            self.hub.publish("events", {"type": "run", "run": p})
+            self._submit(rid, self._message_worker)
+        return ids
+
+    def stop(self, run_id: int) -> bool:
+        with self.lock:
+            ev = self.stop_events.get(run_id)
+        if ev:
+            ev.set()
+            self.pool.notify()
+            with self.gate:
+                self.gate.notify_all()
+            return True
+        return False
+
+    def stop_all(self) -> int:
+        with self.lock:
+            events = list(self.stop_events.values())
+        for ev in events:
+            ev.set()
+        self.pool.notify()
+        with self.gate:
+            self.gate.notify_all()
+        return len(events)
+
+    def active_count(self) -> int:
+        with self.lock:
+            return len(self.stop_events)
+
+    # --- run state helpers -------------------------------------------------
+
+    def _update_run(self, run_id: int, **fields) -> dict:
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            for k, v in fields.items():
+                setattr(run, k, v)
+            s.add(run)
+            s.commit()
+            s.refresh(run)
+            payload = run_public(run)
+        self.hub.publish("events", {"type": "run", "run": payload})
+        self.hub.publish(f"run:{run_id}", {"type": "run", "run": payload})
+        return payload
+
+    def _log(self, run_id: int, level: str, msg: str):
+        with Session(engine) as s:
+            entry = RunLog(run_id=run_id, level=level, msg=msg)
+            s.add(entry)
+            s.commit()
+            s.refresh(entry)
+            data = {"type": "log", "id": entry.id, "ts": iso(entry.ts), "level": level, "msg": msg}
+        self.hub.publish(f"run:{run_id}", data)
+
+    def _guard(self, run_id: int, fn, ev: threading.Event):
+        had_slot = False
+        try:
+            with Session(engine) as s:
+                run = s.get(BotRun, run_id)
+                if not run or run.status != "queued":
+                    return
+            had_slot = self._wait_turn(run_id, ev)
+            if not had_slot:
+                self._update_run(run_id, status="stopped", reason="stopped before start", finished_at=utcnow())
+                return
+            with self.gate:
+                worker = next((k for k, v in self.slots.items() if v == run_id), None)
+            self._update_run(run_id, status="running", started_at=utcnow(), step="starting", worker=worker)
+            fn(run_id, ev)
+        except Exception as e:  # last-resort guard: never leave a run "running"
+            self._log(run_id, "error", f"[MANAGER] {type(e).__name__}: {e}")
+            self._update_run(run_id, status="failed", reason=f"{type(e).__name__}: {e}", finished_at=utcnow())
+        finally:
+            self._leave(run_id, had_slot)
+            with self.lock:
+                self.stop_events.pop(run_id, None)
+
+    def _acquire_proxy(self, run_id, ev, settings):
+        def on_wait():
+            self._update_run(run_id, step="waiting_proxy")
+            self._log(run_id, "warning", "[PROXY] All dedicated proxies busy — waiting for a free one")
+
+        proxy = self.pool.acquire(ev, require=settings.get("require_proxy", True), on_wait=on_wait)
+        if proxy:
+            self._update_run(run_id, proxy_id=proxy.id, proxy_label=proxy_display(proxy))
+        return proxy
+
+    def _finish(self, run_id, result):
+        self._update_run(run_id, status=result["status"], reason=result.get("reason", ""),
+                         finished_at=utcnow())
+
+    # --- signup worker -----------------------------------------------------
+
+    def _signup_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            snap = run.config_snapshot
+            config_id = run.config_id
+            name = run.requested_name
+            photo_name = run.photo
+            worker = run.worker
+        settings = snap["settings"]
+
+        photo = PHOTOS_DIR / photo_name if photo_name else None
+        if not photo or not photo.is_file():
+            self._log(run_id, "error", f"[PHOTO] Reserved photo is missing: {photo_name}")
+            return self._finish(run_id, {"status": "failed", "reason": "reserved photo missing from library"})
+
+        try:
+            proxy = self._acquire_proxy(run_id, ev, settings)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped while waiting for proxy"})
+        except NoProxyAvailable as e:
+            self._log(run_id, "error", f"[PROXY] {e}")
+            return self._finish(run_id, {"status": "failed", "reason": str(e)})
+
+        ctx = {"account_id": None, "proxy_id": proxy.id if proxy else None, "config_id": config_id,
+               "apk_profile_id": snap.get("apk_profile_id"), "worker": worker}
+        try:
+            runner = BotRunner(
+                settings, snap["apk"], str(photo),
+                proxy_url=proxy_url(proxy) if proxy else None, name=name,
+                emit=lambda kind, data: self._on_signup_event(run_id, ctx, kind, data),
+                stop_event=ev,
+            )
+            result = runner.run()
+        finally:
+            self.pool.release(proxy.id if proxy else None)
+        self._finish(run_id, result)
+
+    def _on_signup_event(self, run_id, ctx, kind, data):
+        if kind == "log":
+            self._log(run_id, data.get("level", "info"), data.get("msg", ""))
+        elif kind == "step":
+            self._update_run(run_id, step=data["step"])
+        elif kind == "account_created":
+            a = data["account"]
+            with Session(engine) as s:
+                acc = Account(
+                    run_id=run_id, config_id=ctx["config_id"], proxy_id=ctx["proxy_id"], worker=ctx["worker"],
+                    last_activity_at=utcnow(),
+                    name=a["name"], gender=a["gender"], birthday=a["birthday"],
+                    looking_for_gender=a["looking_for_gender"], location=a["location"],
+                    photo=a.get("photo"), photo_url=a.get("photo_url"), status=a.get("status", "signing_up"),
+                    android_id=a["android_id"], device_id=a["device_id"], device_info=a.get("device_info"),
+                    access_token=a["access_token"] or "", refresh_token=a["refresh_token"] or "",
+                )
+                s.add(acc)
+                s.commit()
+                ctx["account_id"] = acc.id
+            self._update_run(run_id, account_id=ctx["account_id"], requested_name=a["name"])
+            self._account_event(ctx["account_id"], run_id, "created",
+                                detail=f"Signed up as {a['name']} · {a['location']} · photo {a.get('photo')}")
+            self.hub.publish("events", {"type": "account", "account_id": ctx["account_id"]})
+        elif kind == "account_update":
+            self._update_account(ctx.get("account_id"), data, run_id)
+        elif kind == "swipe":
+            self._on_swipe(run_id, ctx.get("account_id"), data)
+        elif kind == "apk_check":
+            self._on_apk_check(ctx.get("apk_profile_id"), data)
+
+    def _on_apk_check(self, apk_id, data):
+        if not apk_id:
+            return
+        # Atomic UPDATE: several bots report at the same moment.
+        if data.get("ok"):
+            values = {"last_ok_at": utcnow(), "ok_count": ApkProfile.ok_count + 1, "fail_streak": 0}
+        else:
+            values = {"last_fail_at": utcnow(), "fail_count": ApkProfile.fail_count + 1,
+                      "fail_streak": ApkProfile.fail_streak + 1,
+                      "last_error": (data.get("error") or "")[:300]}
+        with Session(engine) as s:
+            s.exec(sa_update(ApkProfile).where(ApkProfile.id == apk_id).values(**values))
+            s.commit()
+            apk = s.get(ApkProfile, apk_id)
+            if not apk:
+                return
+            streak = apk.fail_streak
+        self.hub.publish("events", {"type": "apk", "apk_profile_id": apk_id, "fail_streak": streak})
+
+    def _account_event(self, account_id, run_id, kind, user_id=None, detail=""):
+        with Session(engine) as s:
+            ev = AccountEvent(account_id=account_id, run_id=run_id, kind=kind, user_id=user_id, detail=detail)
+            s.add(ev)
+            s.exec(sa_update(Account).where(Account.id == account_id).values(last_activity_at=ev.ts))
+            s.commit()
+            s.refresh(ev)
+            payload = event_public(ev)
+        self.hub.publish(f"account:{account_id}", {"type": "activity", "event": payload})
+
+    def _update_account(self, account_id, fields, run_id=None):
+        if not account_id:
+            return
+        old_status = None
+        with Session(engine) as s:
+            acc = s.get(Account, account_id)
+            if not acc:
+                return
+            old_status = acc.status
+            for k, v in fields.items():
+                if hasattr(acc, k):
+                    setattr(acc, k, v if v is not None else getattr(acc, k))
+            acc.updated_at = utcnow()
+            s.add(acc)
+            s.commit()
+        if "status" in fields:
+            if fields["status"] and fields["status"] != old_status:
+                self._account_event(account_id, run_id, "status", detail=f"{old_status} → {fields['status']}")
+            self.hub.publish("events", {"type": "account", "account_id": account_id})
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})
+
+    def _on_swipe(self, run_id, account_id, data):
+        uid, action, matched = data["user_id"], data["action"], data.get("matched")
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            run.swipes += 1
+            if action == "like":
+                run.liked += 1
+                run.matches += 1 if matched else 0
+            else:
+                run.disliked += 1
+            s.add(run)
+            if account_id:
+                acc = s.get(Account, account_id)
+                if action == "like":
+                    acc.liked = [*acc.liked, uid]
+                    acc.liked_count = len(acc.liked)
+                    if matched:
+                        acc.matches = [*acc.matches, uid]
+                        acc.matches_count = len(acc.matches)
+                else:
+                    acc.disliked = [*acc.disliked, uid]
+                    acc.disliked_count = len(acc.disliked)
+                acc.updated_at = utcnow()
+                s.add(acc)
+            s.commit()
+            s.refresh(run)
+            payload = run_public(run)
+        self.hub.publish("events", {"type": "run", "run": payload})
+        self.hub.publish(f"run:{run_id}", {"type": "run", "run": payload})
+        if account_id:
+            self._account_event(account_id, run_id, "match" if matched else action, user_id=uid)
+            self.hub.publish(f"account:{account_id}", {"type": "changed"})
+
+    # --- message worker ----------------------------------------------------
+
+    def _message_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            snap = run.config_snapshot
+            acc = s.get(Account, run.account_id)
+            if not acc:
+                return self._finish(run_id, {"status": "failed", "reason": "account not found"})
+            account = acc.model_dump()
+        settings = snap["settings"]
+
+        try:
+            proxy = self._acquire_proxy(run_id, ev, settings)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped while waiting for proxy"})
+        except NoProxyAvailable as e:
+            self._log(run_id, "error", f"[PROXY] {e}")
+            return self._finish(run_id, {"status": "failed", "reason": str(e)})
+
+        def emit(kind, data):
+            if kind == "log":
+                self._log(run_id, data.get("level", "info"), data.get("msg", ""))
+            elif kind == "step":
+                self._update_run(run_id, step=data["step"])
+            elif kind == "account_update":
+                self._update_account(account["id"], data, run_id)
+            elif kind == "message":
+                self._on_message(run_id, account["id"], data)
+
+        try:
+            runner = MessageRunner(settings, snap["apk"], account,
+                                   proxy_url=proxy_url(proxy) if proxy else None,
+                                   emit=emit, stop_event=ev)
+            result = runner.run()
+        finally:
+            self.pool.release(proxy.id if proxy else None)
+        self._finish(run_id, result)
+
+    def _on_message(self, run_id, account_id, data):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            acc = s.get(Account, account_id)
+            if data.get("ok"):
+                run.messages_sent += 1
+                acc.messaged = [*acc.messaged, data["user_id"]]
+                acc.messages_sent += 1
+                acc.updated_at = utcnow()
+                s.add(acc)
+            s.add(run)
+            s.commit()
+            s.refresh(run)
+            payload = run_public(run)
+        self.hub.publish("events", {"type": "run", "run": payload})
+        self._account_event(account_id, run_id, "message" if data.get("ok") else "message_failed",
+                            user_id=str(data["user_id"]), detail=data.get("text", ""))
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})

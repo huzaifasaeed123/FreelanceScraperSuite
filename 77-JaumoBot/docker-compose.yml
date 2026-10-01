@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:?set ADMIN_PASS}
+      - SECRET_KEY=${SECRET_KEY:?set SECRET_KEY}
+      - JAUMO_CLIENT_ID=${JAUMO_CLIENT_ID:-}
+      - JAUMO_SIGN_SECRET=${JAUMO_SIGN_SECRET:-}
+      - JAUMO_USER_AGENT=${JAUMO_USER_AGENT:-}
+    volumes:
+      - jaumo-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  jaumo-storage:

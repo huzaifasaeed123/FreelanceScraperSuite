@@ -1,0 +1,8 @@
+.env
+storage/
+__pycache__/
+*.pyc
+
+# Decompiled APK (reference only, huge, may contain tokens)
+decoded apk/
+*.apk
