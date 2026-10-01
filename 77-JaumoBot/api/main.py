@@ -14,11 +14,11 @@ from fastapi import (Depends, FastAPI, File, HTTPException, Query, Request, Resp
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete as sa_delete
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 from sqlmodel import Session, select
 
 from . import settings as cfg
-from bot.engine import AUTO_FEMALE_NAMES
+from bot.engine import AUTO_FEMALE_NAMES, RELATIONSHIP_VALUES
 
 from .auth import (COOKIE_NAME, check_credentials, is_https, make_token, require_auth,
                    verify_token, ws_authenticated)
@@ -28,7 +28,7 @@ from .photolib import THUMBS_DIR, delete_photo_files, import_uploads, photo_usag
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog, engine,
                      get_session, init_db, iso, utcnow)
 from .proxies import parse_proxy_line, save_test_result, split_lines, test_proxy
-from .schemas import (SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigSettings,
+from .schemas import (StatsSyncIn, SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigSettings,
                       LoginIn, MessageLaunch, ProxyBulkAction, ProxyBulkIn, ProxyIn,
                       ProxyUpdate, RunLaunch)
 
@@ -184,7 +184,11 @@ def me(request: Request):
 
 @app.get("/api/meta", dependencies=auth)
 def meta():
-    return {"default_settings": ConfigSettings().model_dump(),
+    with Session(engine) as s:
+        offered = s.get(AppSetting, "signup_defaults")
+    return {"signup_defaults": offered.value if offered else None,
+            "relationship_values": list(RELATIONSHIP_VALUES),
+            "default_settings": ConfigSettings().model_dump(),
             "auto_names": AUTO_FEMALE_NAMES}
 
 
@@ -202,8 +206,9 @@ def stats(s: Session = Depends(get_session)):
                            func.coalesce(func.sum(Account.matches_count), 0),
                            func.coalesce(func.sum(Account.messages_sent), 0))).one()
     return {
-        "running": count(select(func.count()).select_from(BotRun).where(BotRun.status == "running")),
-        "queued": count(select(func.count()).select_from(BotRun).where(BotRun.status == "queued")),
+        "running": count(select(func.count()).select_from(BotRun).where(BotRun.status == "running", BotRun.kind != "sync")),
+        "queued": count(select(func.count()).select_from(BotRun).where(BotRun.status == "queued", BotRun.kind != "sync")),
+        "syncing": count(select(func.count()).select_from(BotRun).where(BotRun.status.in_(ACTIVE_STATUSES), BotRun.kind == "sync")),
         "parallel": manager.parallel,
         "created_today": count(select(func.count()).select_from(Account).where(Account.created_at >= today)),
         "accounts_total": sum(acc_by_status.values()),
@@ -604,6 +609,16 @@ def launch_runs(body: RunLaunch):
     return {"run_ids": ids}
 
 
+@app.post("/api/runs/check", dependencies=auth)
+def check_runs(body: RunLaunch):
+    """What would stop POST /api/runs with the same body (nothing is started)."""
+    try:
+        problems = manager.check_signup(body.config_id, body.count, body.names)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    return {"ok": not problems, "problems": problems}
+
+
 @app.get("/api/runs", dependencies=auth)
 def list_runs(status: Optional[str] = None, kind: Optional[str] = None, active: bool = False,
               limit: int = Query(100, le=1000), offset: int = 0, s: Session = Depends(get_session)):
@@ -800,7 +815,7 @@ def put_settings(body: SettingsIn, s: Session = Depends(get_session)):
         if part is None:
             continue
         row = s.get(AppSetting, key) or AppSetting(key=key, value=dict(defaults))
-        row.value = {**defaults, **(row.value or {}), **part.model_dump()}
+        row.value = {**defaults, **(row.value or {}), **part.model_dump(exclude_unset=True)}
         s.add(row)
     s.commit()
     manager.set_parallel(get_bot_settings(s)["parallel_accounts"])
@@ -826,7 +841,7 @@ STATE_STATUSES = {
 
 def _working_ids(s: Session) -> set:
     """Accounts a worker is busy with right now."""
-    ids = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES),
+    ids = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES), BotRun.kind != "sync",
                                                      BotRun.account_id.is_not(None))).all())
     ids |= set(s.exec(select(Account.id).where(Account.status == "signing_up")).all())
     return ids
@@ -837,6 +852,7 @@ def _account_public(a: Account, full=False, working: Optional[set] = None) -> di
     d = a.model_dump(exclude=exclude)
     d["created_at"], d["updated_at"] = _iso(a.created_at), _iso(a.updated_at)
     d["last_activity_at"] = _iso(a.last_activity_at or a.updated_at or a.created_at)
+    d["stats_synced_at"] = _iso(a.stats_synced_at)
     d["has_token"] = bool(a.refresh_token or a.access_token)
     d["pending_messages"] = len(set(map(str, a.matches or [])) - set(map(str, a.messaged or [])))
     d["actions"] = (a.liked_count or 0) + (a.disliked_count or 0) + (a.messages_sent or 0)
@@ -888,8 +904,14 @@ def list_accounts(status: Optional[str] = None, location: Optional[str] = None,
     args = (status, location, date_from, date_to, q, state, worker, working)
     base = _account_query(select(Account), *args)
     total = s.exec(_account_query(select(func.count()).select_from(Account), *args)).one()
-    ordering = col.asc() if order == "asc" else col.desc()
-    rows = s.exec(base.order_by(ordering, Account.id.desc()).offset(offset).limit(limit)).all()
+    ordering = [col.asc() if order == "asc" else col.desc(), Account.id.desc()]
+    term = (q or "").strip().lstrip("#@")
+    if term:
+        # exact hits (ID, Jaumo ID, name) first, then the partial matches
+        exact = or_(Account.jaumo_id == term, func.lower(Account.name) == term.lower(),
+                    *([Account.id == int(term)] if term.isdigit() else []))
+        ordering.insert(0, case((exact, 0), else_=1))
+    rows = s.exec(base.order_by(*ordering).offset(offset).limit(limit)).all()
     return {"total": total, "items": [_account_public(a, working=working) for a in rows]}
 
 
@@ -904,7 +926,10 @@ def accounts_summary(tz_offset: int = 0, s: Session = Depends(get_session)):
                         func.coalesce(func.sum(Account.messages_sent), 0),
                         func.coalesce(func.sum(Account.messages_received), 0),
                         func.count(Account.messages_received),
-                        func.coalesce(func.sum(Account.profile_visits), 0))).one()
+                        func.coalesce(func.sum(Account.profile_visits), 0),
+                        func.coalesce(func.sum(Account.likes_received), 0),
+                        func.count(Account.stats_synced_at),
+                        func.max(Account.stats_synced_at))).one()
     today_events = dict(s.exec(select(AccountEvent.kind, func.count()).where(AccountEvent.ts >= today)
                                .group_by(AccountEvent.kind)).all())
     created_today = s.exec(select(func.count()).select_from(Account).where(Account.created_at >= today)).one()
@@ -919,6 +944,10 @@ def accounts_summary(tz_offset: int = 0, s: Session = Depends(get_session)):
         "messages_sent": tot[4], "messages_sent_today": today_events.get("message", 0),
         "messages_received": tot[5], "messages_received_synced": tot[6],
         "profile_visits": tot[7],
+        # client definitions: received (from stats sync) vs sent (by the bot)
+        "likes_sent": tot[1], "likes_sent_today": likes_today,
+        "likes_received": tot[8], "visits_received": tot[7],
+        "stats_synced_accounts": tot[9], "stats_last_synced_at": _iso(tot[10]),
         "actions": tot[1] + tot[2] + tot[4],
         "actions_today": likes_today + today_events.get("dislike", 0) + today_events.get("message", 0),
         "working": len(working),
@@ -953,6 +982,23 @@ def export_accounts(status: Optional[str] = None, location: Optional[str] = None
 @app.get("/api/accounts/{id_}", dependencies=auth)
 def get_account(id_: int, s: Session = Depends(get_session)):
     return _account_public(_get_or_404(s, Account, id_), full=True, working=_working_ids(s))
+
+
+@app.post("/api/accounts/sync", dependencies=auth)
+def sync_accounts(body: StatsSyncIn):
+    """Read-only stats refresh for the selected accounts or all accounts (one after another, with a delay)."""
+    if not body.all and not body.account_ids:
+        raise HTTPException(422, "choose accounts or all=true")
+    return manager.launch_sync(body.account_ids, all_accounts=body.all)
+
+
+@app.post("/api/accounts/{id_}/sync", dependencies=auth)
+def sync_account(id_: int, s: Session = Depends(get_session)):
+    _get_or_404(s, Account, id_)
+    res = manager.launch_sync([id_])
+    if not res["run_ids"]:
+        raise HTTPException(409, res["skipped"][0]["reason"] if res["skipped"] else "could not start refresh")
+    return res
 
 
 @app.get("/api/accounts/{id_}/runs", dependencies=auth)
@@ -1001,9 +1047,9 @@ async def _pump(ws: WebSocket, channel: str):
     if not ws_authenticated(ws):
         await ws.close(code=4401)
         return
-    await ws.accept()
-    q = hub.subscribe(channel)
+    q = hub.subscribe(channel)   # before accept: nothing published after the client sees 'open' is missed
     try:
+        await ws.accept()
         while True:
             try:
                 msg = await asyncio.wait_for(q.get(), timeout=25)

@@ -93,6 +93,21 @@ const I18N = {
     "col.last": "Letzte Aktivität", "col.actions": "Aktionen",
     "st.likes": "Likes", "st.dislikes": "Dislikes", "st.matches": "Matches", "st.messages": "Nachrichten",
     "st.visits": "Besuche", "st.actions": "Aktionen",
+    "st.likesIn": "Likes", "st.likesInTip": "Erhaltene Likes, die unser Profil geliked haben",
+    "st.visitsIn": "Besucher", "st.visitsInTip": "Erhaltene Besucher, die unser Profil besucht haben",
+    "st.messagesIn": "Nachrichten", "st.messagesInTip": "Erhaltene Nachrichten, die dem Profil geschrieben wurden",
+    "st.matchesTip": "Übereinstimmung im Matchgame mit anderen Profilen durch Liken",
+    "st.likesOut": "Gesendete Likes", "st.likesOutTip": "Likes, die wir gesendet haben",
+    "st.dislikesTip": "Profile, die wir als nicht-Like markiert haben",
+    "st.messagesOut": "Nachrichten gesendet", "st.messagesOutLong": "Nachrichten gesendet", "st.messagesOutTip": "Nachrichten, die wir mit unserem Profil an User gesendet haben",
+    "sync.never": "Noch nicht synchronisiert", "sync.at": "Synchronisiert {t}", "sync.refresh": "Stats aktualisieren",
+    "sync.refreshOne": "Aktualisieren", "sync.running": "Wird aktualisiert …", "sync.wait": "Bitte {s} s warten",
+    "sync.error": "Letzte Aktualisierung fehlgeschlagen: {e}", "sync.title": "Stats von Jaumo aktualisieren",
+    "sync.text": "Liest Likes, Besucher, Nachrichten und Matches direkt von Jaumo (nur lesen — es wird nichts gesendet). Jeder Account kann nur einmal gleichzeitig aktualisiert werden (15 s Pause danach).",
+    "sync.selected": "Ausgewählte Accounts ({n})", "sync.all": "Alle Accounts ({n})",
+    "sync.cost": "{n} Account(s) · ca. {r} Anfragen über den Proxy · nacheinander mit {d} s Pause",
+    "sync.started": "{n} Aktualisierung(en) gestartet", "sync.skipped": "{n} übersprungen: {why}",
+    "sync.start": "Aktualisieren",
     "st.messagesTip": "Chats im Postfach (Kontakte, die uns geschrieben haben)",
     "st.visitsTip": "Profilbesuche", "st.notSynced": "Noch nicht synchronisiert",
     "st.actionsTip": "Likes + Dislikes + gesendete Nachrichten",
@@ -116,6 +131,12 @@ const I18N = {
     "new.names": "Eigene Namen (optional, einer pro Zeile)", "new.submit": "Accounts erstellen",
     "new.queued": "{n} Account(s) werden erstellt", "new.busy": "{w} Worker aktiv · {q} in Warteschlange",
     "new.idle": "Alle Worker frei",
+    "new.blocked": "So kann noch nicht gestartet werden:", "new.fix": "Beheben",
+    "new.p.apk": "Keine aktive APK-Konfiguration für diese Konfiguration.", "new.p.photos": "Nicht genug freie Fotos.",
+    "new.p.names": "Nicht genug freie Namen.", "new.p.proxy": "Kein aktiver Proxy — die Konfiguration verlangt einen.",
+    "setup.title": "Einrichtung", "setup.sub": "Das fehlt noch, bevor Accounts mit „{c}“ erstellt werden können:",
+    "setup.apk": "APK-Profil", "setup.proxy": "Proxy", "setup.photos": "Fotos", "setup.names": "Namen",
+    "setup.ok": "Bereit", "setup.proxyOff": "nicht verlangt",
     "edit.title": "Account bearbeiten", "edit.status": "Status", "edit.notes": "Notizen", "edit.save": "Speichern", "edit.saved": "Gespeichert",
     "msg.title": "Matches anschreiben", "msg.config": "Konfiguration für Nachrichten", "msg.start": "Starten",
     "common.cancel": "Abbrechen", "common.delete": "Löschen",
@@ -140,6 +161,21 @@ const I18N = {
     "col.last": "Last activity", "col.actions": "Actions",
     "st.likes": "Likes", "st.dislikes": "Dislikes", "st.matches": "Matches", "st.messages": "Messages",
     "st.visits": "Visits", "st.actions": "Actions",
+    "st.likesIn": "Likes", "st.likesInTip": "Likes received — people who liked our profile",
+    "st.visitsIn": "Visitors", "st.visitsInTip": "Visitors received — people who visited our profile",
+    "st.messagesIn": "Messages", "st.messagesInTip": "Messages received — written to the profile",
+    "st.matchesTip": "Mutual likes in the match game",
+    "st.likesOut": "Likes sent", "st.likesOutTip": "Likes we sent",
+    "st.dislikesTip": "Profiles we passed",
+    "st.messagesOut": "Messages sent", "st.messagesOutLong": "Messages sent", "st.messagesOutTip": "Messages we sent to users with our profile",
+    "sync.never": "Not synced yet", "sync.at": "Synced {t}", "sync.refresh": "Refresh stats",
+    "sync.refreshOne": "Refresh", "sync.running": "Refreshing …", "sync.wait": "Wait {s}s",
+    "sync.error": "Last refresh failed: {e}", "sync.title": "Refresh stats from Jaumo",
+    "sync.text": "Reads likes, visitors, messages and matches directly from Jaumo (read-only — nothing is sent). Each account can be refreshed once at a time (15 s pause afterwards).",
+    "sync.selected": "Selected accounts ({n})", "sync.all": "All accounts ({n})",
+    "sync.cost": "{n} account(s) · about {r} requests through the proxy · one after another with a {d} s pause",
+    "sync.started": "{n} refresh(es) started", "sync.skipped": "{n} skipped: {why}",
+    "sync.start": "Refresh",
     "st.messagesTip": "Chats in the inbox (contacts who wrote to us)",
     "st.visitsTip": "Profile visits", "st.notSynced": "Not synced yet",
     "st.actionsTip": "Likes + dislikes + messages sent",
@@ -163,6 +199,12 @@ const I18N = {
     "new.names": "Custom names (optional, one per line)", "new.submit": "Create accounts",
     "new.queued": "Creating {n} account(s)", "new.busy": "{w} worker(s) busy · {q} waiting",
     "new.idle": "All workers free",
+    "new.blocked": "Cannot start yet:", "new.fix": "Fix",
+    "new.p.apk": "No enabled APK profile for this configuration.", "new.p.photos": "Not enough free photos.",
+    "new.p.names": "Not enough free names.", "new.p.proxy": "No enabled proxy — the configuration requires one.",
+    "setup.title": "Setup", "setup.sub": "Still missing before accounts can be created with “{c}”:",
+    "setup.apk": "APK profile", "setup.proxy": "Proxy", "setup.photos": "Photos", "setup.names": "Names",
+    "setup.ok": "Ready", "setup.proxyOff": "not required",
     "edit.title": "Edit account", "edit.status": "Status", "edit.notes": "Notes", "edit.save": "Save", "edit.saved": "Saved",
     "msg.title": "Message matches", "msg.config": "Configuration for messages", "msg.start": "Start",
     "common.cancel": "Cancel", "common.delete": "Delete",
@@ -209,6 +251,18 @@ function relTime(iso) {
   return new Date(iso).toLocaleDateString(LANG);
 }
 const shortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LANG, { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—");
+
+// Live refreshes: run at most once per `ms`, but never starve while events keep arriving
+// (a plain debounce never fires while a worker sends updates faster than its delay).
+function throttle(fn, ms) {
+  let last = 0, timer = null;
+  return (...a) => {
+    if (document.hidden) { missedWhileHidden = true; return; }
+    const wait = ms - (Date.now() - last);
+    if (wait <= 0) { last = Date.now(); fn(...a); return; }
+    if (!timer) timer = setTimeout(() => { timer = null; last = Date.now(); fn(...a); }, wait);
+  };
+}
 
 function debounce(fn, ms) {
   let t;
@@ -503,17 +557,24 @@ function openEvents() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === "run") {
+      const prev = state.runs.get(msg.run.id);
       state.runs.set(msg.run.id, msg.run);
-      if (state.tab === "accounts") reloadAccountsSoon();
       renderLiveCards();
-      refreshStatsSoon();
+      // Counter changes arrive as "counters" events; only status changes need fresh lists/stats.
+      if (!prev || prev.status !== msg.run.status) {
+        refreshStatsSoon();
+        if (state.tab === "accounts") reloadAccountsSoon();
+      }
       if (state.tab === "runs") reloadRunsSoon();
+    } else if (msg.type === "counters") {
+      applyCounters(msg);
     } else if (msg.type === "account") {
       refreshStatsSoon();
       refreshDailySoon();
       if (state.tab === "accounts") reloadAccountsSoon();
     } else if (msg.type === "settings") {
       refreshStatsSoon();
+      if (state.tab === "dashboard") guard(renderSetupCheck)();
     } else if (msg.type === "apk") {
       refreshStatsSoon();
       if (state.tab === "configs") reloadApksSoon();
@@ -534,10 +595,50 @@ function closeEvents() {
   if (eventsWs) { const ws = eventsWs; eventsWs = null; ws.close(); }
 }
 
-const refreshStatsSoon = debounce(() => guard(loadStats)(), 800);
-const refreshDailySoon = debounce(() => { if (state.tab === "dashboard") guard(loadDaily)(); }, 2500);
-const reloadRunsSoon = debounce(() => guard(loadRuns)(), 1500);
-const reloadApksSoon = debounce(() => guard(() => Promise.all([loadApks(), loadConfigs()]))(), 1500);
+const refreshStatsSoon = throttle(() => guard(loadStats)(), 5000);
+const refreshDailySoon = throttle(() => { if (state.tab === "dashboard") guard(loadDaily)(); }, 5000);
+const reloadRunsSoon = throttle(() => guard(loadRuns)(), 3000);
+
+// Apply a "counters" push: patch the visible row / cards locally (no HTTP request).
+function applyCounters(m) {
+  const d = m.delta || {};
+  const liked = d.liked || 0, disliked = d.disliked || 0, matches = d.matches || 0, msgs = d.messages || 0;
+  const s = state.stats;
+  if (s) {
+    s.liked += liked; s.disliked += disliked; s.matches += matches; s.messages_sent += msgs;
+    if (state.tab === "dashboard") { renderKpis(); renderEngagement(); }
+  }
+  const sum = state.acc && state.acc.summary;
+  if (sum) {
+    sum.likes += liked; sum.likes_sent = (sum.likes_sent || 0) + liked; sum.likes_today += liked;
+    sum.dislikes += disliked; sum.dislikes_today = (sum.dislikes_today || 0) + disliked; sum.matches += matches; sum.matches_today += matches;
+    sum.messages_sent += msgs; sum.messages_sent_today = (sum.messages_sent_today || 0) + msgs; sum.actions += liked + disliked + msgs; sum.actions_today += liked + disliked + msgs;
+    if (d.synced) reloadAccountsSoon();   // received totals come from the server
+  }
+  if (state.tab !== "accounts") return;
+  const item = state.acc.items.find((x) => x.id === m.account_id);
+  const row = $(`#acc-tbody tr[data-acc="${m.account_id}"]`);
+  if (item) Object.assign(item, m);
+  if (row) {
+    const setTile = (cls, v) => { const b = row.querySelector(`.stat-tile.${cls} b`); if (b) b.textContent = v === null || v === undefined ? "–" : fmtNum(v); };
+    setTile("likes-out", m.liked_count); setTile("dislikes", m.disliked_count); setTile("matches", m.matches_count);
+    setTile("messages-out", m.messages_sent); setTile("actions", m.actions);
+    setTile("likes", m.likes_received); setTile("visits", m.profile_visits); setTile("messages", m.messages_received);
+    const rel = row.querySelector("[data-rel]");
+    if (rel && m.last_activity_at) { rel.dataset.rel = m.last_activity_at; rel.textContent = relTime(m.last_activity_at); }
+  }
+  if (sum) renderAccSummary();
+}
+
+// While the tab is hidden nothing is loaded; one catch-up when it becomes visible again.
+let missedWhileHidden = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !missedWhileHidden || $("#app-view").classList.contains("hidden")) return;
+  missedWhileHidden = false;
+  guard(loadStats)();
+  if (state.tab !== "account") guard(TAB_LOADERS[state.tab])();
+});
+const reloadApksSoon = throttle(() => guard(() => Promise.all([loadApks(), loadConfigs()]))(), 1500);
 
 // ---------------------------------------------------------------------------
 // Dashboard
@@ -546,11 +647,13 @@ const reloadApksSoon = debounce(() => guard(() => Promise.all([loadApks(), loadC
 const STEP_FLOW = {
   signup: ["client_token", "signup", "location", "profile", "photo", "verify", "swiping"],
   message: ["login", "matches", "messaging"],
+  sync: ["login", "links", "counters"],
 };
 const STEP_LABELS = {
   starting: "Starting", waiting_proxy: "Waiting for proxy", client_token: "Client token", signup: "Signing up",
   location: "Setting location", profile: "Loading profile", photo: "Uploading photo", verify: "Verifying photo",
   swiping: "Swiping", finished: "Finished", login: "Logging in", matches: "Loading matches", messaging: "Messaging",
+  links: "Loading links", counters: "Reading counters",
 };
 
 state.days = 14;
@@ -558,7 +661,30 @@ state.daily = [];
 state.liveFilter = "active";
 
 async function loadDashboard() {
-  await Promise.all([loadStats(), loadDaily(), loadDashboardRuns()]);
+  await Promise.all([loadStats(), loadDaily(), loadDashboardRuns(), renderSetupCheck()]);
+}
+
+// First-run checklist: the same server check as "Neuer Account", shown only while something is missing.
+async function renderSetupCheck() {
+  const box = $("#setup-check");
+  const c = state.configs.find((x) => String(x.id) === ($("#launch-config") || {}).value) || state.configs[0];
+  if (!c) { box.classList.add("hidden"); return; }
+  const res = await api("/api/runs/check", { method: "POST", body: { config_id: c.id, count: 1, names: [] } });
+  if (state.tab !== "dashboard") return;
+  box.classList.toggle("hidden", res.ok);
+  if (res.ok) { box.innerHTML = ""; return; }
+  const byCode = Object.fromEntries(res.problems.map((p) => [p.code, p]));
+  const proxyRequired = (c.settings || {}).require_proxy !== false;
+  const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "settings"]].map(([code, page]) => {
+    const p = byCode[code];
+    const note = p ? t("new.p." + code) : code === "proxy" && !proxyRequired ? t("setup.proxyOff") : t("setup.ok");
+    return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? p.message : "")}">
+      <span class="icon-bubble ${p ? "warn" : "ok"}">${icon(p ? "alert" : "check")}</span>
+      <span><b>${esc(t("setup." + code))}</b><small>${esc(note)}</small></span>
+      ${p ? `<a class="btn ghost sm" href="#${page}">${esc(t("new.fix"))}</a>` : ""}</li>`;
+  }).join("");
+  box.innerHTML = `<div class="card-head"><div><h2>${icon("sliders")} ${esc(t("setup.title"))}</h2>
+    <p class="card-sub">${esc(t("setup.sub", { c: c.name }))}</p></div></div><ul class="setup-list">${rows}</ul>`;
 }
 
 async function loadStats() {
@@ -830,7 +956,9 @@ function stepBar(r) {
 function botCard(r) {
   const name = r.requested_name || (r.kind === "message" ? `Account #${r.account_id}` : "New account");
   const initial = (r.requested_name || "?").trim().charAt(0).toUpperCase() || "?";
-  const metrics = r.kind === "message"
+  const metrics = r.kind === "sync"
+    ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${icon("refresh")}</b><span>stats refresh</span></div></div>`
+    : r.kind === "message"
     ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${r.messages_sent}</b><span>messages sent</span></div></div>`
     : `<div class="bot-metrics">
         <div><b>${r.liked}</b><span>liked</span></div><div><b>${r.disliked}</b><span>disliked</span></div>
@@ -921,7 +1049,7 @@ function renderLaunchInfo() {
       !(state.photos || []).some((p) => p.status === "available")),
   ].join("");
 }
-$("#launch-config").addEventListener("change", renderLaunchInfo);
+$("#launch-config").addEventListener("change", () => { renderLaunchInfo(); guard(renderSetupCheck)(); });
 
 $("#launch-form").addEventListener("click", (e) => {
   const b = e.target.closest("[data-step]");
@@ -1166,6 +1294,34 @@ $("#new-config-btn").onclick = guard(async () => {
   openConfigEditor({ id: null, name: "", apk_profile_id: state.apks[0]?.id ?? null, settings: meta.default_settings });
 });
 
+// Values the decoded APK knows for both relationship fields (RelationshipItem.isFlirt / isFriendship).
+const RELATIONSHIP_LABELS = { FLIRT: "Flirt / Dating (FLIRT)", FRIENDSHIP: "Freundschaft / Friendship (FRIENDSHIP)" };
+function relationshipOptions(current) {
+  const values = (state.meta && state.meta.relationship_values) || Object.keys(RELATIONSHIP_LABELS);
+  return values.map((v) => `<option value="${v}" ${v === current ? "selected" : ""}>${esc(RELATIONSHIP_LABELS[v] || v)}</option>`).join("");
+}
+
+// What Jaumo's own signup/defaults response offered at the last registration.
+function offeredByJaumo() {
+  const sd = state.meta && state.meta.signup_defaults;
+  if (!sd) {
+    return `<p class="field-hint">Jaumo's own list of options is saved automatically at the next account creation
+      (from <code>signup/defaults</code>) and will be shown here.</p>`;
+  }
+  const found = [];
+  (function walk(v, path) {
+    if (Array.isArray(v)) v.forEach((x, i) => walk(x, path));
+    else if (v && typeof v === "object") Object.entries(v).forEach(([k, x]) => walk(x, path.concat(k)));
+    else if (path.some((k) => /relationship/i.test(k)) && typeof v === "string" && /^[A-Z_]{3,}$/.test(v)) found.push(v);
+  })(sd.data, []);
+  const uniq = [...new Set(found)];
+  const unknown = uniq.filter((v) => !(state.meta.relationship_values || []).includes(v));
+  return `<div class="sent-list"><span>Jaumo offers (signup/defaults, ${esc(fmtDate(sd.received_at))}):</span>
+      ${uniq.length ? uniq.map((v) => `<code>${esc(v)}</code>`).join(" ") : "no relationship values found in the response"}
+      ${unknown.length ? `<div class="sr-warn">Not in the dropdown yet: ${unknown.map(esc).join(", ")} — tell the developer to add them.</div>` : ""}
+      <details><summary>Show full response</summary><pre class="mono pre-json">${esc(JSON.stringify(sd.data, null, 2))}</pre></details></div>`;
+}
+
 const DELAY_LABELS = {
   after_signup: "After signup", after_location: "After location", after_refresh: "After token refresh",
   after_profile: "After profile fetch", before_photo: "Before photo upload", after_photo: "After photo upload",
@@ -1174,7 +1330,7 @@ const DELAY_LABELS = {
 
 async function openConfigEditor(c) {
   const s = c.settings;
-  if (!state.meta) state.meta = await api("/api/meta");
+  state.meta = await api("/api/meta");
   if (!state.settings) state.settings = await api("/api/settings");
   await loadPhotos();
   const apkOpts = `<option value="">— none —</option>` + state.apks.map((a) =>
@@ -1225,44 +1381,22 @@ async function openConfigEditor(c) {
       <label id="custom-names-box" class="${s.name_source === "custom" ? "" : "hidden"}">Custom names (one per line)
         <textarea name="name_pool" rows="6">${esc(s.name_pool.join("\n"))}</textarea></label>
       <div class="name-usage" id="name-usage"><span class="muted">Checking which names are used…</span></div>
-      <div class="form-grid" style="margin-top:14px">
-        <label class="span-2">Signup photo URLs (sent as photo_url at registration)
-          <textarea name="signup_photo_urls" rows="4">${esc(s.signup_photo_urls.join("\n"))}</textarea></label>
-      </div>
       <h3 style="margin-top:14px">Profile photo</h3>
       <p class="field-hint">None checked = any unused photo from the whole library (${fmtNum(availablePhotos)} available).
         Check photos to limit this configuration to them. Used photos are greyed out. <a href="#photos" data-close-modal>Manage photo library</a></p>
       <div class="photo-pick">${photos || `<span class="muted">No photos uploaded yet</span>`}</div>
     </div>
 
-    <div class="form-section"><h3>Signup details</h3>
-      <p class="field-hint">Exactly the fields sent to Jaumo when an account is registered. The defaults are the values used
-        so far — change them only if the APK expects other values.</p>
-      <div class="form-grid" style="margin-top:10px">
-        <label>Gender<input value="Female (2)" disabled></label>
-        <label>Looking for<select name="looking_for_gender">
-          <option value="1" ${s.looking_for_gender === 1 ? "selected" : ""}>Men (1)</option>
-          <option value="2" ${s.looking_for_gender === 2 ? "selected" : ""}>Women (2)</option></select></label>
-        <label>Relationship search<input name="relationship_search" value="${esc(s.relationship_search)}" pattern="[A-Z_]{2,40}" required class="mono"></label>
-        <label>Dating relationship search<input name="dating_relationship_search" value="${esc(s.dating_relationship_search)}" pattern="[A-Z_]{2,40}" required class="mono"></label>
-      </div>
-      <label class="toggle-row"><input type="checkbox" class="switch" name="allow_in_all_brands" ${s.allow_in_all_brands ? "checked" : ""}>
-        <div><b>Allow in all brands</b><span>Sent as allow_in_all_brands=1 (profile visible across Jaumo's partner apps).</span></div></label>
-      <div class="sent-list">
-        <span>Also sent:</span><code>name</code> from Names · <code>birthday</code> from the age range · <code>photo_url</code> from signup photo URLs ·
-        <code>location_permission</code> and <code>notifications_services</code> empty (as the app does).
-        After signup the location is set and the profile photo uploaded. Nothing else (bio, height, …) is set.
-      </div>
-    </div>
-
-    <div class="form-section"><h3>Locations &amp; devices</h3>
-      <div class="form-grid">
-        <label class="span-2"><span>Locations — <code>label,lat,lon</code> per line</span>
-          <span class="field-hint">One is picked at random for each account. Jaumo turns the coordinates into the real city at run time
-            (same as before), so the label is only for your reference.</span>
-          <textarea name="locations" rows="8">${esc(s.locations.map((l) => `${l.label},${l.lat},${l.lon}`).join("\n"))}</textarea></label>
-        <label class="span-2"><span>Devices — <code>manufacturer;model;brand</code> per line</span>
-          <textarea name="devices" rows="8">${esc(s.devices.map((d) => `${d.manufacturer};${d.model};${d.brand}`).join("\n"))}</textarea></label>
+    <div class="form-section"><h3>Locations</h3>
+      <div class="form-grid one-col">
+        <label class="span-2"><span>Locations — <code>label,lat,lon</code> or <code>label,lat,lon,radius_km</code> per line</span>
+          <span class="field-hint">One city is picked at random for each account. With a radius, each account gets its own random
+            point inside that circle around the city centre (like real users spread over a city). Jaumo turns the point into the
+            real city at run time.</span>
+          <span class="radius-row">Default radius around each city
+            <input type="number" name="location_radius_km" min="0" max="100" step="any" value="${s.location_radius_km ?? 0}"> km
+            <span class="field-hint">0 = exact city centre · e.g. 15 = anywhere within 15 km · a 4th value on a line overrides it for that city</span></span>
+          <textarea name="locations" rows="8">${esc(s.locations.map((l) => `${l.label},${l.lat},${l.lon}${l.radius_km != null ? `,${l.radius_km}` : ""}`).join("\n"))}</textarea></label>
       </div>
     </div>
 
@@ -1273,9 +1407,34 @@ async function openConfigEditor(c) {
         <textarea name="message_templates" rows="5">${esc(s.message_templates.join("\n"))}</textarea></label>
     </div>
 
-    <div class="form-section"><h3>Delays (random between min and max)</h3>
+    <div class="adv-head">Advanced — the defaults work; change only if needed</div>
+    <details class="form-section adv" data-adv="signup"><summary><span><b>Signup details</b><small>Values sent to Jaumo at registration (relationship, looking for, brands)</small></span></summary>
+      <p class="field-hint">Exactly the fields sent to Jaumo when an account is registered. The defaults are the values used
+        so far — change them only if the APK expects other values.</p>
+      <div class="form-grid" style="margin-top:10px">
+        <label>Gender<input value="Female (2)" disabled></label>
+        <label>Looking for<select name="looking_for_gender">
+          <option value="1" ${s.looking_for_gender === 1 ? "selected" : ""}>Men (1)</option>
+          <option value="2" ${s.looking_for_gender === 2 ? "selected" : ""}>Women (2)</option></select></label>
+        <label>Relationship search<select name="relationship_search">${relationshipOptions(s.relationship_search)}</select></label>
+        <label>Dating relationship search<select name="dating_relationship_search">${relationshipOptions(s.dating_relationship_search)}</select></label>
+      </div>
+      ${offeredByJaumo()}
+      <label class="toggle-row"><input type="checkbox" class="switch" name="allow_in_all_brands" ${s.allow_in_all_brands ? "checked" : ""}>
+        <div><b>Allow in all brands</b><span>Sent as allow_in_all_brands=1 (profile visible across Jaumo's partner apps).</span></div></label>
+      <div class="sent-list">
+        <span>Also sent:</span><code>name</code> from Names · <code>birthday</code> from the age range · <code>photo_url</code> (fixed value from the original script) ·
+        <code>location_permission</code> and <code>notifications_services</code> empty (as the app does).
+        After signup the location is set and the profile photo uploaded. Nothing else (bio, height, …) is set.
+      </div>
+    </details>
+    <details class="form-section adv" data-adv="devices"><summary><span><b>Devices</b><small>${s.devices.length} phone models — one is picked per account</small></span></summary>
+      <label><span>Devices — <code>manufacturer;model;brand</code> per line</span>
+        <textarea name="devices" rows="8">${esc(s.devices.map((d) => `${d.manufacturer};${d.model};${d.brand}`).join("\n"))}</textarea></label>
+    </details>
+    <details class="form-section adv" data-adv="delays"><summary><span><b>Delays</b><small>Random pauses between steps, in seconds (min – max)</small></span></summary>
       <div class="delay-grid">${delays}</div>
-    </div>
+    </details>
 
     <p class="error" id="config-error"></p>
     <div class="modal-foot">
@@ -1286,6 +1445,7 @@ async function openConfigEditor(c) {
 
   $("#config-cancel").onclick = closeModal;
   const form = $("#config-form");
+  form.addEventListener("invalid", (e) => { const d = e.target.closest("details"); if (d) d.open = true; }, true);
   let usage = {};
   const renderNameUsage = () => {
     const custom = form.elements.name_source.value === "custom";
@@ -1323,9 +1483,12 @@ async function openConfigEditor(c) {
     $("#config-error").textContent = "";
     try {
       const locations = lines(f.locations.value).map((l, i) => {
-        const [label, lat, lon] = l.split(",").map((x) => x.trim());
-        if (!label || !lat || !lon || isNaN(+lat) || isNaN(+lon)) throw new Error(`Location line ${i + 1} is invalid: "${l}"`);
-        return { label, lat, lon };
+        const [label, lat, lon, radius] = l.split(",").map((x) => x.trim());
+        if (!label || !lat || !lon || isNaN(+lat) || isNaN(+lon) || Math.abs(+lat) > 90 || Math.abs(+lon) > 180
+            || (radius !== undefined && radius !== "" && (isNaN(+radius) || +radius < 0 || +radius > 100))) {
+          throw new Error(`Location line ${i + 1} is invalid: "${l}" (label,lat,lon[,radius_km 0–100])`);
+        }
+        return { label, lat, lon, radius_km: radius === undefined || radius === "" ? null : +radius };
       });
       const devices = lines(f.devices.value).map((l, i) => {
         const [manufacturer, model, brand] = l.split(";").map((x) => x.trim());
@@ -1340,6 +1503,7 @@ async function openConfigEditor(c) {
         settings: {
           require_proxy: f.require_proxy.checked,
           like_ratio: +f.like_ratio.value,
+          location_radius_km: +f.location_radius_km.value || 0,
           max_swipes: +f.max_swipes.value,
           block_threshold: +f.block_threshold.value,
           max_empty_batches: +f.max_empty_batches.value,
@@ -1353,7 +1517,6 @@ async function openConfigEditor(c) {
           allow_in_all_brands: f.allow_in_all_brands.checked,
           messaging_enabled: f.messaging_enabled.checked,
           name_pool: lines(f.name_pool.value),
-          signup_photo_urls: lines(f.signup_photo_urls.value),
           photo_pool: fd.getAll("photo_pool"),
           locations, devices,
           message_templates: lines(f.message_templates.value),
@@ -1933,13 +2096,13 @@ function renderAccSummary() {
       <div><div class="acc-kpi-label">${esc(label)}</div><div class="acc-kpi-value">${value}</div>
         <div class="acc-kpi-delta">${today}</div></div></div>`;
   const plus = (n) => (n ? `<span class="up">${esc(t("kpi.today", { n: fmtNum(n) }))}</span>` : `<span>${esc(t("kpi.today", { n: 0 }))}</span>`);
-  const msgs = s.messages_received_synced ? fmtNum(s.messages_received) : "–";
+  const synced = s.stats_synced_accounts;
+  const syncedFoot = synced ? `<span>${esc(t("sync.at", { t: relTime(s.stats_last_synced_at) }))}</span>` : `<span>${esc(t("sync.never"))}</span>`;
   $("#acc-summary").innerHTML = [
     card("teal", "users", t("kpi.total"), fmtNum(s.accounts), plus(s.accounts_today)),
-    card("green", "thumbsUp", t("kpi.likes"), fmtNum(s.likes), plus(s.likes_today)),
-    card("violet", "heart", t("kpi.matches"), fmtNum(s.matches), plus(s.matches_today)),
-    card("blue", "message", t("kpi.messages"), msgs,
-      s.messages_received_synced ? plus(0) : `<span>${esc(t("kpi.notSynced"))}</span>`, t("st.messagesTip")),
+    card("green", "heart", t("st.likesIn"), synced ? fmtNum(s.likes_received) : "–", syncedFoot, t("st.likesInTip")),
+    card("violet", "thumbsUp", t("kpi.matches"), fmtNum(s.matches), plus(s.matches_today), t("st.matchesTip")),
+    card("blue", "message", t("st.messagesIn"), synced ? fmtNum(s.messages_received) : "–", syncedFoot, t("st.messagesInTip")),
     card("indigo", "zap", t("kpi.actions"), fmtNum(s.actions), plus(s.actions_today), t("st.actionsTip")),
   ].join("");
 }
@@ -1954,6 +2117,12 @@ function renderAccWorkers() {
 function statTile(kind, iconName, value, label, tip, muted) {
   return `<div class="stat-tile ${kind}${muted ? " muted" : ""}" title="${esc(tip || label)}">
     <span class="stat-ic">${icon(iconName)}</span><span class="stat-txt"><b>${value}</b><small>${esc(label)}</small></span></div>`;
+}
+
+function receivedTile(kind, iconName, value, labelKey, tipKey) {
+  const none = value === null || value === undefined;
+  return statTile(kind, iconName, none ? "–" : fmtNum(value), t(labelKey),
+    none ? `${t(tipKey)} — ${t("sync.never")}` : t(tipKey), none);
 }
 
 function stateBadge(st) {
@@ -1972,13 +2141,13 @@ function accRow(a) {
         <div class="acc-meta">${esc(t("acc.created", { d: shortDate(a.created_at) }))}${a.location ? ` · ${esc(a.location)}` : ""}</div></div>
     </div></td>
     <td><div class="stat-tiles">
-      ${statTile("likes", "heart", fmtNum(a.liked_count), t("st.likes"))}
-      ${statTile("dislikes", "thumbsDown", fmtNum(a.disliked_count), t("st.dislikes"))}
-      ${statTile("matches", "thumbsUp", fmtNum(a.matches_count), t("st.matches"))}
-      ${statTile("messages", "users", nd(a.messages_received), t("st.messages"),
-        a.messages_received === null ? `${t("st.messagesTip")} — ${t("st.notSynced")}` : t("st.messagesTip"), a.messages_received === null)}
-      ${statTile("visits", "eye", nd(a.profile_visits), t("st.visits"),
-        a.profile_visits === null ? `${t("st.visitsTip")} — ${t("st.notSynced")}` : t("st.visitsTip"), a.profile_visits === null)}
+      ${receivedTile("likes", "heart", a.likes_received, "st.likesIn", "st.likesInTip")}
+      ${receivedTile("visits", "eye", a.profile_visits, "st.visitsIn", "st.visitsInTip")}
+      ${receivedTile("messages", "users", a.messages_received, "st.messagesIn", "st.messagesInTip")}
+      ${statTile("matches", "thumbsUp", fmtNum(a.matches_count), t("st.matches"), t("st.matchesTip"))}
+      ${statTile("likes-out", "thumbsUp", fmtNum(a.liked_count), t("st.likesOut"), t("st.likesOutTip"))}
+      ${statTile("dislikes", "thumbsDown", fmtNum(a.disliked_count), t("st.dislikes"), t("st.dislikesTip"))}
+      ${statTile("messages-out", "send", fmtNum(a.messages_sent), t("st.messagesOut"), t("st.messagesOutTip"))}
       ${statTile("actions", "zap", fmtNum(a.actions), t("st.actions"), t("st.actionsTip"))}
     </div></td>
     <td>${stateBadge(a.state)}</td>
@@ -2024,7 +2193,7 @@ function updateAccSelected() {
   $("#acc-bulk-count").textContent = t("bulk.selected", { n });
 }
 
-const reloadAccountsSoon = debounce(() => { if (state.tab === "accounts") guard(loadAccounts)(); }, 1200);
+const reloadAccountsSoon = throttle(() => { if (state.tab === "accounts") guard(loadAccounts)(); }, 3000);
 setInterval(() => {
   if (state.tab !== "accounts" || document.hidden) return;
   $$("#acc-tbody [data-rel]").forEach((el) => { if (el.dataset.rel) el.textContent = relTime(el.dataset.rel); });
@@ -2164,6 +2333,44 @@ $("#bulk-message").onclick = () => openMessageDialog([...state.accSelected]);
 $("#bulk-export").onclick = () => { window.location = "/api/accounts/export?" + accQuery(); };
 $("#bulk-clear").onclick = () => { state.accSelected.clear(); renderAccTable(); };
 
+async function openSyncDialog() {
+  const settings = await api("/api/settings");
+  const delay = settings.bot.sync_delay_seconds;
+  const total = (state.acc.summary && state.acc.summary.accounts) || 0;
+  const sel = state.accSelected.size;
+  openModal(t("sync.title"), `<form id="sync-form" class="narrow-form">
+      <p class="muted">${esc(t("sync.text"))}</p>
+      <div class="choice-cards">
+        <label class="choice"><input type="radio" name="scope" value="selected" ${sel ? "checked" : "disabled"}>
+          <div><b>${esc(t("sync.selected", { n: sel }))}</b></div></label>
+        <label class="choice"><input type="radio" name="scope" value="all" ${sel ? "" : "checked"}>
+          <div><b>${esc(t("sync.all", { n: total }))}</b></div></label>
+      </div>
+      <p class="field-hint" id="sync-cost"></p>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close-modal>${esc(t("common.cancel"))}</button>
+        <button class="btn primary">${icon("refresh")}${esc(t("sync.start"))}</button></div></form>`);
+  const form = $("#sync-form");
+  const cost = () => {
+    const n = form.elements.scope.value === "all" ? total : sel;
+    $("#sync-cost").textContent = t("sync.cost", { n, r: n * 3, d: delay });
+  };
+  cost();
+  form.addEventListener("change", cost);
+  form.addEventListener("submit", guard(async (e) => {
+    e.preventDefault();
+    const all = form.elements.scope.value === "all";
+    const res = await api("/api/accounts/sync", { method: "POST", body: all ? { all: true } : { account_ids: [...state.accSelected] } });
+    closeModal();
+    toast(t("sync.started", { n: res.run_ids.length }));
+    if (res.skipped.length) {
+      const why = [...new Set(res.skipped.map((x) => x.reason))].join("; ");
+      toast(t("sync.skipped", { n: res.skipped.length, why }), true);
+    }
+  }));
+}
+$("#acc-sync").onclick = guard(openSyncDialog);
+$("#bulk-sync").onclick = guard(openSyncDialog);
+
 // --- New accounts (one by one or parallel workers) -----------------------------
 
 async function openNewAccounts() {
@@ -2191,8 +2398,9 @@ async function openNewAccounts() {
             <button type="button" data-wstep="1">+</button></div></label>
       </div>
       <details class="names-details"><summary>${esc(t("new.names"))}</summary><textarea name="names" rows="3"></textarea></details>
+      <div id="new-problems" class="new-problems hidden" role="alert"></div>
       <div class="modal-foot"><button type="button" class="btn ghost" data-close-modal>${esc(t("common.cancel"))}</button>
-        <button class="btn primary">${icon("plus")}${esc(t("new.submit"))}</button></div></form>`);
+        <button id="new-submit" class="btn primary">${icon("plus")}${esc(t("new.submit"))}</button></div></form>`);
   const form = $("#new-acc-form");
   const showInfo = () => {
     const prev = $("#launch-config").value;
@@ -2201,12 +2409,33 @@ async function openNewAccounts() {
     $("#new-config-info").innerHTML = $("#launch-config-info").innerHTML;
     $("#launch-config").value = prev;
   };
+  // Ask the server whether this start would be refused, so the reason is shown here instead of a toast.
+  let checkSeq = 0;
+  const check = async () => {
+    const seq = ++checkSeq, f = form.elements;
+    if (!f.config_id.value) return;
+    let res;
+    try {
+      res = await api("/api/runs/check", { method: "POST",
+        body: { config_id: +f.config_id.value, count: Math.min(500, Math.max(1, +f.count.value || 1)), names: lines(f.names.value) } });
+    } catch { return; }
+    if (seq !== checkSeq || !$("#new-problems")) return;
+    const box = $("#new-problems");
+    box.classList.toggle("hidden", res.ok);
+    $("#new-submit").disabled = !res.ok;
+    box.innerHTML = res.ok ? "" : `<b>${icon("alert")}${esc(t("new.blocked"))}</b><ul>${res.problems.map((p) =>
+      `<li><span>${esc(t("new.p." + p.code))} <small>${esc(p.message)}</small></span>
+        <a href="#${p.page}" data-close-modal class="btn ghost sm">${esc(t("new.fix"))}</a></li>`).join("")}</ul>`;
+  };
+  const checkSoon = throttle(check, 400);
   showInfo();
-  form.elements.config_id.onchange = showInfo;
+  check();
+  form.elements.config_id.onchange = () => { showInfo(); check(); };
+  form.addEventListener("input", (e) => { if (e.target.name === "count" || e.target.name === "names") checkSoon(); });
   form.addEventListener("change", (e) => { if (e.target.name === "mode") $("#par-box").classList.toggle("hidden", e.target.value !== "par"); });
   form.addEventListener("click", (e) => {
     const s = e.target.closest("[data-step]"), w = e.target.closest("[data-wstep]");
-    if (s) form.elements.count.value = Math.min(500, Math.max(1, (+form.elements.count.value || 1) + +s.dataset.step));
+    if (s) { form.elements.count.value = Math.min(500, Math.max(1, (+form.elements.count.value || 1) + +s.dataset.step)); checkSoon(); }
     if (w) form.elements.workers.value = Math.min(20, Math.max(2, (+form.elements.workers.value || 2) + +w.dataset.wstep));
   });
   form.addEventListener("submit", guard(async (e) => {
@@ -2259,30 +2488,41 @@ async function openAccountPage(id) {
   acct.id = id;
   acct.events = [];
   $("#account-page").innerHTML = `<div class="empty">${icon("clock")}<b>Loading account…</b></div>`;
+  // Subscribe first, then load: events that happen while the page loads are buffered, not lost.
+  const early = [];
+  let loaded = false;
+  const ws = new WebSocket(wsUrl(`/ws/accounts/${id}`));
+  acct.ws = ws;
+  const addEvent = (ev) => {
+    if (acct.events.some((x) => x.id === ev.id)) return;
+    acct.events.unshift(ev);
+    prependTimeline(ev);
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (acct.id !== id) return;
+    if (msg.type === "activity") {
+      if (!loaded) { early.push(msg.event); return; }
+      addEvent(msg.event);
+      refreshAccountSoon();
+    } else if (msg.type === "changed" && loaded) {
+      refreshAccountSoon();
+    }
+  };
+  await new Promise((res) => { ws.addEventListener("open", res, { once: true }); ws.addEventListener("error", res, { once: true }); setTimeout(res, 3000); });
+  if (acct.id !== id) return;
   const [data, runs, events] = await Promise.all([
     api(`/api/accounts/${id}`), api(`/api/accounts/${id}/runs`), api(`/api/accounts/${id}/events?limit=200`),
   ]);
   if (acct.id !== id) return;
   acct.data = data; acct.runs = runs; acct.events = events;
   renderAccountPage();
-  const ws = new WebSocket(wsUrl(`/ws/accounts/${id}`));
-  acct.ws = ws;
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (acct.id !== id) return;
-    if (msg.type === "activity") {
-      if (!acct.events.some((x) => x.id === msg.event.id)) {
-        acct.events.unshift(msg.event);
-        prependTimeline(msg.event);
-      }
-      refreshAccountSoon();
-    } else if (msg.type === "changed") {
-      refreshAccountSoon();
-    }
-  };
+  loaded = true;
+  early.sort((a, b) => a.id - b.id).forEach(addEvent);
+  if (early.length) refreshAccountSoon();
 }
 
-const refreshAccountSoon = debounce(guard(async () => {
+const refreshAccountSoon = throttle(guard(async () => {
   if (!acct.id || state.tab !== "account") return;
   const id = acct.id;
   const [data, runs] = await Promise.all([api(`/api/accounts/${id}`), api(`/api/accounts/${id}/runs`)]);
@@ -2300,6 +2540,7 @@ function renderAccountPage() {
   $("#account-page").innerHTML = `
     <a href="#accounts" class="back-link">${icon("chevronLeft")}All accounts</a>
     <div id="acc-hero"></div>
+    <div id="acc-sync-bar" class="sync-bar"></div>
     <div id="acc-kpis" class="kpi-grid eight"></div>
     <div id="acc-live"></div>
     <div class="grid-12">
@@ -2381,19 +2622,19 @@ function renderAccountSections() {
   });
 
   const rate = a.liked_count ? ((a.matches_count / a.liked_count) * 100).toFixed(1) : "0.0";
+  const nd = (v) => (v === null || v === undefined ? "–" : fmtNum(v));
   $("#acc-kpis").innerHTML = [
-    kpiTile({ label: t("st.likes"), iconName: "thumbsUp", tone: "info", value: fmtNum(a.liked_count), foot: t("st.likesSub") }),
-    kpiTile({ label: t("st.dislikes"), iconName: "thumbsDown", tone: "", value: fmtNum(a.disliked_count), foot: t("st.dislikesSub") }),
-    kpiTile({ label: t("st.matches"), iconName: "heart", tone: "danger", value: fmtNum(a.matches_count), foot: t("st.rate", { r: rate }) }),
-    kpiTile({ label: t("st.messages"), iconName: "users", tone: "accent",
-      value: a.messages_received === null ? "–" : fmtNum(a.messages_received),
-      foot: a.messages_received === null ? t("st.notSynced") : t("st.messagesTip") }),
-    kpiTile({ label: t("st.visitsTip"), iconName: "eye", tone: "info",
-      value: a.profile_visits === null ? "–" : fmtNum(a.profile_visits), foot: a.profile_visits === null ? t("st.notSynced") : "" }),
+    kpiTile({ label: t("st.likesIn"), iconName: "heart", tone: "danger", value: nd(a.likes_received), foot: t("st.likesInTip") }),
+    kpiTile({ label: t("st.visitsIn"), iconName: "eye", tone: "info", value: nd(a.profile_visits), foot: t("st.visitsInTip") }),
+    kpiTile({ label: t("st.messagesIn"), iconName: "users", tone: "accent", value: nd(a.messages_received), foot: t("st.messagesInTip") }),
+    kpiTile({ label: t("st.matches"), iconName: "thumbsUp", tone: "ok", value: fmtNum(a.matches_count),
+      foot: `${t("st.rate", { r: rate })} · ${t("st.pending")}: ${fmtNum(a.pending_messages)}` }),
+    kpiTile({ label: t("st.likesOut"), iconName: "thumbsUp", tone: "info", value: fmtNum(a.liked_count), foot: t("st.likesOutTip") }),
+    kpiTile({ label: t("st.dislikes"), iconName: "thumbsDown", tone: "", value: fmtNum(a.disliked_count), foot: t("st.dislikesTip") }),
+    kpiTile({ label: t("st.messagesOutLong"), iconName: "send", tone: "ok", value: fmtNum(a.messages_sent), foot: t("st.messagesOutTip") }),
     kpiTile({ label: t("st.actions"), iconName: "zap", tone: "accent", value: fmtNum(a.actions), foot: t("st.actionsTip") }),
-    kpiTile({ label: t("st.sent"), iconName: "message", tone: "ok", value: fmtNum(a.messages_sent), foot: t("st.sentSub", { n: a.messaged.length }) }),
-    kpiTile({ label: t("st.pending"), iconName: "send", tone: a.pending_messages ? "warn" : "", value: fmtNum(a.pending_messages), foot: t("st.pendingSub") }),
   ].join("");
+  renderSyncBar(a);
 
   renderLiveSession(run);
   renderPeople();
@@ -2403,7 +2644,8 @@ function renderAccountSections() {
       <dt>Name</dt><dd>${esc(a.name)}</dd>
       <dt>Birthday</dt><dd>${esc(a.birthday || "—")}${age !== null ? ` (${age})` : ""}</dd>
       <dt>Gender / looking for</dt><dd>Female · ${esc(lf)}</dd>
-      <dt>Location</dt><dd>${esc(a.location || "—")}</dd>
+      <dt>Relationship (signup)</dt><dd>${a.relationship_search ? `${esc(a.relationship_search)} · dating ${esc(a.dating_relationship_search || "—")}` : "—"}</dd>
+      <dt>Location</dt><dd>${esc(a.location || "—")}${a.latitude ? ` <span class="muted">(${esc(a.latitude)}, ${esc(a.longitude)})</span>` : ""}</dd>
       <dt>Profile photo</dt><dd>${esc(a.photo || "—")} · ${a.photo_uploaded ? "uploaded" : "not uploaded"} · gallery ${a.gallery_count}</dd>
       <dt>Signup photo_url</dt><dd class="mono">${esc(a.photo_url || "—")}</dd>
       <dt>Device</dt><dd>${esc(dev)}</dd>
@@ -2434,13 +2676,38 @@ function renderAccountSections() {
       <th class="num">Liked</th><th class="num">Disliked</th><th class="num">Matches</th><th class="num">Msgs</th>
       <th>Started</th><th>Duration</th><th>Result</th><th></th></tr></thead>
     <tbody>${acct.runs.map((r) => `<tr>
-      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : "Signup + swiping"}</td><td>${badge(r.status)}</td>
+      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : "Signup + swiping"}</td><td>${badge(r.status)}</td>
       <td>${esc(STEP_LABELS[r.step] || r.step || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
       <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(r.reason || "—")}</td>
       <td class="actions">${iconBtn("terminal", `data-log="${r.id}"`, "Open log")}</td></tr>`).join("")
       || `<tr><td colspan="12" class="muted">No sessions recorded (legacy account)</td></tr>`}</tbody>`;
   $("#acc-runs").onclick = (e) => { const b = e.target.closest("[data-log]"); if (b) openRunModal(+b.dataset.log); };
+}
+
+const SYNC_COOLDOWN_MS = 15000;
+let syncTimer = null;
+function renderSyncBar(a) {
+  clearInterval(syncTimer);
+  const bar = $("#acc-sync-bar");
+  if (!bar) return;
+  const running = acct.runs.some((r) => r.kind === "sync" && ACTIVE.has(r.status));
+  const draw = () => {
+    const left = a.stats_synced_at ? Math.ceil((new Date(a.stats_synced_at).getTime() + SYNC_COOLDOWN_MS - Date.now()) / 1000) : 0;
+    const label = running ? t("sync.running") : left > 0 ? t("sync.wait", { s: left }) : t("sync.refreshOne");
+    bar.innerHTML = `<div class="sync-info">${icon("refresh")}
+        <span>${esc(a.stats_synced_at ? t("sync.at", { t: relTime(a.stats_synced_at) }) : t("sync.never"))}</span>
+        ${a.stats_sync_error ? `<span class="sr-danger">${esc(t("sync.error", { e: a.stats_sync_error }))}</span>` : ""}</div>
+      <button class="btn small" id="acc-sync-btn" ${running || left > 0 ? "disabled" : ""}>${icon("refresh")}${esc(label)}</button>`;
+    $("#acc-sync-btn").onclick = guard(async () => {
+      await api(`/api/accounts/${a.id}/sync`, { method: "POST" });
+      toast(t("sync.started", { n: 1 }));
+      refreshAccountSoon();
+    });
+    if (!running && left <= 0) clearInterval(syncTimer);
+  };
+  draw();
+  syncTimer = setInterval(draw, 1000);
 }
 
 function renderLiveSession(run) {
@@ -2569,6 +2836,16 @@ async function loadSettings() {
       </div>
     </div>
     <div class="card">
+      <div class="card-head"><div><h2>${icon("refresh")} Stats refresh</h2>
+        <p class="card-sub">Reading likes, visitors, messages and matches from Jaumo only happens when you click Refresh
+          (never in the background). Each account can be refreshed once at a time, then 15 s cooldown.</p></div></div>
+      <div class="setting-row">
+        <div><b>Pause between accounts for "refresh all" (seconds)</b>
+          <span>"Refresh all" works through the accounts one after another with this pause, so Jaumo sees no burst of requests.</span></div>
+        <input type="number" id="sync-delay-input" min="2" max="600" step="1" value="${s.bot.sync_delay_seconds}" style="width:110px">
+      </div>
+    </div>
+    <div class="card">
       <div class="card-head"><div><h2>${icon("shieldCheck")} Identity rules</h2>
         <p class="card-sub">Apply to every configuration and every launch. Names and photos are reserved the moment an account is queued.</p></div></div>
       <label class="setting-row">
@@ -2598,6 +2875,10 @@ async function loadSettings() {
     commit();
   };
   $("#parallel-input").onchange = commit;
+  $("#sync-delay-input").onchange = (e) => {
+    const v = Math.min(600, Math.max(2, +e.target.value || 10));
+    save({ bot: { parallel_accounts: +$("#parallel-input").value || 1, sync_delay_seconds: v } }, `Pause between refreshes: ${v} s`);
+  };
 }
 
 // ---------------------------------------------------------------------------

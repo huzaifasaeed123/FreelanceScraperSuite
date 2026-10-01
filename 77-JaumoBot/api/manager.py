@@ -7,17 +7,20 @@ subscribers live in this process's memory.
 """
 
 import asyncio
+import os
 import random
+import sys
 import threading
 from collections import Counter, deque
 from concurrent.futures import ThreadPoolExecutor
 
 from sqlalchemy import update as sa_update
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import Session, select
 
-from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StopRequested
+from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StatsSyncRunner, StopRequested
 
-from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, RunLog,
+from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Proxy, RunLog,
                      engine, iso, utcnow)
 from .photolib import pick_photos
 from .proxies import NoProxyAvailable, ProxyPool, proxy_display, proxy_url
@@ -27,8 +30,11 @@ ACTIVE_STATUSES = ("queued", "running")
 
 
 IDENTITY_DEFAULTS = {"unique_names": True, "unique_photos": True}
-BOT_DEFAULTS = {"parallel_accounts": 1}
-THREAD_CAP = 64  # internal worker threads; the admin's parallel setting is the real limit
+BOT_DEFAULTS = {"parallel_accounts": 1, "sync_delay_seconds": 10}
+SYNC_COOLDOWN_SECONDS = 15   # one refresh per account at a time, then wait at least this long
+THREAD_CAP = 64
+# Mirror bot log lines (info/warning/error, never HTTP bodies) to stdout -> Coolify runtime log.
+LOG_TO_STDOUT = os.environ.get("LOG_BOT_TO_STDOUT", "1") != "0"  # internal worker threads; the admin's parallel setting is the real limit
 
 
 def get_bot_settings(s: Session) -> dict:
@@ -157,6 +163,10 @@ class RunManager:
         self.hub = hub
         self.parallel = BOT_DEFAULTS["parallel_accounts"]
         self.executor = ThreadPoolExecutor(max_workers=THREAD_CAP, thread_name_prefix="bot")
+        # Stats syncs run on their own single thread: one account at a time, never taking a worker
+        # away from account creation.
+        self.sync_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sync")
+        self.labels: dict[int, str] = {}     # run id -> "session 12 · Worker-01 · Sabrina" for stdout lines
         self.gate = threading.Condition()
         self.waiting: deque[int] = deque()   # run ids in launch order
         self.working = 0
@@ -218,6 +228,7 @@ class RunManager:
             ev.set()
         self.pool.notify()
         self.executor.shutdown(wait=False, cancel_futures=True)
+        self.sync_executor.shutdown(wait=False, cancel_futures=True)
 
     # --- launching ---------------------------------------------------------
 
@@ -241,6 +252,31 @@ class RunManager:
         with self.gate:
             self.waiting.append(run_id)
         self.executor.submit(self._guard, run_id, fn, ev)
+
+    def check_signup(self, config_id: int, count: int, names: list[str]) -> list[dict]:
+        """Dry run of launch_signup: every reason it would be refused, each with the page that fixes it."""
+        names = [n.strip() for n in names if n and n.strip()]
+        problems = []
+        with Session(engine) as s:
+            config = s.get(BotConfig, config_id)
+            if not config:
+                raise LookupError("config not found")
+            settings = dict(config.settings)
+            rules = get_identity(s)
+            checks = (("apk", "configs", lambda: self._snapshot(s, config)),
+                      ("photos", "photos", lambda: pick_photos(s, settings, count, rules["unique_photos"])),
+                      ("names", "settings", lambda: pick_names(name_usage(s), settings, count, names,
+                                                                rules["unique_names"])))
+            for code, page, fn in checks:
+                try:
+                    fn()
+                except ValueError as e:
+                    problems.append({"code": code, "page": page, "message": str(e)})
+            if settings.get("require_proxy", True) and not s.exec(
+                    select(Proxy.id).where(Proxy.enabled == True)).first():  # noqa: E712
+                problems.append({"code": "proxy", "page": "proxies",
+                                 "message": "No enabled proxy — the configuration requires one (Proxies page)"})
+        return problems
 
     def launch_signup(self, config_id: int, count: int, names: list[str]) -> list[int]:
         names = [n.strip() for n in names if n and n.strip()]
@@ -335,6 +371,12 @@ class RunManager:
             s.commit()
             s.refresh(run)
             payload = run_public(run)
+        parts = [f"session {run_id}", {"message": "messaging", "sync": "stats refresh"}.get(payload["kind"], "")]
+        if payload.get("worker"):
+            parts.append(f"Worker-{payload['worker']:02d}")
+        if payload.get("requested_name"):
+            parts.append(payload["requested_name"])
+        self.labels[run_id] = " · ".join(p for p in parts if p)
         self.hub.publish("events", {"type": "run", "run": payload})
         self.hub.publish(f"run:{run_id}", {"type": "run", "run": payload})
         return payload
@@ -347,6 +389,11 @@ class RunManager:
             s.refresh(entry)
             data = {"type": "log", "id": entry.id, "ts": iso(entry.ts), "level": level, "msg": msg}
         self.hub.publish(f"run:{run_id}", data)
+        if LOG_TO_STDOUT and level != "debug":
+            first = msg.strip().splitlines()[0] if msg.strip() else ""
+            extra = msg.count("\n")
+            print(f"[{self.labels.get(run_id, f'session {run_id}')}] {level.upper():7} {first}"
+                  + (f"  (+{extra} lines)" if extra else ""), file=sys.stdout, flush=True)
 
     def _guard(self, run_id: int, fn, ev: threading.Event):
         had_slot = False
@@ -370,6 +417,7 @@ class RunManager:
             self._leave(run_id, had_slot)
             with self.lock:
                 self.stop_events.pop(run_id, None)
+            self.labels.pop(run_id, None)
 
     def _acquire_proxy(self, run_id, ev, settings):
         def on_wait():
@@ -384,6 +432,10 @@ class RunManager:
     def _finish(self, run_id, result):
         self._update_run(run_id, status=result["status"], reason=result.get("reason", ""),
                          finished_at=utcnow())
+        if LOG_TO_STDOUT:
+            print(f"[{self.labels.get(run_id, f'session {run_id}')}] RESULT  {result['status']}: {result.get('reason', '')}",
+                  file=sys.stdout, flush=True)
+        self.labels.pop(run_id, None)
 
     # --- signup worker -----------------------------------------------------
 
@@ -437,6 +489,9 @@ class RunManager:
                     last_activity_at=utcnow(),
                     name=a["name"], gender=a["gender"], birthday=a["birthday"],
                     looking_for_gender=a["looking_for_gender"], location=a["location"],
+                    latitude=a.get("latitude"), longitude=a.get("longitude"),
+                    relationship_search=a.get("relationship_search"),
+                    dating_relationship_search=a.get("dating_relationship_search"),
                     photo=a.get("photo"), photo_url=a.get("photo_url"), status=a.get("status", "signing_up"),
                     android_id=a["android_id"], device_id=a["device_id"], device_info=a.get("device_info"),
                     access_token=a["access_token"] or "", refresh_token=a["refresh_token"] or "",
@@ -452,8 +507,21 @@ class RunManager:
             self._update_account(ctx.get("account_id"), data, run_id)
         elif kind == "swipe":
             self._on_swipe(run_id, ctx.get("account_id"), data)
+        elif kind == "signup_defaults":
+            self._save_signup_defaults(data.get("data"))
         elif kind == "apk_check":
             self._on_apk_check(ctx.get("apk_profile_id"), data)
+
+    def _save_signup_defaults(self, data):
+        """Latest signup/defaults response from Jaumo (shown next to the signup dropdowns)."""
+        if not isinstance(data, dict):
+            return
+        value = {"received_at": iso(utcnow()), "data": data}
+        # upsert: parallel workers may report at the same moment
+        stmt = sqlite_insert(AppSetting).values(key="signup_defaults", value=value)
+        with Session(engine) as s:
+            s.exec(stmt.on_conflict_do_update(index_elements=["key"], set_={"value": value}))
+            s.commit()
 
     def _on_apk_check(self, apk_id, data):
         if not apk_id:
@@ -473,6 +541,21 @@ class RunManager:
                 return
             streak = apk.fail_streak
         self.hub.publish("events", {"type": "apk", "apk_profile_id": apk_id, "fail_streak": streak})
+
+    def _publish_counters(self, account_id, delta=None):
+        """Push an account's current numbers so open pages update without reloading."""
+        with Session(engine) as s:
+            a = s.get(Account, account_id)
+            if not a:
+                return
+            msg = {"type": "counters", "account_id": account_id, "delta": delta or {},
+                   "liked_count": a.liked_count, "disliked_count": a.disliked_count, "matches_count": a.matches_count,
+                   "messages_sent": a.messages_sent, "actions": a.liked_count + a.disliked_count + a.messages_sent,
+                   "likes_received": a.likes_received, "profile_visits": a.profile_visits,
+                   "messages_received": a.messages_received, "pending_messages":
+                       len(set(map(str, a.matches or [])) - set(map(str, a.messaged or []))),
+                   "last_activity_at": iso(a.last_activity_at), "stats_synced_at": iso(a.stats_synced_at)}
+        self.hub.publish("events", msg)
 
     def _account_event(self, account_id, run_id, kind, user_id=None, detail=""):
         with Session(engine) as s:
@@ -537,6 +620,8 @@ class RunManager:
         if account_id:
             self._account_event(account_id, run_id, "match" if matched else action, user_id=uid)
             self.hub.publish(f"account:{account_id}", {"type": "changed"})
+            self._publish_counters(account_id, {"liked": int(action == "like"), "disliked": int(action != "like"),
+                                                "matches": int(bool(matched))})
 
     # --- message worker ----------------------------------------------------
 
@@ -595,3 +680,164 @@ class RunManager:
         self._account_event(account_id, run_id, "message" if data.get("ok") else "message_failed",
                             user_id=str(data["user_id"]), detail=data.get("text", ""))
         self.hub.publish(f"account:{account_id}", {"type": "changed"})
+        if data.get("ok"):
+            self._publish_counters(account_id, {"messages": 1})
+
+    # --- stats sync (read-only, admin-triggered) ---------------------------
+
+    def launch_sync(self, account_ids: list[int], all_accounts: bool = False) -> dict:
+        """
+        Queue read-only stats syncs. One refresh per account at a time with a cooldown;
+        "refresh all" runs one account after another with a delay in between.
+        Returns {"run_ids": [...], "skipped": [{"id", "reason"}]}.
+        """
+        with Session(engine) as s:
+            if all_accounts:
+                accs = s.exec(select(Account).where(Account.status.in_(("active", "legacy", "blocked")))
+                              .order_by(Account.id)).all()
+            else:
+                accs = s.exec(select(Account).where(Account.id.in_(account_ids or [-1]))).all()
+            busy_sync = set(s.exec(select(BotRun.account_id).where(BotRun.kind == "sync",
+                                                                   BotRun.status.in_(ACTIVE_STATUSES))).all())
+            configs = {c.id: c for c in s.exec(select(BotConfig)).all()}
+            fallback = next((c for c in configs.values() if c.apk_profile_id), None)
+            delay = float(get_bot_settings(s)["sync_delay_seconds"])
+            bulk = len(accs) > 1
+            now = utcnow()
+            runs, skipped = [], []
+            for acc in accs:
+                reason = None
+                if acc.id in busy_sync:
+                    reason = "a refresh for this account is already queued or running"
+                elif not (acc.refresh_token or acc.access_token):
+                    reason = "no login token stored"
+                elif acc.stats_synced_at and (now - acc.stats_synced_at).total_seconds() < SYNC_COOLDOWN_SECONDS:
+                    wait = SYNC_COOLDOWN_SECONDS - int((now - acc.stats_synced_at).total_seconds())
+                    reason = f"refreshed a moment ago — wait {wait}s"
+                if reason:
+                    skipped.append({"id": acc.id, "name": acc.name, "reason": reason})
+                    continue
+                config = configs.get(acc.config_id) if acc.config_id in configs and configs[acc.config_id].apk_profile_id else fallback
+                if not config:
+                    skipped.append({"id": acc.id, "name": acc.name, "reason": "no configuration with an APK profile"})
+                    continue
+                try:
+                    snap = self._snapshot(s, config)
+                except ValueError as e:
+                    skipped.append({"id": acc.id, "name": acc.name, "reason": str(e)})
+                    continue
+                snap["sync_delay"] = delay if bulk else 0
+                run = BotRun(kind="sync", config_id=config.id, config_name=config.name, config_snapshot=snap,
+                             account_id=acc.id, requested_name=acc.name)
+                s.add(run)
+                runs.append(run)
+            s.commit()
+            ids = [r.id for r in runs]
+            payloads = [run_public(r) for r in runs]
+        for rid, payload in zip(ids, payloads):
+            self.hub.publish("events", {"type": "run", "run": payload})
+            ev = threading.Event()
+            with self.lock:
+                self.stop_events[rid] = ev
+            self.sync_executor.submit(self._sync_guard, rid, ev)
+        return {"run_ids": ids, "skipped": skipped}
+
+    def _sync_guard(self, run_id: int, ev: threading.Event):
+        delay = 0
+        try:
+            with Session(engine) as s:
+                run = s.get(BotRun, run_id)
+                if not run or run.status != "queued":
+                    return
+                delay = float(run.config_snapshot.get("sync_delay") or 0)
+            if ev.is_set():
+                self._update_run(run_id, status="stopped", reason="stopped before start", finished_at=utcnow())
+                return
+            self._update_run(run_id, status="running", started_at=utcnow(), step="starting")
+            self._sync_worker(run_id, ev)
+        except Exception as e:  # never leave a run "running"
+            self._log(run_id, "error", f"[MANAGER] {type(e).__name__}: {e}")
+            self._update_run(run_id, status="failed", reason=f"{type(e).__name__}: {e}", finished_at=utcnow())
+        finally:
+            with self.lock:
+                self.stop_events.pop(run_id, None)
+            self.labels.pop(run_id, None)
+            if delay:
+                ev.wait(delay)   # pause before the next account of a "refresh all"
+
+    def _sync_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            snap = run.config_snapshot
+            acc = s.get(Account, run.account_id)
+            if not acc:
+                return self._finish(run_id, {"status": "failed", "reason": "account not found"})
+            account = acc.model_dump()
+        settings = snap["settings"]
+        try:
+            proxy = self._acquire_proxy(run_id, ev, settings)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped while waiting for proxy"})
+        except NoProxyAvailable as e:
+            self._log(run_id, "error", f"[PROXY] {e}")
+            self._store_sync_error(account["id"], str(e))
+            return self._finish(run_id, {"status": "failed", "reason": str(e)})
+
+        def emit(kind, data):
+            if kind == "log":
+                self._log(run_id, data.get("level", "info"), data.get("msg", ""))
+            elif kind == "step":
+                self._update_run(run_id, step=data["step"])
+            elif kind == "account_update":
+                self._update_account(account["id"], data, run_id)
+            elif kind == "stats":
+                self._on_stats(run_id, account["id"], data)
+
+        try:
+            runner = StatsSyncRunner(settings, snap["apk"], account, proxy_url=proxy_url(proxy) if proxy else None,
+                                     emit=emit, stop_event=ev)
+            result = runner.run()
+        finally:
+            self.pool.release(proxy.id if proxy else None)
+        if result["status"] != "done":
+            self._store_sync_error(account["id"], result.get("reason", "failed"))
+        self._finish(run_id, result)
+
+    def _store_sync_error(self, account_id, reason):
+        with Session(engine) as s:
+            acc = s.get(Account, account_id)
+            if acc:
+                acc.stats_sync_error = reason[:300]
+                acc.stats_synced_at = utcnow()   # cooldown also applies after a failed refresh
+                s.add(acc)
+                s.commit()
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})
+
+    def _on_stats(self, run_id, account_id, data):
+        c = data.get("counters") or {}
+        with Session(engine) as s:
+            acc = s.get(Account, account_id)
+            if not acc:
+                return
+            acc.likes_received = c.get("likes", 0)
+            acc.profile_visits = c.get("visits", 0)
+            acc.messages_received = c.get("conversations", 0)
+            acc.requests_received = c.get("requests", 0)
+            new_matches = []
+            if data.get("match_ids") is not None:
+                known = [str(m) for m in (acc.matches or [])]
+                new_matches = [m for m in dict.fromkeys(data["match_ids"]) if m not in set(known)]
+                acc.matches = known + new_matches
+            acc.matches_count = max(len(acc.matches or []), int(c.get("matches", 0)))
+            acc.stats_synced_at = utcnow()
+            acc.stats_sync_error = ""
+            acc.updated_at = utcnow()
+            s.add(acc)
+            s.commit()
+        self._account_event(account_id, run_id, "sync",
+                            detail=(f"likes {c.get('likes', 0)} · visitors {c.get('visits', 0)} · "
+                                    f"messages {c.get('conversations', 0)} · matches {c.get('matches', 0)}"
+                                    + (f" · {len(new_matches)} new match ids" if new_matches else "")))
+        self.hub.publish("events", {"type": "account", "account_id": account_id})
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})
+        self._publish_counters(account_id, {"synced": 1})

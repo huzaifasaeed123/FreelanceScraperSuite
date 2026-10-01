@@ -13,6 +13,7 @@ class Location(BaseModel):
     label: str
     lat: str
     lon: str
+    radius_km: Optional[float] = Field(None, ge=0, le=100)   # overrides the config's default radius
 
 
 class Device(BaseModel):
@@ -48,6 +49,7 @@ class ConfigSettings(BaseModel):
     request_timeout: int = Field(_D["request_timeout"], ge=5, le=300)
     delays: Delays = Field(default_factory=Delays)
     like_ratio: float = Field(_D["like_ratio"], ge=0, le=1)
+    location_radius_km: float = Field(_D["location_radius_km"], ge=0, le=100)
     max_swipes: int = Field(_D["max_swipes"], ge=0)
     block_threshold: int = Field(_D["block_threshold"], ge=1, le=100)
     max_empty_batches: int = Field(_D["max_empty_batches"], ge=1, le=100)
@@ -56,18 +58,17 @@ class ConfigSettings(BaseModel):
     name_source: Literal["auto", "custom"] = _D["name_source"]
     messaging_enabled: bool = _D["messaging_enabled"]
     looking_for_gender: Literal[1, 2] = _D["looking_for_gender"]
-    relationship_search: str = Field(_D["relationship_search"], pattern=r"^[A-Z_]{2,40}$")
-    dating_relationship_search: str = Field(_D["dating_relationship_search"], pattern=r"^[A-Z_]{2,40}$")
+    relationship_search: Literal["FLIRT", "FRIENDSHIP"] = _D["relationship_search"]
+    dating_relationship_search: Literal["FLIRT", "FRIENDSHIP"] = _D["dating_relationship_search"]
     allow_in_all_brands: bool = _D["allow_in_all_brands"]
     name_pool: list[str] = Field(default_factory=lambda: list(_D["name_pool"]))
     photo_pool: list[str] = Field(default_factory=list)
-    signup_photo_urls: list[str] = Field(default_factory=lambda: list(_D["signup_photo_urls"]))
     locations: list[Location] = Field(default_factory=lambda: [Location(**l) for l in _D["locations"]])
     devices: list[Device] = Field(default_factory=lambda: [Device(**d) for d in _D["devices"]])
     message_templates: list[str] = Field(default_factory=lambda: list(_D["message_templates"]))
     require_proxy: bool = True
 
-    @field_validator("name_pool", "photo_pool", "signup_photo_urls", "message_templates")
+    @field_validator("name_pool", "photo_pool", "message_templates")
     @classmethod
     def _strip(cls, v):
         return [s.strip() for s in v if s and s.strip()]
@@ -82,8 +83,6 @@ class ConfigSettings(BaseModel):
             raise ValueError("locations cannot be empty")
         if not self.devices:
             raise ValueError("devices cannot be empty")
-        if not self.signup_photo_urls:
-            raise ValueError("signup_photo_urls cannot be empty")
         return self
 
 
@@ -177,6 +176,12 @@ class IdentitySettings(BaseModel):
 
 class BotSettings(BaseModel):
     parallel_accounts: int = Field(1, ge=1, le=20)
+    sync_delay_seconds: float = Field(10, ge=2, le=600)   # pause between accounts in "refresh all"
+
+
+class StatsSyncIn(BaseModel):
+    account_ids: list[int] = Field(default_factory=list)
+    all: bool = False
 
 
 class SettingsIn(BaseModel):

@@ -17,6 +17,7 @@ Quick manual test (no admin panel):
 import base64
 import hashlib
 import json
+import math
 import os
 import random
 import threading
@@ -83,8 +84,8 @@ DEFAULT_SETTINGS = {
     "messaging_enabled": False, # allow the messaging job to use this config
     # Signup form fields (defaults = exactly what the original bot sent).
     "looking_for_gender": GENDER_MALE,
-    "relationship_search": "FRIENDSHIP",
-    "dating_relationship_search": "FRIENDSHIP",
+    "relationship_search": "FLIRT",
+    "dating_relationship_search": "FLIRT",
     "allow_in_all_brands": True,
     "name_pool": [
         "Emma", "Sophia", "Olivia", "Ava", "Isabella", "Mia", "Charlotte",
@@ -94,9 +95,7 @@ DEFAULT_SETTINGS = {
         "Clara", "Elena", "Nina", "Rosa", "Lena", "Sara", "Julia",
     ],
     "photo_pool": [],           # photo filenames; empty = all uploaded photos
-    "signup_photo_urls": [
-        "https://i.jaumo.com/gallery_orig/113550,0339ee18d142fbf39e.jpg",
-    ],
+    "location_radius_km": 0,    # 0 = exact city centre; >0 = random point within this radius
     "locations": [
         {"lat": "52.5200", "lon": "13.4050", "label": "Berlin"},
         {"lat": "48.1351", "lon": "11.5820", "label": "Munich"},
@@ -127,6 +126,17 @@ DEFAULT_SETTINGS = {
     ],
 }
 
+# Relationship values the APK knows (SignUpStepResponse$RelationshipStepResponse$RelationshipItem:
+# isFlirt()/isFriendship(); "UNSET" = nothing chosen). Both relationship_search and
+# dating_relationship_search take the selected item's value (SignUpFlowViewModel).
+RELATIONSHIP_VALUES = ("FLIRT", "FRIENDSHIP")
+
+# photo_url sent at registration — fixed value from the original script (not configurable).
+# The real profile picture is uploaded after signup from the photo library.
+SIGNUP_PHOTO_URLS = [
+    "https://i.jaumo.com/gallery_orig/113550,0339ee18d142fbf39e.jpg",
+]
+
 DEFAULT_APK = {
     "client_id": "",
     "sign_secret": "",
@@ -135,6 +145,23 @@ DEFAULT_APK = {
     "os_version": "14",
     "accept_language": "en_US",
 }
+
+
+def jitter_location(loc, radius_km):
+    """
+    Random point inside a circle of radius_km around the city centre, evenly
+    spread over the area (sqrt) and with longitude scaled for the latitude so
+    the area is a real circle. radius 0 / None returns the centre unchanged.
+    """
+    radius_km = float(radius_km or 0)
+    if radius_km <= 0:
+        return loc
+    lat0, lon0 = float(loc["lat"]), float(loc["lon"])
+    distance = radius_km * math.sqrt(random.random())
+    angle = random.uniform(0, 2 * math.pi)
+    dlat = distance * math.cos(angle) / 111.32
+    dlon = distance * math.sin(angle) / (111.32 * max(0.01, math.cos(math.radians(lat0))))
+    return {**loc, "lat": f"{lat0 + dlat:.6f}", "lon": f"{lon0 + dlon:.6f}"}
 
 
 class StopRequested(Exception):
@@ -698,7 +725,7 @@ class BotRunner(_RunnerBase):
             "gender": GENDER_FEMALE,
             "birthday": f"{year}-{month:02d}-{day:02d}",
             "looking_for_gender": int(s.get("looking_for_gender") or GENDER_MALE),
-            "photo_url": random.choice(s["signup_photo_urls"] or DEFAULT_SETTINGS["signup_photo_urls"]),
+            "photo_url": random.choice(SIGNUP_PHOTO_URLS),
             "relationship_search": s.get("relationship_search") or "FRIENDSHIP",
             "dating_relationship_search": s.get("dating_relationship_search") or "FRIENDSHIP",
             "allow_in_all_brands": "1" if s.get("allow_in_all_brands", True) else "0",
@@ -744,6 +771,8 @@ class BotRunner(_RunnerBase):
         c = self.client
         profile = self.make_profile()
         loc = random.choice(self.settings["locations"] or DEFAULT_SETTINGS["locations"])
+        radius = loc.get("radius_km")
+        loc = jitter_location(loc, self.settings.get("location_radius_km", 0) if radius is None else radius)
 
         if self.proxy_url:
             host = self.proxy_url.rsplit("@", 1)[-1]
@@ -768,7 +797,11 @@ class BotRunner(_RunnerBase):
             return {"status": "failed", "reason": f"client token failed (HTTP {status})"}
 
         # 1b. Fetch signup defaults (APK does this before registering)
-        c.get_signup_defaults(client_bearer)
+        defaults = c.get_signup_defaults(client_bearer)
+        if isinstance(defaults, dict):
+            # Keep what Jaumo offers (e.g. the relationship options) so the panel can show it.
+            self.log(f"[DEFAULTS] {json.dumps(_redact(defaults), ensure_ascii=False)[:4000]}", "debug")
+            self.emit("signup_defaults", data=_redact(defaults))
 
         # 2. Signup
         self.step("signup")
@@ -785,6 +818,8 @@ class BotRunner(_RunnerBase):
             "access_token": access_token,
             "refresh_token": refresh_token,
             "location": loc["label"],
+            "latitude": loc["lat"],
+            "longitude": loc["lon"],
             "photo": os.path.basename(self.photo_path) if self.photo_path else None,
             "status": "signing_up",
             **profile,
@@ -1076,6 +1111,121 @@ class MessageRunner(_RunnerBase):
             sent += ok
         self.step("finished")
         return {"status": "done", "reason": f"sent {sent}/{len(targets)}"}
+
+
+# ---------------------------------------------------------------------------
+# Stats sync (read-only, started by the admin)
+# ---------------------------------------------------------------------------
+
+class StatsSyncRunner(_RunnerBase):
+    """
+    Reads the received numbers of an existing account exactly like the app does:
+        refresh login -> GET /v2/ (API root: links) -> GET links.unseen (UnseenResponse counters)
+        -> only when there are matches we don't know yet: page links.likes.mutual (match user ids).
+    Sends nothing to other users and changes nothing on the account.
+
+    Emits: log, step, account_update (new tokens), stats {counters, match_ids, raw}
+    """
+
+    MAX_MATCH_PAGES = 5
+    COUNTERS = ("likes", "visits", "conversations", "matches", "requests")
+
+    def __init__(self, settings, apk, account, proxy_url=None, emit=None, stop_event=None):
+        super().__init__(settings, emit, stop_event)
+        self.account = account
+        self.client = JaumoClient(
+            apk, proxy_url=proxy_url, timeout=self.settings["request_timeout"],
+            device_id=account.get("device_id"), android_id=account.get("android_id"),
+            device_info=account.get("device_info"), devices=self.settings["devices"],
+            log=self._client_log,
+        )
+        self.access_token = account.get("access_token")
+        self.refresh_token = account.get("refresh_token")
+
+    def run(self):
+        try:
+            return self._run()
+        except StopRequested:
+            self.log("[STOP] Stopped by admin", "warning")
+            return {"status": "stopped", "reason": "stopped by admin"}
+        except requests.RequestException as e:
+            self.log(f"[NETWORK] {type(e).__name__}: {e}", "error")
+            return {"status": "failed", "reason": f"network error: {type(e).__name__}"}
+        except Exception as e:
+            self.log(f"[CRASH] {type(e).__name__}: {e}", "error")
+            return {"status": "failed", "reason": f"{type(e).__name__}: {e}"}
+
+    def _refresh(self):
+        if not self.refresh_token:
+            return False
+        new_tok, new_ref = self.client.refresh_access_token(self.refresh_token)
+        if new_tok:
+            self.access_token, self.refresh_token = new_tok, new_ref
+            self.emit("account_update", access_token=new_tok, refresh_token=new_ref)
+            return True
+        return False
+
+    def _get_json(self, url, label):
+        """GET with one refresh-and-retry on 401. Returns (data, status)."""
+        self.check_stop()
+        resp = self.client._get(url, access_token=self.access_token)
+        if resp.status_code == 401 and self._refresh():
+            resp = self.client._get(url, access_token=self.access_token)
+        if resp.status_code != 200:
+            self.log(f"[{label}] FAIL {resp.status_code}: {resp.text[:300]}", "warning")
+            return None, resp.status_code
+        try:
+            return resp.json(), 200
+        except ValueError:
+            self.log(f"[{label}] FAIL — response was not JSON", "warning")
+            return None, resp.status_code
+
+    def _run(self):
+        acc = self.account
+        self.log(f"--- Stats sync for {acc.get('name')} (account #{acc.get('id')}) ---")
+
+        self.step("login")
+        if not self._refresh():
+            self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
+        if not self.access_token:
+            return {"status": "failed", "reason": "no usable token"}
+
+        self.step("links")
+        root, status = self._get_json("", "API ROOT")          # GET https://api.jaumo.com/v2/
+        links = (root or {}).get("links") or {}
+        unseen_url = links.get("unseen")
+        if not unseen_url:
+            return {"status": "failed", "reason": f"API root did not provide links.unseen (HTTP {status})"}
+
+        self.step("counters")
+        data, status = self._get_json(unseen_url, "UNSEEN")
+        if not isinstance(data, dict):
+            return {"status": "failed", "reason": f"could not read counters (HTTP {status})"}
+        self.log(f"[UNSEEN] {json.dumps(_redact(data), ensure_ascii=False)[:2000]}")
+        counters = {k: int(data.get(k) or 0) for k in self.COUNTERS}
+
+        match_ids = None
+        known = {str(m) for m in (acc.get("matches") or [])}
+        mutual_url = (links.get("likes") or {}).get("mutual") if isinstance(links.get("likes"), dict) else None
+        if counters["matches"] > len(known) and mutual_url:
+            self.step("matches")
+            match_ids, url, pages = [], mutual_url, 0
+            while url and pages < self.MAX_MATCH_PAGES:
+                page, status = self._get_json(url, "MATCHES")
+                if not isinstance(page, dict):
+                    break
+                for item in page.get("items") or []:
+                    uid = (item.get("user") or {}).get("id") if isinstance(item, dict) else None
+                    if uid:
+                        match_ids.append(str(uid))
+                url = (page.get("links") or {}).get("next")
+                pages += 1
+            self.log(f"[MATCHES] {len(match_ids)} match ids read from {pages} page(s)")
+
+        self.emit("stats", counters=counters, match_ids=match_ids, raw=_redact(data))
+        self.step("finished")
+        return {"status": "done", "reason": (f"likes {counters['likes']} · visitors {counters['visits']} · "
+                                             f"messages {counters['conversations']} · matches {counters['matches']}")}
 
 
 # ---------------------------------------------------------------------------

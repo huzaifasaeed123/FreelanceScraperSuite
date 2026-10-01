@@ -122,6 +122,10 @@ class Account(SQLModel, table=True):
     birthday: str = ""
     looking_for_gender: int = 1
     location: str = Field(default="", index=True)
+    latitude: Optional[str] = None      # exact point used at signup (city centre or jittered)
+    relationship_search: Optional[str] = None          # values the account was registered with
+    dating_relationship_search: Optional[str] = None
+    longitude: Optional[str] = None
     photo: Optional[str] = None
     photo_url: Optional[str] = None
     status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
@@ -143,6 +147,10 @@ class Account(SQLModel, table=True):
     # Filled by an inbox / visitors sync once those endpoints are known from the APK (None = not synced yet).
     messages_received: Optional[int] = None
     profile_visits: Optional[int] = None
+    likes_received: Optional[int] = None          # stats sync (UnseenResponse.likes)
+    requests_received: Optional[int] = None       # stats sync (UnseenResponse.requests)
+    stats_synced_at: Optional[datetime] = None
+    stats_sync_error: str = ""
     notes: str = ""
     updated_at: datetime = Field(default_factory=utcnow)
 
