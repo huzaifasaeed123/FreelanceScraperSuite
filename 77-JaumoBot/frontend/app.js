@@ -174,6 +174,10 @@ const I18N = {
     "st.actionsTip": "Likes + Dislikes + gesendete Nachrichten",
     "st.likesSub": "vergebene Likes", "st.dislikesSub": "vergebene Dislikes", "st.rate": "{r}% der Likes",
     "st.sent": "Gesendete Nachrichten", "st.sentSub": "{n} Kontakte angeschrieben", "st.pending": "Offene Matches", "st.pendingSub": "noch nicht angeschrieben",
+    "res.done": "Fertig", "res.blocked": "Gesperrt", "res.failed": "Fehler", "res.stopped": "Gestoppt",
+    "res.interrupted": "Unterbrochen", "res.last": "Letzte Sitzung", "about.textLabel": "Über mich Text:",
+    "state.queued": "In Warteschlange", "acc.stop": "Stoppen", "acc.dequeue": "Aus Warteschlange entfernen",
+    "acc.stopped": "{n} Sitzung(en) gestoppt", "acc.stopConfirm": "{n} Account(s) stoppen? Laufende Sitzungen enden, wartende werden entfernt.",
     "state.active": "Aktiv", "state.working": "Arbeitet", "state.blocked": "Gesperrt", "state.error": "Fehler", "state.stopped": "Gestoppt",
     "acc.created": "erstellt {d}", "acc.lastLabel": "Letzte Aktivität", "acc.never": "noch keine",
     "acc.view": "Account ansehen", "acc.edit": "Bearbeiten", "acc.more": "Weitere Aktionen",
@@ -303,6 +307,10 @@ const I18N = {
     "st.actionsTip": "Likes + dislikes + messages sent",
     "st.likesSub": "likes given", "st.dislikesSub": "dislikes given", "st.rate": "{r}% of likes",
     "st.sent": "Messages sent", "st.sentSub": "{n} people messaged", "st.pending": "Pending matches", "st.pendingSub": "not messaged yet",
+    "res.done": "Finished", "res.blocked": "Blocked", "res.failed": "Error", "res.stopped": "Stopped",
+    "res.interrupted": "Interrupted", "res.last": "Last session", "about.textLabel": "About me text:",
+    "state.queued": "Queued", "acc.stop": "Stop", "acc.dequeue": "Remove from queue",
+    "acc.stopped": "{n} session(s) stopped", "acc.stopConfirm": "Stop {n} account(s)? Running sessions end, queued ones are removed.",
     "state.active": "Active", "state.working": "Working", "state.blocked": "Blocked", "state.error": "Error", "state.stopped": "Stopped",
     "acc.created": "created {d}", "acc.lastLabel": "Last activity", "acc.never": "none yet",
     "acc.view": "View account", "acc.edit": "Edit", "acc.more": "More actions",
@@ -1114,7 +1122,7 @@ function botCard(r) {
       ${badge(r.status)}
     </div>
     ${stepBar(r)}
-    ${!ACTIVE.has(r.status) && r.reason ? `<div class="bot-reason" title="${esc(r.reason)}">${esc(r.reason)}</div>` : ""}
+    ${!ACTIVE.has(r.status) && r.reason ? `<div class="bot-reason" title="${esc(r.reason)}">${esc(reasonText(r.reason))}</div>` : ""}
     ${metrics}
     <div class="bot-foot">
       <div class="meta">
@@ -1254,7 +1262,7 @@ async function openRunModal(id) {
     const isActive = ACTIVE.has(run.status);
     $("#run-stop").classList.toggle("hidden", !isActive);
     $("#run-info").innerHTML = `<dl class="kv">
-      <dt>Status</dt><dd>${badge(run.status)} ${esc(run.reason || "")}</dd>
+      <dt>Status</dt><dd>${badge(run.status)} ${esc(reasonText(run.reason))}</dd>
       <dt>Type / step</dt><dd>${esc(run.kind)} · ${esc(run.step || "—")}</dd>
       <dt>Config</dt><dd>${esc(run.config_name)}${run.apk_profile_name ? " · APK: " + esc(run.apk_profile_name) : ""}</dd>
       <dt>Proxy</dt><dd>${esc(run.proxy_label || "—")}</dd>
@@ -1317,7 +1325,7 @@ async function loadRuns() {
       <td>${esc(r.requested_name || "")}${r.account_id ? ` <span class="muted">#${r.account_id}</span>` : ""}</td>
       <td>${esc(r.config_name)}</td><td class="wrapcell">${esc(r.proxy_label)}</td><td>${esc(r.step)}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
-      <td>${fmtDate(r.created_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(r.reason)}</td>
+      <td>${fmtDate(r.created_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(reasonText(r.reason))}</td>
       <td class="actions">${ACTIVE.has(r.status)
         ? `<button class="btn small danger" data-stop="${r.id}">Stop</button>`
         : iconBtn("trash", `data-del="${r.id}"`, "Delete run and its logs", "danger")}</td>
@@ -2162,6 +2170,7 @@ const SORTS = {
 };
 const STATE_STYLE = {
   active: { cls: "ok", icon: "checkCircle" }, working: { cls: "working", icon: "refresh" },
+  queued: { cls: "queued", icon: "clock" },
   blocked: { cls: "bad", icon: "ban" }, error: { cls: "warn", icon: "alert" }, stopped: { cls: "", icon: "pause" },
 };
 state.acc = { page: 0, per: +prefs.get("accPer", "12") || 12, q: "", state: "", worker: "", location: "",
@@ -2237,6 +2246,44 @@ function receivedTile(kind, iconName, value, labelKey, tipKey) {
     none ? `${t(tipKey)} — ${t("sync.never")}` : t(tipKey), none);
 }
 
+// Session reasons come from the server in English; show them in German when the panel is German.
+const DIALOG_DE = { rate_app: "Bewertungs-Dialog", vip: "Premium-Dialog", dialog: "Dialog" };
+const REASON_DE = [
+  [/^max swipes reached \((\d+)\)$/, (m) => `Max. Swipes erreicht (${m[1]})`],
+  [/^no more cards$/, () => "Keine Karten mehr"],
+  [/^no more profiles/, () => "Keine Profile mehr in der Nähe"],
+  [/^Jaumo lock: cards locked for (\d+) s \((.+)\)$/, (m) => `Jaumo-Sperre ${m[1]} s (${DIALOG_DE[m[2]] || m[2]})`],
+  [/^Jaumo lock: cards locked \((.+)\)$/, (m) => `Jaumo-Sperre (${DIALOG_DE[m[1]] || m[1]})`],
+  [/^Jaumo pause repeated (\d+) times without new cards \((.+)\)$/,
+    (m) => `Jaumo-Pause ${m[1]}× hintereinander ohne neue Karten (${DIALOG_DE[m[2]] || m[2]})`],
+  [/^swipe limit reached(.*)$/, (m) => `Jaumo-Sperre${m[1].replace("unlock expires in", "endet in")}`],
+  [/^stopped by admin$/, () => "Vom Admin gestoppt"],
+  [/^stopped before start$/, () => "Aus der Warteschlange entfernt"],
+  [/^stopped while waiting for proxy$/, () => "Beim Warten auf einen Proxy gestoppt"],
+  [/^(like|dislike) HTTP (\d+)$/, (m) => `${m[1] === "like" ? "Like" : "Dislike"} abgelehnt (HTTP ${m[2]})`],
+  [/^zapping HTTP (\d+)$/, (m) => `Karten nicht abrufbar (HTTP ${m[1]})`],
+  [/^consecutive failures$/, () => "Mehrere Fehler hintereinander"],
+  [/^photo upload not accepted$/, () => "Foto von Jaumo nicht akzeptiert"],
+  [/^photo not registered by server$/, () => "Foto von Jaumo nicht übernommen"],
+  [/^network error: (.+)$/, (m) => `Netzwerkfehler (${m[1]})`],
+  [/^interrupted/, () => "Durch Server-Neustart unterbrochen"],
+  [/^([A-Z]\w+Error): (.+)$/, (m) => `Absturz: ${m[1]}: ${m[2]}`],
+];
+function reasonText(reason) {
+  if (!reason || LANG !== "de") return reason || "";
+  for (const [re, fmt] of REASON_DE) { const m = re.exec(reason); if (m) return fmt(m); }
+  return reason;
+}
+const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn" };
+
+// "Fertig: Max. Swipes erreicht (100)" under the status badge (nothing while the account works).
+function resultLine(a, cls = "state-reason") {
+  const r = a.last_result;
+  if (a.working || !r) return "";
+  const text = `${t("res." + r.status)}: ${reasonText(r.reason) || "—"}`;
+  return `<div class="${cls} ${RESULT_TONE[r.status] || ""}" title="${esc(text)}${r.finished_at ? " · " + esc(fmtDate(r.finished_at)) : ""}">${esc(text)}</div>`;
+}
+
 function stateBadge(st) {
   const s = STATE_STYLE[st] || STATE_STYLE.stopped;
   return `<span class="state-badge ${s.cls}">${icon(s.icon)}${esc(t("state." + st)).toUpperCase()}</span>`;
@@ -2262,7 +2309,7 @@ function accRow(a) {
       ${statTile("messages-out", "send", fmtNum(a.messages_sent), t("st.messagesOut"), t("st.messagesOutTip"))}
       ${statTile("actions", "zap", fmtNum(a.actions), t("st.actions"), t("st.actionsTip"))}
     </div></td>
-    <td>${stateBadge(a.state)}</td>
+    <td>${stateBadge(a.active_run && a.active_run.status === "queued" ? "queued" : a.state)}${resultLine(a)}</td>
     <td><div class="worker-cell"><span class="worker-ic">${icon("cpu")}</span>
       <div><div class="w-name">${workerName(a.worker)}</div><div class="acc-meta">Jaumo</div></div></div></td>
     <td><div class="last-cell" title="${esc(fmtDate(a.last_activity_at))}">${icon("clock")}
@@ -2375,6 +2422,15 @@ function canSwipe(a) {
   return !a.working && a.has_token !== false && ["active", "legacy", "stopped"].includes(a.status);
 }
 
+async function stopAccounts(ids) {
+  if (ids.length > 1 && !confirm(t("acc.stopConfirm", { n: ids.length }))) return;
+  const res = await api("/api/accounts/stop", { method: "POST", body: { account_ids: ids } });
+  toast(t("acc.stopped", { n: res.stopped }), !res.stopped);
+  guard(loadStats)();
+  if (state.tab === "accounts") reloadAccountsSoon();
+  if (state.tab === "account") refreshAccountSoon();
+}
+
 async function startSwiping(ids) {
   const res = await api("/api/accounts/swipe", { method: "POST", body: { account_ids: ids } });
   if (res.run_ids.length) toast(t("swipe.started", { n: res.run_ids.length }));
@@ -2393,6 +2449,7 @@ function openAccountMenu(btn, id) {
   const menu = document.createElement("div");
   menu.className = "menu";
   menu.innerHTML = `
+    ${a.active_run ? `<button data-act="stop" class="danger">${icon("stop")}${esc(t(a.active_run.status === "queued" ? "acc.dequeue" : "acc.stop"))}</button><hr>` : ""}
     <button data-act="swipe" ${canSwipe(a) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
     <button data-act="sync" ${a.has_token === false ? "disabled" : ""}>${icon("refresh")}${esc(t("sync.refresh"))}</button>
     <button data-act="message" ${a.pending_messages ? "" : "disabled"}>${icon("send")}${esc(t("acc.menuMessage"))}${a.pending_messages ? ` <span class="seg-count">${a.pending_messages}</span>` : ""}</button>
@@ -2407,6 +2464,7 @@ function openAccountMenu(btn, id) {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (!act) return;
     menu.remove();
+    if (act === "stop") return stopAccounts([id]);
     if (act === "swipe") return startSwiping([id]);
     if (act === "sync") {
       await api(`/api/accounts/${id}/sync`, { method: "POST" });
@@ -2466,6 +2524,7 @@ function openMessageDialog(ids) {
 
 $("#bulk-message").onclick = () => openMessageDialog([...state.accSelected]);
 $("#bulk-swipe").onclick = guard(() => startSwiping([...state.accSelected]));
+$("#bulk-stop").onclick = guard(() => stopAccounts([...state.accSelected]));
 $("#bulk-export").onclick = () => { window.location = "/api/accounts/export?" + accQuery(); };
 $("#bulk-clear").onclick = () => { state.accSelected.clear(); renderAccTable(); };
 
@@ -2729,7 +2788,8 @@ function renderAccountSections() {
       <div class="acc-title"><h1>${esc(a.name)}</h1>${badge(a.status)}
         ${run ? `<span class="live-chip on"><span class="pulse"></span>${esc(workerName(run.worker))} ${esc(t("state.working").toLowerCase())}</span>` : ""}</div>
       <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? ` · ${age} years` : ""} · ${esc(a.location || "—")} · joined ${fmtDate(a.created_at)}</div>
-      ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span>${esc(a.about_me)}</span></p>`
+      ${!run && a.last_result ? `<div class="acc-result">${esc(t("res.last"))} · ${fmtDate(a.last_result.finished_at)}${resultLine(a, "acc-result-text")}</div>` : ""}
+      ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span><b>${esc(t("about.textLabel"))}</b> ${esc(a.about_me)}</span></p>`
         : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(a.about_me_error)}</span></p>` : ""}
       <div class="acc-chips">
         <span class="chip">${icon("smartphone")}${esc(dev)}</span>
@@ -2739,6 +2799,7 @@ function renderAccountSections() {
       </div>
     </div>
     <div class="acc-actions">
+      ${run ? `<button class="btn danger-soft" id="acc-stop">${icon("stop")}${esc(t(run.status === "queued" ? "acc.dequeue" : "acc.stop"))}</button>` : ""}
       <button class="btn" id="acc-swipe" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
       ${msgOff ? `<a class="field-hint" href="#configs">${esc(t("msg.off"))}</a>` : ""}
       <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
@@ -2746,6 +2807,7 @@ function renderAccountSections() {
   </div>`;
   $("#acc-hero [data-full]")?.addEventListener("click", () => openPhotoViewer(a.photo));
   $("#acc-swipe").onclick = guard(() => startSwiping([a.id]));
+  if ($("#acc-stop")) $("#acc-stop").onclick = guard(() => stopAccounts([a.id]));
   $("#acc-msg").onclick = guard(async () => {
     const res = await api("/api/messages", { method: "POST", body: { account_ids: [a.id] } });
     toast(res.run_ids.length ? "Messaging session queued" : "Nothing to send (no pending matches or a session is already running)", !res.run_ids.length);
@@ -2810,7 +2872,7 @@ function renderAccountSections() {
       <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : r.kind === "swipe" ? esc(t("swipe.kind")) : "Signup + swiping"}</td><td>${badge(r.status)}</td>
       <td>${esc(STEP_LABELS[r.step] || r.step || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
-      <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(r.reason || "—")}</td>
+      <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(reasonText(r.reason) || "—")}</td>
       <td class="actions">${iconBtn("terminal", `data-log="${r.id}"`, "Open log")}</td></tr>`).join("")
       || `<tr><td colspan="12" class="muted">No sessions recorded (legacy account)</td></tr>`}</tbody>`;
   $("#acc-runs").onclick = (e) => { const b = e.target.closest("[data-log]"); if (b) openRunModal(+b.dataset.log); };

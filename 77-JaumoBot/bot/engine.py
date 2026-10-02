@@ -72,6 +72,7 @@ DEFAULT_SETTINGS = {
         "after_photo": [3, 6],
         "between_swipes": [2, 5],
         "between_batches": [5, 10],
+        "after_jaumo_pause": [5, 20],   # extra seconds after a Jaumo card pause before swiping on
         "before_message": [3, 7],
     },
     "like_ratio": 0.5,          # probability a card is liked (rest disliked)
@@ -583,7 +584,8 @@ class JaumoClient:
         return True, access_token, refresh_token
 
     def get_zapping_cards(self, zapping_url, access_token, include_status=False):
-        self.zapping_note = ""   # why a batch came back empty (swipe limit / no more profiles)
+        self.zapping_note = ""   # why a batch came back empty (Jaumo lock / no more profiles)
+        self.zapping_unlock = None   # {"expires_in": seconds or None, "type": dialog type} when Jaumo locks the cards
         resp = self._get(zapping_url, access_token=access_token)
         if resp.status_code == 200:
             data = resp.json()
@@ -593,8 +595,15 @@ class JaumoClient:
                 # ZappingApiResponse: "items" is null when Jaumo answers with an unlock / noResult dialog
                 cards = data.get("items") or data.get("cards") or []
                 if not cards and (data.get("unlock") or data.get("unlockTimeout")):
+                    # ZappingApiResponse.unlock: a dialog (e.g. "rate us", Premium) + unlockExpiresIn seconds
                     wait = data.get("unlockExpiresIn")
-                    self.zapping_note = "swipe limit reached" + (f" (unlock expires in {wait} s)" if wait else "")
+                    dialog = data.get("unlock") if isinstance(data.get("unlock"), dict) else {}
+                    kind = next((o.get("type") for o in dialog.get("options") or []
+                                 if isinstance(o, dict) and o.get("type")), None) or dialog.get("illustration") or "dialog"
+                    wait = int(wait) if isinstance(wait, (int, float)) else None
+                    self.zapping_unlock = {"expires_in": wait, "type": str(kind)}
+                    self.zapping_note = (f"Jaumo lock: cards locked for {wait} s ({kind})" if wait is not None
+                                         else f"Jaumo lock: cards locked ({kind})")
                 elif not cards and data.get("noResult"):
                     self.zapping_note = "no more profiles (noResult)"
             if self.zapping_note:
@@ -956,6 +965,9 @@ class BotRunner(_RunnerBase):
                  f"matches={self.counters['matches']} ---")
         return result
 
+    MAX_JAUMO_PAUSE = 900      # wait out Jaumo card locks up to 15 min; longer ones end the session
+    MAX_PAUSES_IN_ROW = 3      # ... unless they repeat without a single swipe in between
+
     def _swipe_loop(self, zapping_url):
         c = self.client
         s = self.settings
@@ -968,6 +980,7 @@ class BotRunner(_RunnerBase):
         empty_batches = 0
         first_batch = True
         last_fail_reason = ""
+        pauses = 0   # Jaumo card pauses in a row without a swipe in between
 
         def blocked():
             self.log(f"[BLOCKED] {consecutive_fail} consecutive failures — last: {last_fail_reason}", "error")
@@ -1005,10 +1018,26 @@ class BotRunner(_RunnerBase):
 
             if not cards:
                 note = getattr(c, "zapping_note", "")
-                if note.startswith("swipe limit"):
-                    # Asking again only repeats the limit dialog; the account is fine.
-                    self.emit("account_update", status="active")
-                    return {"status": "done", "reason": note}
+                unlock = getattr(c, "zapping_unlock", None)
+                if unlock:
+                    # Jaumo locks the cards for a while behind a dialog (e.g. "rate us"). The dialog is never
+                    # clicked: a short lock is waited out, a long or repeated one ends the session.
+                    pauses += 1
+                    wait = unlock["expires_in"]
+                    if pauses > self.MAX_PAUSES_IN_ROW:
+                        self.emit("account_update", status="active")
+                        return {"status": "done", "reason": f"Jaumo pause repeated {pauses - 1} times without new cards "
+                                                           f"({unlock['type']})"}
+                    if wait is None or wait > int(s.get("max_jaumo_pause", self.MAX_JAUMO_PAUSE)):
+                        self.emit("account_update", status="active")
+                        return {"status": "done", "reason": note}
+                    lo, hi = s["delays"].get("after_jaumo_pause") or (0, 0)
+                    total = round(wait + random.uniform(float(lo), float(hi)), 1)
+                    self.log(f"[PAUSE] Jaumo paused the cards for {wait} s ({unlock['type']}) — waiting {total} s, "
+                             f"then swiping on (pause {pauses} in a row)", "warning")
+                    if self.stop_event.wait(total):
+                        raise StopRequested()
+                    continue
                 empty_batches += 1
                 if empty_batches >= max_empty:
                     self.emit("account_update", status="active")
@@ -1042,6 +1071,7 @@ class BotRunner(_RunnerBase):
                 ok, matched, status = self._do_action(action, like_url, dislike_url)
                 if ok:
                     consecutive_fail = 0
+                    pauses = 0
                     self.counters["swipes"] += 1
                     if action == "like":
                         self.counters["liked"] += 1

@@ -40,10 +40,50 @@ def test_swipe_limit_answer_ends_the_session_cleanly(jaumo, photo):
                                          "unlockExpiresIn": 3600, "noResult": None})
     calls = jaumo.state()["requests"]
     res, rec = _swipe(jaumo, acc, max_swipes=0)
-    assert res == {"status": "done", "reason": "swipe limit reached (unlock expires in 3600 s)"}, res
+    assert res == {"status": "done", "reason": "Jaumo lock: cards locked for 3600 s (dialog)"}, res
     assert {"status": "active"} in rec.kinds("account_update"), "the account stays active"
     zapping = [r for r in jaumo.state()["requests"][len(calls):] if "zapping/pop" in r["path"]]
-    assert len(zapping) == 1, "the limit dialog is not requested again and again"
+    assert len(zapping) == 1, "a long lock (> 15 min) is not requested again and again"
+
+
+# The live answer from 2026-10-03 (shortened): a "rate us" dialog that locks the cards for 147 s.
+RATE_APP = {"items": None, "actionRequired": None, "noResult": None,
+            "unlock": {"identifier": "", "title": "Having fun on <b>Jaumo?</b>", "illustration": "RATING",
+                       "options": [{"caption": "Will you give us 5 stars?", "type": "rate_app", "style": "primary"}],
+                       "links": {}},
+            "unlockTimeout": "2026-10-02T20:50:23+00:00", "unlockExpiresIn": 1, "progress": None}
+NO_WAIT = {**FAST_DELAYS, "after_jaumo_pause": [0, 0]}
+
+
+def test_short_jaumo_pause_is_waited_out_and_swiping_continues(jaumo, photo):
+    acc = _account_from_signup(jaumo, photo)
+    jaumo.control(zapping_script=[RATE_APP])
+    res, rec = _swipe(jaumo, acc, max_swipes=6, delays=NO_WAIT)
+    assert res == {"status": "done", "reason": "max swipes reached (6)"}, res
+    assert len(rec.kinds("swipe")) == 6, "swiping went on after the pause"
+    logs = [l["msg"] for l in rec.kinds("log")]
+    assert any("[PAUSE] Jaumo paused the cards for 1 s (rate_app)" in m for m in logs), logs
+    assert not any("rate" in r["path"] or "unlock" in r["path"] for r in jaumo.state()["requests"]),         "the dialog is never clicked"
+
+
+def test_repeated_pauses_without_swipes_end_the_session(jaumo, photo):
+    acc = _account_from_signup(jaumo, photo)
+    jaumo.control(zapping_script=[RATE_APP] * 5)
+    res, rec = _swipe(jaumo, acc, max_swipes=6, delays=NO_WAIT)
+    assert res == {"status": "done", "reason": "Jaumo pause repeated 3 times without new cards (rate_app)"}, res
+    assert rec.kinds("swipe") == [] and {"status": "active"} in rec.kinds("account_update")
+
+
+def test_stop_during_a_jaumo_pause(jaumo, photo):
+    import threading
+    acc = _account_from_signup(jaumo, photo)
+    jaumo.control(zapping_script=[{**RATE_APP, "unlockExpiresIn": 600}])
+    rec, ev = Recorder(), threading.Event()
+    r = SwipeRunner({"delays": NO_WAIT, "max_swipes": 3}, APK, acc, emit=rec, stop_event=ev)
+    r.client.base_url = jaumo.base
+    threading.Timer(1.0, ev.set).start()
+    res = r.run()
+    assert res["status"] == "stopped", "a 10 min wait can be stopped right away"
 
 
 def test_no_more_profiles_answer_ends_the_session_cleanly(jaumo, photo):
@@ -114,5 +154,60 @@ def test_continue_from_the_accounts_page(browser, app, jaumo):
         runs = ok(api.get(f"/api/accounts/{acc_id}/runs"))
         assert runs[0]["kind"] == "swipe" and runs[0]["status"] == "done" and runs[0]["swipes"] == 6
         pg.assert_clean("continue swiping")
+    finally:
+        pg.close()
+
+
+# --- stop / remove from queue (accounts list, account page) ------------------------------
+
+def _three_accounts(api):
+    cid = setup_ready(api, photos=3, max_swipes=1)
+    ok(api.put("/api/settings", json={"bot": {"parallel_accounts": 3}}))
+    runs = wait_runs_done(api, ok(api.post("/api/runs", json={"config_id": cid, "count": 3}))["run_ids"])
+    ok(api.put("/api/settings", json={"bot": {"parallel_accounts": 1}}))
+    ok(api.put("/api/config", json={"settings": {"max_swipes": 0, "delays": {**FAST_DELAYS, "between_swipes": [0.5, 0.5]}}}))
+    return [r["account_id"] for r in runs]
+
+
+def test_stop_running_and_remove_queued_by_account(app, api, jaumo):
+    ids = _three_accounts(api)
+    res = ok(api.post("/api/accounts/swipe", json={"account_ids": ids}))
+    wait_until(lambda: ok(api.get("/api/stats"))["running"] == 1, msg="one worker busy")
+    items = {a["id"]: a for a in ok(api.get("/api/accounts"))["items"]}
+    states = sorted(items[i]["active_run"]["status"] for i in ids)
+    assert states == ["queued", "queued", "running"], "1 worker: the others wait in the queue"
+    queued = [i for i in ids if items[i]["active_run"]["status"] == "queued"]
+    running = next(i for i in ids if items[i]["active_run"]["status"] == "running")
+
+    ok(api.post(f"/api/accounts/{queued[0]}/stop"))
+    r = wait_runs_done(api, [items[queued[0]]["active_run"]["id"]])[0]
+    assert r["status"] == "stopped" and r["reason"] == "stopped before start", "taken out of the queue"
+    assert ok(api.post("/api/accounts/stop", json={"account_ids": [running, queued[1]]}))["stopped"] == 2
+    runs = wait_runs_done(api, res["run_ids"])
+    assert all(r["status"] == "stopped" for r in runs)
+    a = ok(api.get(f"/api/accounts/{running}"))
+    assert a["status"] == "active" and a["active_run"] is None, "a stopped account can continue later"
+    assert api.post(f"/api/accounts/{running}/stop").status_code == 409
+
+
+def test_stop_from_the_accounts_page(browser, app, jaumo):
+    api = app.client()
+    ids = _three_accounts(api)
+    ok(api.post("/api/accounts/swipe", json={"account_ids": ids}))
+    wait_until(lambda: ok(api.get("/api/stats"))["running"] == 1, msg="one worker busy")
+    pg = Page(browser, app).login("accounts")
+    try:
+        pg.p.wait_for_selector("#acc-tbody .state-badge.queued")
+        assert pg.p.locator("#acc-tbody .state-badge.queued").count() == 2, "waiting accounts are marked"
+        queued_row = pg.p.locator("#acc-tbody tr", has=pg.p.locator(".state-badge.queued")).first
+        queued_row.locator("[data-more]").click()
+        assert "Aus Warteschlange entfernen" in pg.p.inner_text(".menu [data-act=stop]")
+        pg.p.click(".menu [data-act=stop]")
+        pg.p.wait_for_function("document.querySelectorAll('#acc-tbody .state-badge.queued').length === 1")
+        pg.p.check("#acc-all")
+        pg.p.click("#bulk-stop")
+        wait_until(lambda: ok(api.get("/api/stats"))["running"] + ok(api.get("/api/stats"))["queued"] == 0, msg="all stopped")
+        pg.p.wait_for_function("!document.querySelector('#acc-tbody .state-badge.working, #acc-tbody .state-badge.queued')")
+        pg.assert_clean("stop from accounts page")
     finally:
         pg.close()

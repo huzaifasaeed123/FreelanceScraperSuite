@@ -94,7 +94,27 @@ def test_profile_texts_page(browser, app, jaumo):
         acc = wait_runs_done(api, ok(api.post("/api/runs", json={"count": 1}))["run_ids"])[0]["account_id"]
         pg.p.goto(f"{app.url}/#account/{acc}")
         pg.p.wait_for_selector(".acc-about")
-        assert pg.p.inner_text(".acc-about") in ("Erster Text", "Zweiter Text")
+        assert pg.p.inner_text(".acc-about") in ("Über mich Text: Erster Text", "Über mich Text: Zweiter Text")
         pg.assert_clean("profile texts")
+    finally:
+        pg.close()
+
+
+def test_result_under_status_and_about_label(browser, app, jaumo):
+    api = app.client()
+    setup_ready(api, photos=2, max_swipes=3)
+    ok(api.put("/api/config", json={"settings": {"about_enabled": True, "about_pool": ["Hallo Welt"]}}))
+    acc = wait_runs_done(api, ok(api.post("/api/runs", json={"count": 1}))["run_ids"])[0]["account_id"]
+    a = ok(api.get(f"/api/accounts/{acc}"))
+    assert a["last_result"]["status"] == "done" and a["last_result"]["reason"] == "max swipes reached (3)"
+    pg = Page(browser, app).login("accounts")
+    try:
+        row = pg.p.locator(f'#acc-tbody tr[data-acc="{acc}"]')
+        assert row.locator(".state-reason").inner_text() == "Fertig: Max. Swipes erreicht (3)"
+        pg.p.goto(f"{app.url}/#account/{acc}")
+        pg.p.wait_for_selector(".acc-result")
+        assert "Fertig: Max. Swipes erreicht (3)" in pg.p.inner_text(".acc-result")
+        assert pg.p.inner_text(".acc-about").startswith("Über mich Text:") and "Hallo Welt" in pg.p.inner_text(".acc-about")
+        pg.assert_clean("result + about label")
     finally:
         pg.close()

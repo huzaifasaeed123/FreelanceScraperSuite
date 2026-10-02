@@ -738,6 +738,23 @@ def stop_all_runs():
     return {"stopped": manager.stop_all()}
 
 
+@app.post("/api/accounts/stop", dependencies=auth)
+def stop_accounts(body: SwipeIn, s: Session = Depends(get_session)):
+    """Stop the running sessions of these accounts and take their queued sessions out of the queue."""
+    ids = s.exec(select(BotRun.id).where(BotRun.account_id.in_(body.account_ids),
+                                         BotRun.status.in_(ACTIVE_STATUSES))).all()
+    return {"stopped": sum(1 for rid in ids if manager.stop(rid))}
+
+
+@app.post("/api/accounts/{id_}/stop", dependencies=auth)
+def stop_account(id_: int, s: Session = Depends(get_session)):
+    _get_or_404(s, Account, id_)
+    res = stop_accounts(SwipeIn(account_ids=[id_]), s)
+    if not res["stopped"]:
+        raise HTTPException(409, "nothing is running or queued for this account")
+    return res
+
+
 @app.post("/api/runs/{id_}/stop", dependencies=auth)
 def stop_run(id_: int):
     if not manager.stop(id_):
@@ -916,15 +933,30 @@ STATE_STATUSES = {
 }
 
 
-def _working_ids(s: Session) -> set:
-    """Accounts a worker is busy with right now."""
-    ids = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES), BotRun.kind != "sync",
-                                                     BotRun.account_id.is_not(None))).all())
-    ids |= set(s.exec(select(Account.id).where(Account.status == "signing_up")).all())
-    return ids
+def _working_ids(s: Session) -> dict:
+    """Accounts a worker is busy with or that wait in the queue: account id -> its active session (or None)."""
+    out = {aid: None for aid in s.exec(select(Account.id).where(Account.status == "signing_up")).all()}
+    rows = s.exec(select(BotRun.account_id, BotRun.id, BotRun.status, BotRun.kind)
+                  .where(BotRun.status.in_(ACTIVE_STATUSES), BotRun.kind != "sync", BotRun.account_id.is_not(None))
+                  .order_by(BotRun.id)).all()
+    for aid, rid, status, kind in rows:
+        out[aid] = {"id": rid, "status": status, "kind": kind}
+    return out
 
 
-def _account_public(a: Account, full=False, working: Optional[set] = None) -> dict:
+def _last_results(s: Session, ids) -> dict:
+    """Latest finished session per account (signup / swipe / message): status + reason for the status line."""
+    ids = list(ids)
+    if not ids:
+        return {}
+    latest = (select(func.max(BotRun.id)).where(BotRun.account_id.in_(ids), BotRun.kind != "sync",
+                                                BotRun.status.not_in(ACTIVE_STATUSES)).group_by(BotRun.account_id))
+    return {r.account_id: {"id": r.id, "kind": r.kind, "status": r.status, "reason": r.reason,
+                           "finished_at": _iso(r.finished_at)}
+            for r in s.exec(select(BotRun).where(BotRun.id.in_(latest))).all()}
+
+
+def _account_public(a: Account, full=False, working: Optional[set] = None, last: Optional[dict] = None) -> dict:
     exclude = {"access_token", "refresh_token"} | (set() if full else {"liked", "disliked", "matches", "messaged"})
     d = a.model_dump(exclude=exclude)
     d["created_at"], d["updated_at"] = _iso(a.created_at), _iso(a.updated_at)
@@ -935,6 +967,8 @@ def _account_public(a: Account, full=False, working: Optional[set] = None) -> di
     d["actions"] = (a.liked_count or 0) + (a.disliked_count or 0) + (a.messages_sent or 0)
     is_working = working is not None and a.id in working
     d["working"] = is_working
+    d["active_run"] = working.get(a.id) if isinstance(working, dict) else None   # {id, status, kind}: stop/cancel
+    d["last_result"] = (last or {}).get(a.id)                                     # {status, reason, ...}
     d["state"] = "working" if is_working else next((k for k, v in STATE_STATUSES.items() if a.status in v), "working")
     return d
 
@@ -989,7 +1023,8 @@ def list_accounts(status: Optional[str] = None, location: Optional[str] = None,
                     *([Account.id == int(term)] if term.isdigit() else []))
         ordering.insert(0, case((exact, 0), else_=1))
     rows = s.exec(base.order_by(*ordering).offset(offset).limit(limit)).all()
-    return {"total": total, "items": [_account_public(a, working=working) for a in rows]}
+    last = _last_results(s, (a.id for a in rows))
+    return {"total": total, "items": [_account_public(a, working=working, last=last) for a in rows]}
 
 
 @app.get("/api/accounts/summary", dependencies=auth)
@@ -1058,7 +1093,8 @@ def export_accounts(status: Optional[str] = None, location: Optional[str] = None
 
 @app.get("/api/accounts/{id_}", dependencies=auth)
 def get_account(id_: int, s: Session = Depends(get_session)):
-    return _account_public(_get_or_404(s, Account, id_), full=True, working=_working_ids(s))
+    a = _get_or_404(s, Account, id_)
+    return _account_public(a, full=True, working=_working_ids(s), last=_last_results(s, [a.id]))
 
 
 @app.post("/api/accounts/sync", dependencies=auth)

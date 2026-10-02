@@ -29,6 +29,7 @@ DEFAULT_CONTROL = {
     "signup_fail": False,
     "header_message_fail": False,
     "zapping_status": 200,
+    "zapping_script": [],          # bodies served first, one per zapping call (e.g. a Jaumo pause), then normal
     "empty_deck": None,            # body once the deck is empty (default {"items": []}), e.g. Jaumo's unlock dialog
     "slow_ms": 0,
     "user_id_start": 500000000,
@@ -311,6 +312,8 @@ def zapping(request: Request):
     c = state["control"]
     if c["zapping_status"] != 200:
         return JSONResponse({"error": "zapping unavailable"}, c["zapping_status"])
+    if c["zapping_script"]:
+        return c["zapping_script"].pop(0)
     if u["batches"] >= c["batches"]:
         return c["empty_deck"] if c["empty_deck"] is not None else {"items": []}
     u["batches"] += 1

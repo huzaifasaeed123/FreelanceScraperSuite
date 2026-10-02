@@ -264,6 +264,37 @@ saw in DevTools. Each call is small (12 rows), but it adds up with several open 
 
 ---
 
+## 8e. Agreed next steps (2026-10-03) — items 1–4 ✅ done
+
+Finding from the live log (2026-10-03 01:47): the "unlock" answer on zapping is NOT a daily like limit. Jaumo sent
+`"items": null` with an `unlock` dialog of `"type": "rate_app"` ("Will you give us 5 stars?") and
+`"unlockExpiresIn": 147` — cards are locked for ~2.5 min, after ~380 actions in that session.
+
+1. **Wait out short Jaumo pauses instead of ending the session.** When zapping returns `unlock` with
+   `unlockExpiresIn` below a limit (proposal: 15 min), log "Jaumo-Pause N s (<dialog type>)", wait that long
+   (+ a few random seconds, stop-aware), then fetch cards again and keep swiping. End the session only for a long
+   lock or a real Premium / verification wall. The bot never clicks the dialog.
+2. **Show the last session's result next to the status** — under the badge in the accounts list and at the top of
+   the account page (e.g. "Fertig: max swipes", "Jaumo-Pause 147 s", "Gesperrt: like HTTP 403",
+   "Fehler: …"). Today the reason is only in Logs, the account's session table, the session log and dashboard cards.
+3. Rename the reason text: "swipe limit reached" -> "Jaumo-Pause N s (Bewertungs-Dialog)" when type is rate_app.
+
+4. ✅ done: **Stop / remove from queue per account** — row menu "Stoppen" /
+   "Aus Warteschlange entfernen", bulk "Stoppen", "Stoppen" on the account page; queued accounts show the badge
+   "In Warteschlange". API: `POST /api/accounts/stop`, `POST /api/accounts/{id}/stop`. Tests pass.
+
+Done 2026-10-03: (1) short Jaumo pauses (≤ 15 min) are waited out + a few random seconds, then swiping goes on;
+a longer lock or 3 pauses in a row without a swipe end the session; never clicks the dialog; stop works while waiting.
+(2) last session result under the status badge and on the account page; reasons shown in German.
+(3) reasons "Jaumo lock: cards locked for N s (type)" / "Jaumo-Sperre … (Bewertungs-Dialog)". Plus the
+"Über mich Text:" label on the account page.
+
+Still open from the client confirmation (2026-10-03): nickname change (after signup or later, separate list),
+automatic stats refresh (after every session + every 30 min), "Über mich Text:" label, photo-rejected display,
+panel fully in German. "Emails" only if the client asks for it.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),
