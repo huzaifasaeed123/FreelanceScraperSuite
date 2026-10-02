@@ -289,6 +289,13 @@ a longer lock or 3 pauses in a row without a swipe end the session; never clicks
 (3) reasons "Jaumo lock: cards locked for N s (type)" / "Jaumo-Sperre … (Bewertungs-Dialog)". Plus the
 "Über mich Text:" label on the account page.
 
+Done 2026-10-03 (step 2): **automatic stats refresh** — right after every signup / swipe / messaging session
+(setting "Direkt nach jeder Sitzung", default on) and for all accounts every N minutes (setting, default 30, 0 = off;
+first sweep one interval after start; skips accounts refreshed in the last half interval). Safety: working or
+queued accounts are never refreshed (a refresh logs in again and would swap the session's tokens); a session has
+priority — starting one removes a queued refresh / stops a running one and waits up to 60 s for it. Refresh
+sessions are hidden from the dashboard cards (still in Logs).
+
 Still open from the client confirmation (2026-10-03): nickname change (after signup or later, separate list),
 automatic stats refresh (after every session + every 30 min), "Über mich Text:" label, photo-rejected display,
 panel fully in German. "Emails" only if the client asks for it.

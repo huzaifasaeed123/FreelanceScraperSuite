@@ -8,6 +8,7 @@ subscribers live in this process's memory.
 
 import asyncio
 import os
+import time
 import random
 import sys
 import threading
@@ -30,7 +31,9 @@ ACTIVE_STATUSES = ("queued", "running")
 
 
 IDENTITY_DEFAULTS = {"unique_names": True, "unique_photos": True}
-BOT_DEFAULTS = {"parallel_accounts": 1, "sync_delay_seconds": 10}
+BOT_DEFAULTS = {"parallel_accounts": 1, "sync_delay_seconds": 10, "sync_after_session": True, "auto_sync_minutes": 30}
+AUTO_SYNC_TICK = float(os.environ.get("AUTO_SYNC_TICK_SECONDS", "30"))          # how often the timer checks
+AUTO_SYNC_INTERVAL = float(os.environ.get("AUTO_SYNC_INTERVAL_SECONDS", "0"))   # tests only: overrides the minutes
 SYNC_COOLDOWN_SECONDS = 15   # one refresh per account at a time, then wait at least this long
 THREAD_CAP = 64
 # Mirror bot log lines (info/warning/error, never HTTP bodies) to stdout -> Coolify runtime log.
@@ -232,6 +235,8 @@ class RunManager:
         # away from account creation.
         self.sync_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sync")
         self.labels: dict[int, str] = {}     # run id -> "session 12 · Worker-01 · Sabrina" for stdout lines
+        self.closing = False
+        self.auto_sync_stop = threading.Event()
         self.gate = threading.Condition()
         self.waiting: deque[int] = deque()   # run ids in launch order
         self.working = 0
@@ -289,6 +294,8 @@ class RunManager:
             self.gate.notify_all()
 
     def shutdown(self):
+        self.closing = True
+        self.auto_sync_stop.set()
         for ev in list(self.stop_events.values()):
             ev.set()
         self.pool.notify()
@@ -376,7 +383,8 @@ class RunManager:
             if account_ids:
                 q = select(Account).where(Account.id.in_(account_ids))
             accounts = s.exec(q).all()
-            busy = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES))).all())
+            busy = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES),
+                                                              BotRun.kind != "sync")).all())
             runs = []
             for acc in accounts:
                 if acc.id in busy or not (acc.refresh_token or acc.access_token):
@@ -391,6 +399,7 @@ class RunManager:
             s.commit()
             ids = [r.id for r in runs]
             payloads = [run_public(r) for r in runs]
+        self._cancel_syncs([p["account_id"] for p in payloads])
         for rid, p in zip(ids, payloads):
             self.hub.publish("events", {"type": "run", "run": p})
             self._submit(rid, self._message_worker)
@@ -424,12 +433,19 @@ class RunManager:
             s.commit()
             ids = [r.id for r in runs]
             payloads = [run_public(r) for r in runs]
+        self._cancel_syncs([p["account_id"] for p in payloads])
         for rid, p in zip(ids, payloads):
             self.hub.publish("events", {"type": "run", "run": p})
             self._submit(rid, self._swipe_worker)
         return {"run_ids": ids, "skipped": skipped}
 
     def _swipe_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            account_id = s.get(BotRun, run_id).account_id
+        try:
+            self._wait_for_sync(run_id, account_id, ev)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped by admin"})
         with Session(engine) as s:
             run = s.get(BotRun, run_id)
             snap = run.config_snapshot
@@ -567,6 +583,10 @@ class RunManager:
             print(f"[{self.labels.get(run_id, f'session {run_id}')}] RESULT  {result['status']}: {result.get('reason', '')}",
                   file=sys.stdout, flush=True)
         self.labels.pop(run_id, None)
+        try:
+            self._sync_after_session(run_id)
+        except Exception as e:  # a refresh problem must never change the session result
+            self._log(run_id, "warning", f"[STATS] Could not queue the stats refresh: {type(e).__name__}: {e}")
 
     # --- signup worker -----------------------------------------------------
 
@@ -759,6 +779,12 @@ class RunManager:
 
     def _message_worker(self, run_id: int, ev: threading.Event):
         with Session(engine) as s:
+            account_id = s.get(BotRun, run_id).account_id
+        try:
+            self._wait_for_sync(run_id, account_id, ev)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped by admin"})
+        with Session(engine) as s:
             run = s.get(BotRun, run_id)
             snap = run.config_snapshot
             acc = s.get(Account, run.account_id)
@@ -817,10 +843,76 @@ class RunManager:
 
     # --- stats sync (read-only, admin-triggered) ---------------------------
 
-    def launch_sync(self, account_ids: list[int], all_accounts: bool = False) -> dict:
+    # --- automatic stats refresh -----------------------------------------------
+
+    def start_auto_sync(self):
+        """Background timer: refresh all accounts every `auto_sync_minutes` (first sweep one interval after start)."""
+        threading.Thread(target=self._auto_sync_loop, name="auto-sync", daemon=True).start()
+
+    def _auto_sync_loop(self):
+        last = time.monotonic()
+        while not self.auto_sync_stop.wait(AUTO_SYNC_TICK):
+            try:
+                with Session(engine) as s:
+                    minutes = int(get_bot_settings(s).get("auto_sync_minutes") or 0)
+                interval = AUTO_SYNC_INTERVAL or minutes * 60
+                if not interval or time.monotonic() - last < interval:
+                    continue
+                last = time.monotonic()
+                res = self.launch_sync([], all_accounts=True, min_age_seconds=interval / 2)
+                print(f"[auto-sync] every {minutes} min: {len(res['run_ids'])} queued, {len(res['skipped'])} skipped",
+                      file=sys.stdout, flush=True)
+            except Exception as e:  # the timer must keep running
+                print(f"[auto-sync] {type(e).__name__}: {e}", file=sys.stdout, flush=True)
+
+    def _cancel_syncs(self, account_ids):
+        """A session has priority over a stats refresh of the same account: queued refreshes are removed,
+        a running one is stopped (a refresh logs in again and must not swap tokens under the session)."""
+        if not account_ids:
+            return
+        with Session(engine) as s:
+            ids = s.exec(select(BotRun.id).where(BotRun.kind == "sync", BotRun.account_id.in_(list(account_ids)),
+                                                 BotRun.status.in_(ACTIVE_STATUSES))).all()
+        for rid in ids:
+            self.stop(rid)
+
+    def _wait_for_sync(self, run_id, account_id, ev, timeout=60):
+        """Before a session reads the account's tokens, let a refresh that is already running finish."""
+        end = time.monotonic() + timeout
+        noted = False
+        while time.monotonic() < end:
+            with Session(engine) as s:
+                busy = s.exec(select(BotRun.id).where(BotRun.kind == "sync", BotRun.account_id == account_id,
+                                                      BotRun.status == "running")).first()
+            if not busy:
+                return
+            if not noted:
+                self._log(run_id, "info", "[STATS] Waiting for the running stats refresh of this account to finish")
+                noted = True
+            if ev.wait(0.5):
+                raise StopRequested()
+
+    def _sync_after_session(self, run_id):
+        """Queue a stats refresh for the account of a session that just ended (signup / swipe / message)."""
+        if self.closing:
+            return
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            if not run or run.kind == "sync" or not run.account_id or not run.started_at:
+                return
+            if not get_bot_settings(s).get("sync_after_session", True):
+                return
+            account_id = run.account_id
+        res = self.launch_sync([account_id])
+        if res["run_ids"]:
+            self._log(run_id, "info", "[STATS] Stats refresh queued for this account (after the session)")
+
+    def launch_sync(self, account_ids: list[int], all_accounts: bool = False, min_age_seconds: float = 0) -> dict:
         """
         Queue read-only stats syncs. One refresh per account at a time with a cooldown;
         "refresh all" runs one account after another with a delay in between.
+        Accounts that are working or queued are skipped: a refresh logs in again and must not
+        swap the tokens of a running session (they get a refresh when their session ends).
         Returns {"run_ids": [...], "skipped": [{"id", "reason"}]}.
         """
         with Session(engine) as s:
@@ -831,6 +923,8 @@ class RunManager:
                 accs = s.exec(select(Account).where(Account.id.in_(account_ids or [-1]))).all()
             busy_sync = set(s.exec(select(BotRun.account_id).where(BotRun.kind == "sync",
                                                                    BotRun.status.in_(ACTIVE_STATUSES))).all())
+            working = set(s.exec(select(BotRun.account_id).where(BotRun.kind != "sync",
+                                                                 BotRun.status.in_(ACTIVE_STATUSES))).all())
             configs = {c.id: c for c in s.exec(select(BotConfig)).all()}
             fallback = next((c for c in configs.values() if c.apk_profile_id), None)
             delay = float(get_bot_settings(s)["sync_delay_seconds"])
@@ -841,6 +935,11 @@ class RunManager:
                 reason = None
                 if acc.id in busy_sync:
                     reason = "a refresh for this account is already queued or running"
+                elif acc.id in working:
+                    reason = "account is working — its stats are refreshed when the session ends"
+                elif min_age_seconds and acc.stats_synced_at and \
+                        (now - acc.stats_synced_at).total_seconds() < min_age_seconds:
+                    reason = "refreshed recently"
                 elif not (acc.refresh_token or acc.access_token):
                     reason = "no login token stored"
                 elif acc.stats_synced_at and (now - acc.stats_synced_at).total_seconds() < SYNC_COOLDOWN_SECONDS:

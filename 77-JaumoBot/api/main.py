@@ -153,6 +153,7 @@ async def lifespan(app: FastAPI):
         sync_library(s)
         manager.set_parallel(get_bot_settings(s)["parallel_accounts"])
     hub.loop = asyncio.get_running_loop()
+    manager.start_auto_sync()
     if cfg.SECRET_KEY_IS_RANDOM:
         print("[startup] SECRET_KEY not set — sessions will reset on every restart")
     if cfg.ADMIN_PASS == "changeme":

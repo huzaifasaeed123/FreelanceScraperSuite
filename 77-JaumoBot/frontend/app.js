@@ -117,7 +117,9 @@ const I18N = {
     "cfg.noPhotos": "Noch keine Fotos hochgeladen", "cfg.messaging": "Nachrichten",
     "cfg.msgOn": "Matches anschreiben erlaubt", "cfg.msgOnSub": "Erlaubt den Job „Matches anschreiben“ auf der Accounts-Seite. Beim Erstellen werden nie Nachrichten gesendet.",
     "cfg.templates": "Nachrichtenvorlagen (eine pro Zeile, zufällige Auswahl)",
-    "cfg.sync": "Stats aktualisieren", "cfg.syncSub": "Likes, Besucher, Nachrichten und Matches werden nur auf Klick von Jaumo gelesen, nie im Hintergrund.",
+    "cfg.sync": "Stats aktualisieren", "cfg.syncSub": "Erhaltene Likes, Besucher, Nachrichten und Matches werden von Jaumo gelesen (nur lesen). Arbeitende Accounts werden nie gleichzeitig gelesen.",
+    "cfg.syncAfter": "Direkt nach jeder Sitzung", "cfg.syncAfterSub": "Wenn eine Erstellung, „Weiter swipen“ oder das Anschreiben endet, werden die Stats dieses Accounts sofort gelesen.",
+    "cfg.syncEvery": "Automatisch alle X Minuten (0 = aus)", "cfg.syncEverySub": "Liest alle Accounts nacheinander (mit der Pause unten). Übersprungen werden arbeitende Accounts und solche, die kurz vorher gelesen wurden.",
     "cfg.syncDelay": "Pause zwischen Accounts bei „alle aktualisieren“ (Sekunden)",
     "cfg.syncDelaySub": "Die Accounts werden nacheinander mit dieser Pause gelesen, damit Jaumo keine Anfragespitze sieht.",
     "cfg.advanced": "Erweitert — die Standardwerte funktionieren; nur bei Bedarf ändern",
@@ -250,7 +252,9 @@ const I18N = {
     "cfg.noPhotos": "No photos uploaded yet", "cfg.messaging": "Messages",
     "cfg.msgOn": "Messaging matches allowed", "cfg.msgOnSub": "Allows the “Message matches” job on the Accounts page. Creating accounts never sends messages.",
     "cfg.templates": "Message templates (one per line, random pick)",
-    "cfg.sync": "Stats refresh", "cfg.syncSub": "Likes, visitors, messages and matches are read from Jaumo only on click, never in the background.",
+    "cfg.sync": "Stats refresh", "cfg.syncSub": "Received likes, visitors, messages and matches are read from Jaumo (read-only). Working accounts are never read at the same time.",
+    "cfg.syncAfter": "Right after every session", "cfg.syncAfterSub": "When account creation, “Continue swiping” or messaging ends, that account's stats are read at once.",
+    "cfg.syncEvery": "Automatically every X minutes (0 = off)", "cfg.syncEverySub": "Reads all accounts one after another (with the pause below). Working accounts and accounts read shortly before are skipped.",
     "cfg.syncDelay": "Pause between accounts for “refresh all” (seconds)",
     "cfg.syncDelaySub": "Accounts are read one after another with this pause, so Jaumo sees no burst of requests.",
     "cfg.advanced": "Advanced — the defaults work; change only if needed",
@@ -1066,7 +1070,7 @@ async function loadDashboardRuns() {
 
 function renderLiveCards() {
   if (state.tab !== "dashboard") return;
-  const all = [...state.runs.values()].sort((a, b) => b.id - a.id);
+  const all = [...state.runs.values()].filter((r) => r.kind !== "sync").sort((a, b) => b.id - a.id);
   const active = all.filter((r) => ACTIVE.has(r.status))
     .sort((a, b) => (a.status === b.status ? b.id - a.id : a.status === "running" ? -1 : 1));
   const recent = all.filter((r) => !ACTIVE.has(r.status)).slice(0, 12);
@@ -1550,6 +1554,10 @@ async function loadConfigPage() {
         <input type="checkbox" class="switch" name="messaging_enabled" ${s.messaging_enabled ? "checked" : ""}></label>
       <label>${esc(t("cfg.templates"))}<textarea name="message_templates" rows="5">${esc(s.message_templates.join("\n"))}</textarea></label>`)}
     ${cfgCard("refresh", "cfg.sync", "cfg.syncSub", `
+      <label class="setting-row"><div><b>${esc(t("cfg.syncAfter"))}</b><span>${esc(t("cfg.syncAfterSub"))}</span></div>
+        <input type="checkbox" class="switch" name="sync_after_session" ${b.sync_after_session !== false ? "checked" : ""}></label>
+      <div class="setting-row"><div><b>${esc(t("cfg.syncEvery"))}</b><span>${esc(t("cfg.syncEverySub"))}</span></div>
+        <input type="number" name="auto_sync_minutes" min="0" max="1440" step="1" value="${b.auto_sync_minutes ?? 30}" required style="width:110px"></div>
       <div class="setting-row"><div><b>${esc(t("cfg.syncDelay"))}</b><span>${esc(t("cfg.syncDelaySub"))}</span></div>
         <input type="number" name="sync_delay_seconds" min="2" max="600" step="1" value="${b.sync_delay_seconds}" required style="width:110px"></div>`)}
     <div class="adv-head">${esc(t("cfg.advanced"))}</div>
@@ -1614,7 +1622,9 @@ async function loadConfigPage() {
     });
     await api("/api/settings", { method: "PUT", body: {
       bot: { parallel_accounts: Math.min(20, Math.max(1, +f.parallel_accounts.value || 1)),
-             sync_delay_seconds: Math.min(600, Math.max(2, +f.sync_delay_seconds.value || 10)) },
+             sync_delay_seconds: Math.min(600, Math.max(2, +f.sync_delay_seconds.value || 10)),
+             sync_after_session: f.sync_after_session.checked,
+             auto_sync_minutes: Math.max(0, Math.round(+f.auto_sync_minutes.value || 0)) },
       identity: { unique_names: settings.identity.unique_names, unique_photos: f.unique_photos.checked },
     } });
   });

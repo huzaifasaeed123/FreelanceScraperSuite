@@ -161,4 +161,5 @@ def test_sync_validation(app, api):
 def test_saving_workers_keeps_refresh_delay(app, api):
     ok(api.put("/api/settings", json={"bot": {"parallel_accounts": 1, "sync_delay_seconds": 30}}))
     ok(api.put("/api/settings", json={"bot": {"parallel_accounts": 3}}))
-    assert ok(api.get("/api/settings"))["bot"] == {"parallel_accounts": 3, "sync_delay_seconds": 30}
+    assert ok(api.get("/api/settings"))["bot"] == {"parallel_accounts": 3, "sync_delay_seconds": 30,
+                                                   "sync_after_session": True, "auto_sync_minutes": 30}

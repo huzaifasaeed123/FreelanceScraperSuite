@@ -187,12 +187,15 @@ FAST_DELAYS = {k: [0, 0.02] for k in ("after_signup", "after_location", "after_r
 
 
 def setup_ready(api, *, photos=6, require_proxy=False, max_swipes=6, **settings):
-    """APK profile + fast config + photos; returns config id."""
+    """APK profile + fast config + photos; returns config id.
+    The automatic stats refresh after each session is switched off here so tests count only their own
+    requests; tests of that feature switch it on (see test_auto_sync.py)."""
     apk = ok(api.post("/api/apk-profiles", json={"name": "Good APK", "client_id": "good-client",
                                                   "sign_secret": "good-secret", "user_agent": "Android 202609.1.4 (1001864) (GooglePlay;Free)"}))
     conf = ok(api.get("/api/configs"))[0]
     s = {**conf["settings"], "require_proxy": require_proxy, "max_swipes": max_swipes, "delays": FAST_DELAYS, **settings}
     ok(api.put(f"/api/configs/{conf['id']}", json={"name": conf["name"], "apk_profile_id": apk["id"], "settings": s}))
+    ok(api.put("/api/settings", json={"bot": {"sync_after_session": False}}))
     if photos:
         files = [("files", (f"p{i}.jpg", jpeg_bytes(i), "image/jpeg")) for i in range(photos)]
         res = ok(api.post("/api/photos", files=files))
