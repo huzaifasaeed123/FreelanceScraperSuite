@@ -13,6 +13,7 @@ from fastapi import (Depends, FastAPI, File, HTTPException, Query, Request, Resp
                      UploadFile, WebSocket, WebSocketDisconnect)
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import case, func, or_
 from sqlmodel import Session, select
@@ -23,12 +24,12 @@ from bot.engine import AUTO_FEMALE_NAMES, RELATIONSHIP_VALUES
 from .auth import (COOKIE_NAME, check_credentials, is_https, make_token, require_auth,
                    verify_token, ws_authenticated)
 from .manager import (ACTIVE_STATUSES, BOT_DEFAULTS, IDENTITY_DEFAULTS, Hub, RunManager, event_public,
-                      get_bot_settings, get_identity, name_pool_for, name_usage, run_public)
+                      get_bot_settings, get_identity, get_main_config, name_pool_for, name_usage, run_public)
 from .photolib import THUMBS_DIR, delete_photo_files, import_uploads, photo_usage, sync_library
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog, engine,
                      get_session, init_db, iso, utcnow)
 from .proxies import parse_proxy_line, save_test_result, split_lines, test_proxy
-from .schemas import (StatsSyncIn, SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigSettings,
+from .schemas import (StatsSyncIn, SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigPatch, ConfigSettings,
                       LoginIn, MessageLaunch, ProxyBulkAction, ProxyBulkIn, ProxyIn,
                       ProxyUpdate, RunLaunch)
 
@@ -50,20 +51,49 @@ SERVER_CODE_STAMP = _code_stamp()  # what this process actually loaded
 # Startup: DB, seeds, legacy import
 # ---------------------------------------------------------------------------
 
+DEFAULT_USER_AGENT = "Android 202609.1.4 (1001864) (GooglePlay;Free)"
+
+
+def _env_apk(s: Session):
+    """The APK key pair from JAUMO_CLIENT_ID / JAUMO_SIGN_SECRET / JAUMO_USER_AGENT, kept as an
+    ApkProfile row so health tracking keeps working. None when the env vars are not set."""
+    if not (cfg.SEED_CLIENT_ID and cfg.SEED_SIGN_SECRET):
+        return None
+    apk = s.exec(select(ApkProfile).where(ApkProfile.client_id == cfg.SEED_CLIENT_ID)).first()
+    if apk is None:
+        name, n = "Jaumo APK", 2
+        while s.exec(select(ApkProfile).where(ApkProfile.name == name)).first():
+            name, n = f"Jaumo APK {n}", n + 1
+        apk = ApkProfile(name=name, client_id=cfg.SEED_CLIENT_ID, sign_secret=cfg.SEED_SIGN_SECRET,
+                         user_agent=cfg.SEED_USER_AGENT or DEFAULT_USER_AGENT)
+    else:
+        apk.sign_secret = cfg.SEED_SIGN_SECRET
+        apk.user_agent = cfg.SEED_USER_AGENT or apk.user_agent
+        apk.enabled = True
+    s.add(apk)
+    s.commit()
+    s.refresh(apk)
+    return apk
+
+
 def _seed():
+    """One Jaumo configuration; its APK keys come from the env vars, else the profile stored before."""
     with Session(engine) as s:
-        apk = s.exec(select(ApkProfile)).first()
-        if not apk and cfg.SEED_CLIENT_ID and cfg.SEED_SIGN_SECRET:
-            apk = ApkProfile(name="Default APK", client_id=cfg.SEED_CLIENT_ID,
-                             sign_secret=cfg.SEED_SIGN_SECRET,
-                             user_agent=cfg.SEED_USER_AGENT or "Android 202609.1.4 (1001864) (GooglePlay;Free)")
-            s.add(apk)
-            s.commit()
-            s.refresh(apk)
+        apk = _env_apk(s)
         if not s.exec(select(BotConfig)).first():
-            s.add(BotConfig(name="Default", apk_profile_id=apk.id if apk else None,
+            fallback = apk or s.exec(select(ApkProfile).where(ApkProfile.enabled == True)).first()  # noqa: E712
+            s.add(BotConfig(name="Jaumo", apk_profile_id=fallback.id if fallback else None,
                             settings=ConfigSettings().model_dump()))
             s.commit()
+        main = get_main_config(s)
+        current = s.get(ApkProfile, main.apk_profile_id) if main.apk_profile_id else None
+        if apk:
+            main.apk_profile_id = apk.id
+        elif not current or not current.enabled:
+            stored = s.exec(select(ApkProfile).where(ApkProfile.enabled == True).order_by(ApkProfile.id)).first()  # noqa: E712
+            main.apk_profile_id = stored.id if stored else main.apk_profile_id
+        s.add(main)
+        s.commit()
 
 
 def _import_legacy_accounts():
@@ -402,6 +432,43 @@ def _apk_names(s):
 def list_configs(s: Session = Depends(get_session)):
     names, usage = _apk_names(s), name_usage(s)
     return [_config_public(c, names, usage) for c in s.exec(select(BotConfig).order_by(BotConfig.id)).all()]
+
+
+def _main_config_public(s: Session) -> dict:
+    c = get_main_config(s)
+    if not c:
+        raise HTTPException(404, "no configuration")
+    d = _config_public(c, _apk_names(s), name_usage(s))
+    apk = s.get(ApkProfile, c.apk_profile_id) if c.apk_profile_id else None
+    d["apk"] = _apk_public(apk, s) if apk else None
+    from_env = bool(apk and cfg.SEED_CLIENT_ID and cfg.SEED_SIGN_SECRET and apk.client_id == cfg.SEED_CLIENT_ID)
+    d["apk_source"] = "env" if from_env else "stored" if apk else "none"
+    return d
+
+
+@app.get("/api/config", dependencies=auth)
+def get_config(s: Session = Depends(get_session)):
+    """The single Jaumo configuration, with the APK key status (never the secret)."""
+    return _main_config_public(s)
+
+
+@app.put("/api/config", dependencies=auth)
+def put_config(body: ConfigPatch, s: Session = Depends(get_session)):
+    """Update part of the settings (each panel page saves only its own fields)."""
+    c = get_main_config(s)
+    if not c:
+        raise HTTPException(404, "no configuration")
+    current = {**ConfigSettings().model_dump(), **(c.settings or {})}
+    try:
+        merged = ConfigSettings.model_validate({**current, **body.settings})
+    except ValidationError as e:
+        raise HTTPException(422, "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors()))
+    c.settings = merged.model_dump()
+    c.updated_at = utcnow()
+    s.add(c)
+    s.commit()
+    hub.publish("events", {"type": "settings"})
+    return _main_config_public(s)
 
 
 @app.get("/api/names/usage", dependencies=auth)

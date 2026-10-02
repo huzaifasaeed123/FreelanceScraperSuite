@@ -114,6 +114,33 @@ def pick_names(usage: Counter, settings: dict, count: int, manual: list[str], un
     return names
 
 
+def get_main_config(s: Session):
+    """The one Jaumo configuration the panel works with (stored in AppSetting 'main_config_id').
+    On a server that still has several, the one used for the latest signup wins, else the oldest."""
+    row = s.get(AppSetting, "main_config_id")
+    cid = (row.value or {}).get("id") if row and isinstance(row.value, dict) else None
+    config = s.get(BotConfig, cid) if cid else None
+    if config:
+        return config
+    last = s.exec(select(BotRun.config_id).where(BotRun.kind == "signup", BotRun.config_id != None)  # noqa: E711
+                  .order_by(BotRun.id.desc())).first()
+    config = (s.get(BotConfig, last) if last else None) or s.exec(select(BotConfig).order_by(BotConfig.id)).first()
+    if config:
+        row = row or AppSetting(key="main_config_id")
+        row.value = {"id": config.id}
+        s.add(row)
+        s.commit()
+        s.refresh(config)
+    return config
+
+
+def _resolve_config(s: Session, config_id):
+    config = s.get(BotConfig, config_id) if config_id else get_main_config(s)
+    if not config:
+        raise LookupError("config not found")
+    return config
+
+
 def run_public(run: BotRun) -> dict:
     d = run.model_dump(exclude={"config_snapshot"})
     for k in ("created_at", "started_at", "finished_at"):
@@ -253,19 +280,17 @@ class RunManager:
             self.waiting.append(run_id)
         self.executor.submit(self._guard, run_id, fn, ev)
 
-    def check_signup(self, config_id: int, count: int, names: list[str]) -> list[dict]:
+    def check_signup(self, config_id, count: int, names: list[str]) -> list[dict]:
         """Dry run of launch_signup: every reason it would be refused, each with the page that fixes it."""
         names = [n.strip() for n in names if n and n.strip()]
         problems = []
         with Session(engine) as s:
-            config = s.get(BotConfig, config_id)
-            if not config:
-                raise LookupError("config not found")
+            config = _resolve_config(s, config_id)
             settings = dict(config.settings)
             rules = get_identity(s)
             checks = (("apk", "configs", lambda: self._snapshot(s, config)),
                       ("photos", "photos", lambda: pick_photos(s, settings, count, rules["unique_photos"])),
-                      ("names", "settings", lambda: pick_names(name_usage(s), settings, count, names,
+                      ("names", "names", lambda: pick_names(name_usage(s), settings, count, names,
                                                                 rules["unique_names"])))
             for code, page, fn in checks:
                 try:
@@ -278,12 +303,10 @@ class RunManager:
                                  "message": "No enabled proxy — the configuration requires one (Proxies page)"})
         return problems
 
-    def launch_signup(self, config_id: int, count: int, names: list[str]) -> list[int]:
+    def launch_signup(self, config_id, count: int, names: list[str]) -> list[int]:
         names = [n.strip() for n in names if n and n.strip()]
         with self.name_lock, Session(engine) as s:
-            config = s.get(BotConfig, config_id)
-            if not config:
-                raise LookupError("config not found")
+            config = _resolve_config(s, config_id)
             snap = self._snapshot(s, config)
             rules = get_identity(s)
             assigned = pick_names(name_usage(s), snap["settings"], count, names, rules["unique_names"])
@@ -302,11 +325,9 @@ class RunManager:
             self._submit(rid, self._signup_worker)
         return ids
 
-    def launch_messages(self, config_id: int, account_ids: list[int]) -> list[int]:
+    def launch_messages(self, config_id, account_ids: list[int]) -> list[int]:
         with Session(engine) as s:
-            config = s.get(BotConfig, config_id)
-            if not config:
-                raise LookupError("config not found")
+            config = _resolve_config(s, config_id)
             if not (config.settings or {}).get("messaging_enabled", False):
                 raise ValueError(f"Messaging is turned off in configuration '{config.name}' — "
                                  "enable it under Configurations → Messaging")

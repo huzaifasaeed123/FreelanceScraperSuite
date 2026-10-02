@@ -1042,3 +1042,36 @@ details.form-section.adv>:not(summary){margin-left:14px;margin-right:14px}
 details.form-section.adv>:last-child{margin-bottom:14px}
 .form-grid.one-col{grid-template-columns:1fr}
 .form-grid.one-col .span-2{grid-column:auto}
+
+/* Sidebar: Jaumo group (header opens the accounts, arrow folds the sub-menu) */
+.sb-group { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.sb-nav .sb-group-head { border: 1px solid transparent; font-weight: 600; }
+.sb-nav .sb-group-head.active { border-color: rgba(139, 143, 255, .55); }
+.sb-chev { display: grid; place-items: center; width: 24px; height: 24px; margin-right: -4px; border-radius: 6px; color: var(--sidebar-muted); }
+.sb-chev:hover { background: var(--sidebar-hover); color: #fff; }
+.sb-chev svg.ic { transform: rotate(180deg); transition: transform .15s; }
+.sb-group.collapsed .sb-chev svg.ic { transform: rotate(0deg); }
+.sb-sub { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 6px 14px; padding: 4px 0 4px 8px; border-left: 2px solid rgba(139, 143, 255, .45); }
+.sb-group.collapsed .sb-sub { display: none; }
+.sb-nav .sb-sub button { padding: 8px 10px; }
+.sb-nav .sb-sub button.active::before { left: -10px; }
+
+/* Konfiguration / Nicknamen / Städte pages */
+.cfg-page { max-width: 920px; display: flex; flex-direction: column; gap: 16px; }
+.cfg-page form { display: flex; flex-direction: column; gap: 16px; }
+.cfg-page .card { margin: 0; }
+.cfg-page h2 { display: flex; align-items: center; gap: 8px; }
+.cfg-page .card-head { align-items: flex-start; }
+.cfg-page .adv-head { margin-top: 4px; border-top: 0; padding-top: 0; }
+.cfg-page details.form-section.adv { margin-top: 0; background: var(--surface); }
+.cfg-h3 { margin: 16px 0 4px; font-size: 14px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 4px 0 10px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.save-bar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+  padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.save-bar .error { flex: 1; margin: 0; }
+.city-preview { margin-top: 10px; display: grid; gap: 8px; }
+.city-preview .name-chip { display: inline-flex; align-items: center; gap: 4px; }
+.city-preview .name-chip svg.ic { width: 13px; height: 13px; }
+@media (max-width: 600px) { .kv { grid-template-columns: 1fr; gap: 2px; } .kv dt { margin-top: 6px; } }

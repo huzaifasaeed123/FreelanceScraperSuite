@@ -226,6 +226,23 @@ saw in DevTools. Each call is small (12 rows), but it adds up with several open 
 
 ---
 
+## 8b. Panel structure per client mockup (2026-10-02) — ✅ done locally
+
+- Sidebar: Übersicht → Armaturenbrett; collapsible **Jaumo** group (header = accounts overview) with
+  Konfiguration · Fotos · Proxies · Nicknamen · Städte · Logs / Protokolle. Ready for more bots as further groups.
+- **One configuration** (no list, no duplicate/delete). `GET/PUT /api/config` (partial saves); runs, messaging and the
+  start check use it when no `config_id` is sent. On an existing server the configuration used for the latest signup
+  is kept.
+- **APK keys from env vars** `JAUMO_CLIENT_ID` / `JAUMO_SIGN_SECRET` / `JAUMO_USER_AGENT`; if not set, the APK profile
+  already stored on the server keeps being used. The Konfiguration page shows the source and health (read-only).
+- Einstellungen page removed: workers, stats-refresh pause and photo rule → Konfiguration; name rule → Nicknamen;
+  locations + radius → Städte.
+- Left out on purpose (need new Jaumo requests in the engine, decided with the user): Nicknamen-ändern,
+  Profiltexte / Über mich, Emails.
+- Before deploying: if `JAUMO_*` env vars are set in Coolify, they win — make sure they hold the keys that work now.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

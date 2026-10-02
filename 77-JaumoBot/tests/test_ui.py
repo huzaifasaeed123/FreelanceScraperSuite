@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.ui, pytest.mark.skipif(not CHROME.exists(), reason="Ch
 pw_sync = pytest.importorskip("playwright.sync_api")
 
 RAW_KEY = re.compile(r"\b(acc|kpi|st|state|nav|sec|top|filter|sort|new|edit|msg|bulk|pager|col|common|del|sys|brand|outdated)\.[a-zA-Z]+\b")
-TABS = ["dashboard", "accounts", "configs", "proxies", "photos", "runs", "settings"]
+TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "cities", "runs"]
 SLOWISH = {k: [0.2, 0.3] for k in FAST_DELAYS}
 
 
@@ -299,36 +299,109 @@ def test_dashboard_setup_checklist(browser, app):
         pg.close()
 
 
-def test_config_editor_advanced_sections_collapsed_and_saved(browser, app):
+def _main_settings(api):
+    return ok(api.get("/api/config"))["settings"]
+
+
+def test_jaumo_menu_group(browser, app):
+    pg = Page(browser, app).login("dashboard")
+    try:
+        subs = pg.p.locator("#nav-jaumo .sb-sub button").evaluate_all("els => els.map(e => e.dataset.tab)")
+        assert subs == ["configs", "photos", "proxies", "names", "cities", "runs"], "order as in the client's mockup"
+        assert pg.p.locator("#tabs button[data-tab=settings]").count() == 0, "no separate settings page"
+        pg.p.click("#nav-jaumo-toggle")
+        assert not pg.p.is_visible("#nav-jaumo .sb-sub"), "arrow folds the sub-menu"
+        assert pg.p.evaluate("location.hash") == "#dashboard", "the arrow does not navigate"
+        pg.p.reload()
+        pg.p.wait_for_selector("#app-view:not(.hidden)")
+        assert not pg.p.is_visible("#nav-jaumo .sb-sub"), "folded state is remembered"
+        pg.p.click("#tabs button[data-tab=accounts]")
+        pg.p.wait_for_selector("#nav-jaumo .sb-sub", state="visible")
+        assert "active" in pg.p.get_attribute("#tabs button[data-tab=accounts]", "class")
+        pg.tab("cities")
+        assert "active" in pg.p.get_attribute("#nav-jaumo button[data-tab=cities]", "class")
+        pg.assert_clean("menu")
+    finally:
+        pg.close()
+
+
+def test_config_page_saves_its_fields_and_keeps_the_rest(browser, app):
     api = app.client()
-    cid = setup_ready(api, photos=1)
-    before = ok(api.get("/api/configs"))[0]["settings"]
+    setup_ready(api, photos=1)
+    before = _main_settings(api)
     pg = Page(browser, app).login("configs")
     try:
-        pg.p.click(f"[data-edit='{cid}']")
-        pg.p.wait_for_selector("#config-form")
-        assert pg.p.locator("#config-form details.adv").count() == 3
-        assert pg.p.locator("#config-form details.adv[open]").count() == 0, "advanced sections start closed"
-        assert not pg.p.is_visible("#config-form textarea[name=devices]")
-        assert pg.p.is_visible("#config-form textarea[name=locations]"), "important sections stay open"
-        pg.p.click("#config-form details[data-adv=delays] summary")
-        pg.p.fill("#config-form input[name=d_between_swipes_1]", "9")
+        pg.p.wait_for_selector("#cfg-form")
+        assert "Konfiguration" in pg.p.inner_text("#tab-configs h1")
+        assert pg.p.locator("#config-body #apk-card, #config-body .cfg-card").count() >= 5
+        assert "Gespeichertes Profil" in pg.p.inner_text("#config-body"), "no env vars in tests -> stored profile"
+        assert pg.p.locator("#cfg-form details.adv").count() == 3
+        assert pg.p.locator("#cfg-form details.adv[open]").count() == 0, "advanced sections start closed"
+        assert not pg.p.is_visible("#cfg-form textarea[name=devices]")
+        assert pg.p.locator("#cfg-form textarea[name=locations]").count() == 0, "cities have their own page"
+        pg.p.click("#cfg-form details[data-adv=delays] summary")
+        pg.p.fill("#cfg-form input[name=d_between_swipes_1]", "9")
         # an invalid value in a closed section opens it so the browser can point at the field
-        pg.p.fill("#config-form input[name=d_after_signup_0]", "-1")
-        pg.p.click("#config-form details[data-adv=delays] summary")
-        assert pg.p.locator("#config-form details[data-adv=delays][open]").count() == 0
-        pg.p.click("#config-form button[type=submit]")
-        pg.p.wait_for_selector("#config-form details[data-adv=delays][open]")
-        assert pg.p.is_visible("#config-form"), "invalid form is not saved"
-        pg.p.fill("#config-form input[name=d_after_signup_0]", str(before["delays"]["after_signup"][0]))
-        pg.p.fill("#config-form input[name=max_swipes]", "7")
-        pg.p.click("#config-form button[type=submit]")
-        pg.p.wait_for_selector("#config-form", state="detached")
-        after = ok(api.get("/api/configs"))[0]["settings"]
-        assert after["max_swipes"] == 7 and after["delays"]["between_swipes"][1] == 9
-        for k in ("devices", "relationship_search", "dating_relationship_search", "looking_for_gender", "locations"):
-            assert after[k] == before[k], f"{k} kept while its section was closed"
-        pg.assert_clean("config editor")
+        pg.p.fill("#cfg-form input[name=d_after_signup_0]", "-1")
+        pg.p.click("#cfg-form details[data-adv=delays] summary")
+        pg.p.click("#cfg-form button[type=submit]")
+        pg.p.wait_for_selector("#cfg-form details[data-adv=delays][open]")
+        pg.p.fill("#cfg-form input[name=d_after_signup_0]", str(before["delays"]["after_signup"][0]))
+        pg.p.fill("#cfg-form input[name=max_swipes]", "7")
+        pg.p.click("#cfg-workers [data-step='1']")
+        pg.p.click("#cfg-form button[type=submit]")
+        wait_until(lambda: _main_settings(api)["max_swipes"] == 7, msg="saved")
+        after = _main_settings(api)
+        assert after["delays"]["between_swipes"][1] == 9
+        for k in ("devices", "relationship_search", "looking_for_gender", "locations", "name_pool", "name_source"):
+            assert after[k] == before[k], f"{k} kept"
+        assert ok(api.get("/api/settings"))["bot"]["parallel_accounts"] == 2
+        pg.assert_clean("config page")
+    finally:
+        pg.close()
+
+
+def test_names_page(browser, app):
+    api = app.client()
+    setup_ready(api, photos=1)
+    pg = Page(browser, app).login("names")
+    try:
+        pg.p.wait_for_selector("#names-form")
+        assert not pg.p.is_visible("#names-form textarea[name=name_pool]"), "auto names: no list to edit"
+        pg.p.check("#names-form input[name=name_source][value=custom]")
+        pg.p.fill("#names-form textarea[name=name_pool]", "Lena\nMia\nLena")
+        pg.p.wait_for_function("document.querySelector('#name-usage').textContent.includes('2')")
+        pg.p.uncheck("#names-form input[name=unique_names]")
+        pg.p.click("#names-form button[type=submit]")
+        wait_until(lambda: _main_settings(api)["name_source"] == "custom", msg="saved")
+        s = _main_settings(api)
+        assert s["name_pool"] == ["Lena", "Mia", "Lena"] and s["max_swipes"] == 6, "only the name fields change"
+        assert ok(api.get("/api/settings"))["identity"] == {"unique_names": False, "unique_photos": True}
+        pg.assert_clean("names page")
+    finally:
+        pg.close()
+
+
+def test_cities_page(browser, app):
+    api = app.client()
+    setup_ready(api, photos=1)
+    pg = Page(browser, app).login("cities")
+    try:
+        pg.p.wait_for_selector("#cities-form")
+        n = len(_main_settings(api)["locations"])
+        assert str(n) in pg.p.inner_text("#city-preview")
+        pg.p.fill("#cities-form textarea[name=locations]", "Berlin,52.52,13.405,20\nKaputt,abc")
+        pg.p.wait_for_selector("#city-preview .error")
+        pg.p.click("#cities-form button[type=submit]")
+        pg.p.wait_for_function("document.querySelector('#cities-error').textContent.length > 0")
+        assert len(_main_settings(api)["locations"]) == n, "invalid list is not saved"
+        pg.p.fill("#cities-form textarea[name=locations]", "Berlin,52.52,13.405,20\nLeipzig,51.3397,12.3731")
+        pg.p.fill("#cities-form input[name=location_radius_km]", "5")
+        pg.p.click("#cities-form button[type=submit]")
+        wait_until(lambda: len(_main_settings(api)["locations"]) == 2, msg="saved")
+        s = _main_settings(api)
+        assert s["location_radius_km"] == 5 and s["locations"][0]["radius_km"] == 20 and s["locations"][1]["radius_km"] is None
+        pg.assert_clean("cities page")
     finally:
         pg.close()
 

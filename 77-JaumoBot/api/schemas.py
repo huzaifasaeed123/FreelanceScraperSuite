@@ -86,6 +86,11 @@ class ConfigSettings(BaseModel):
         return self
 
 
+class ConfigPatch(BaseModel):
+    """Part of the main configuration's settings; keys not sent keep their value."""
+    settings: dict = Field(default_factory=dict)
+
+
 class ConfigIn(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     apk_profile_id: Optional[int] = None
@@ -149,13 +154,13 @@ class ProxyBulkAction(BaseModel):
 
 
 class RunLaunch(BaseModel):
-    config_id: int
+    config_id: Optional[int] = None    # None = the main Jaumo configuration
     count: int = Field(1, ge=1, le=500)
     names: list[str] = Field(default_factory=list)   # optional manual names, one per bot
 
 
 class MessageLaunch(BaseModel):
-    config_id: int
+    config_id: Optional[int] = None    # None = the main Jaumo configuration
     account_ids: list[int] = Field(default_factory=list)  # empty = all eligible accounts
 
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Account Manager</title>
+<title>Account-Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 <!-- Login -->
 <div id="login-view" class="login-wrap hidden">
   <form id="login-form" class="login-card">
-    <div class="login-brand"><div class="logo">J</div><div><div class="brand-name">Account Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div></div>
+    <div class="login-brand"><div class="logo">J</div><div><div class="brand-name">Account-Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div></div>
     <h1>Welcome back</h1>
     <p class="muted">Sign in to manage your bots.</p>
     <label>Username<input name="username" autocomplete="username" required></label>
@@ -30,22 +30,26 @@
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand">
       <div class="logo">J</div>
-      <div><div class="brand-name">Account Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div>
+      <div><div class="brand-name">Account-Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div>
     </div>
 
     <nav class="sb-nav" id="tabs">
       <div class="sb-section" data-i18n="sec.overview">Übersicht</div>
       <button data-tab="dashboard"><i data-icon="dashboard"></i><span data-i18n="nav.dashboard">Dashboard</span><span class="sb-badge" id="nav-running"></span></button>
-      <button data-tab="accounts"><i data-icon="heart"></i><span data-i18n="nav.accounts">Jaumo Accounts</span><span class="sb-badge" id="nav-accounts"></span></button>
 
-      <div class="sb-section" data-i18n="sec.automation">Automatisierung</div>
-      <button data-tab="configs"><i data-icon="sliders"></i><span data-i18n="nav.configs">Konfigurationen</span><span class="sb-badge warn" id="nav-apk"></span></button>
-      <button data-tab="proxies"><i data-icon="globe"></i><span data-i18n="nav.proxies">Proxys</span></button>
-      <button data-tab="photos"><i data-icon="image"></i><span data-i18n="nav.photos">Fotos</span></button>
-
-      <div class="sb-section" data-i18n="sec.system">System</div>
-      <button data-tab="runs"><i data-icon="terminal"></i><span data-i18n="nav.logs">Logs</span></button>
-      <button data-tab="settings"><i data-icon="settings"></i><span data-i18n="nav.settings">Einstellungen</span></button>
+      <div class="sb-group" id="nav-jaumo">
+        <button data-tab="accounts" class="sb-group-head"><i data-icon="heart"></i><span data-i18n="nav.jaumo">Jaumo</span>
+          <span class="sb-badge" id="nav-accounts"></span>
+          <span class="sb-chev" id="nav-jaumo-toggle" role="button" tabindex="0" data-i18n-title="nav.toggle"><i data-icon="chevronDown"></i></span></button>
+        <div class="sb-sub">
+          <button data-tab="configs"><i data-icon="settings"></i><span data-i18n="nav.config">Konfiguration</span><span class="sb-badge warn" id="nav-apk"></span></button>
+          <button data-tab="photos"><i data-icon="image"></i><span data-i18n="nav.photos">Fotos</span></button>
+          <button data-tab="proxies"><i data-icon="database"></i><span data-i18n="nav.proxies">Proxies</span></button>
+          <button data-tab="names"><i data-icon="user"></i><span data-i18n="nav.names">Nicknamen</span></button>
+          <button data-tab="cities"><i data-icon="mapPin"></i><span data-i18n="nav.cities">Städte</span></button>
+          <button data-tab="runs"><i data-icon="fileText"></i><span data-i18n="nav.logs">Logs / Protokolle</span></button>
+        </div>
+      </div>
     </nav>
 
     <div class="sb-foot">
@@ -132,7 +136,6 @@
               <div class="icon-bubble accent"><i data-icon="rocket"></i></div>
             </div>
             <form id="launch-form">
-              <label>Configuration<select name="config_id" id="launch-config" required></select></label>
               <div id="launch-config-info" class="config-info"></div>
               <label>Accounts to create
                 <div class="stepper">
@@ -205,27 +208,28 @@
         </div>
       </section>
 
-      <!-- Configs -->
+      <!-- Konfiguration (the one Jaumo configuration) -->
       <section id="tab-configs" class="tab hidden">
         <div class="page-head">
-          <div><h1>Configurations</h1><p>Presets for new accounts and the APK credentials they use</p></div>
-          <div class="page-actions">
-            <button class="btn" id="new-apk-btn"><i data-icon="key"></i>New APK profile</button>
-            <button class="btn primary" id="new-config-btn"><i data-icon="plus"></i>New configuration</button>
-          </div>
+          <div><h1 data-i18n="nav.config">Konfiguration</h1><p data-i18n="cfg.pageSub">Einstellungen für neue Jaumo Accounts</p></div>
         </div>
-        <div class="card table-card">
-          <div class="card-head padded"><div><h2>Configurations</h2></div></div>
-          <table class="table" id="configs-table"></table>
+        <div id="config-body" class="cfg-page"></div>
+      </section>
+
+      <!-- Nicknamen -->
+      <section id="tab-names" class="tab hidden">
+        <div class="page-head">
+          <div><h1 data-i18n="nav.names">Nicknamen</h1><p data-i18n="names.pageSub">Namen für neue Accounts</p></div>
         </div>
-        <div class="card table-card">
-          <div class="card-head padded">
-            <div><h2>APK profiles</h2>
-              <p class="card-sub">client_id, sign_secret and User-Agent must come from the same APK build. Health is updated by every
-                signup run. When a profile expires or gets banned: disable it and switch its configs to another profile.</p></div>
-          </div>
-          <table class="table" id="apk-table"></table>
+        <div id="names-body" class="cfg-page"></div>
+      </section>
+
+      <!-- Städte -->
+      <section id="tab-cities" class="tab hidden">
+        <div class="page-head">
+          <div><h1 data-i18n="nav.cities">Städte</h1><p data-i18n="cities.pageSub">Standorte für neue Accounts</p></div>
         </div>
+        <div id="cities-body" class="cfg-page"></div>
       </section>
 
       <!-- Proxies -->
@@ -314,14 +318,6 @@
       <!-- Account detail -->
       <section id="tab-account" class="tab hidden">
         <div id="account-page"></div>
-      </section>
-
-      <!-- Settings -->
-      <section id="tab-settings" class="tab hidden">
-        <div class="page-head">
-          <div><h1>Settings</h1><p>Workers and identity rules for account creation</p></div>
-        </div>
-        <div id="settings-body" class="settings-body"></div>
       </section>
 
       <!-- Accounts -->

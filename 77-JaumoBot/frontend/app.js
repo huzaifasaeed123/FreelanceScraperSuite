@@ -79,8 +79,57 @@ const I18N = {
   de: {
     "brand.sub": "Accountverwaltung & Automatisierung",
     "sec.overview": "Übersicht", "sec.automation": "Automatisierung", "sec.data": "Daten", "sec.system": "System",
-    "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs", "nav.configs": "Konfigurationen",
-    "nav.proxies": "Proxys", "nav.photos": "Fotos", "nav.settings": "Einstellungen",
+    "nav.dashboard": "Armaturenbrett", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs / Protokolle", "nav.configs": "Konfigurationen",
+    "nav.proxies": "Proxies", "nav.photos": "Fotos", "nav.settings": "Einstellungen",
+    "nav.jaumo": "Jaumo", "nav.config": "Konfiguration", "nav.names": "Nicknamen", "nav.cities": "Städte",
+    "nav.toggle": "Menü auf-/zuklappen",
+    "cfg.pageSub": "Einstellungen für neue Jaumo Accounts", "cfg.save": "Speichern", "cfg.saved": "Gespeichert",
+    "cfg.apkTitle": "Jaumo-Zugang (APK)", "cfg.apkSub": "Schlüssel der Jaumo-App, mit denen jede Anfrage signiert wird.",
+    "cfg.source": "Quelle", "cfg.srcEnv": "Umgebungsvariablen (Coolify)",
+    "cfg.srcStored": "Gespeichertes Profil — Umgebungsvariablen sind nicht gesetzt", "cfg.srcNone": "Keine Schlüssel vorhanden",
+    "cfg.apkNone": "Keine APK-Schlüssel — JAUMO_CLIENT_ID und JAUMO_SIGN_SECRET setzen.",
+    "cfg.apkDisabled": "Die APK-Schlüssel sind deaktiviert.", "cfg.apkFailing": "{n} Fehlschläge in Folge beim Jaumo-Login.",
+    "cfg.apkOk": "APK bereit", "cfg.apkReset": "Fehlerzähler zurücksetzen", "cfg.lastOk": "Letzter Erfolg", "cfg.failed": "fehlgeschlagen",
+    "cfg.apkHow": "Ändern: in Coolify die Umgebungsvariablen setzen und neu deployen —",
+    "health.ok": "OK", "health.warning": "Warnung", "health.failing": "Fehlerhaft", "health.disabled": "Deaktiviert", "health.untested": "Noch nicht getestet",
+    "cfg.creation": "Account-Erstellung", "cfg.creationSub": "Worker nehmen die Accounts in der angeforderten Reihenfolge aus der Warteschlange.",
+    "cfg.workers": "Worker (Accounts gleichzeitig)",
+    "cfg.workersSub": "1 = nacheinander. Mehr Worker arbeiten parallel, jeder mit eigenem Proxy und Gerät. Gilt sofort, auch während Accounts erstellt werden.",
+    "cfg.requireProxy": "Proxy erforderlich", "cfg.requireProxySub": "Ohne aktiven Proxy wird kein Account erstellt (nie direkt mit der Server-IP).",
+    "cfg.swiping": "Swipen", "cfg.likeRatio": "Like-Anteil (0–1)", "cfg.maxSwipes": "Max. Swipes (0 = bis gesperrt)",
+    "cfg.blockAfter": "Gesperrt nach N Fehlern in Folge", "cfg.emptyBatches": "Fertig nach N leeren Kartenstapeln", "cfg.timeout": "Anfrage-Timeout (s)",
+    "cfg.profile": "Profil", "cfg.profileSub": "Immer weiblich. Alter wird zufällig im Bereich gewählt.",
+    "cfg.ageMin": "Alter von", "cfg.ageMax": "Alter bis",
+    "cfg.uniquePhotos": "Foto nie wiederverwenden", "cfg.uniquePhotosSub": "Jedes Foto wird nur von einem Account benutzt. {a} von {n} Fotos sind noch frei.",
+    "cfg.photoPool": "Profilfotos", "cfg.photoPoolSub": "Keins ausgewählt = jedes freie Foto der Bibliothek ({n} frei). Auswählen, um nur diese Fotos zu nutzen.",
+    "cfg.noPhotos": "Noch keine Fotos hochgeladen", "cfg.messaging": "Nachrichten",
+    "cfg.msgOn": "Matches anschreiben erlaubt", "cfg.msgOnSub": "Erlaubt den Job „Matches anschreiben“ auf der Accounts-Seite. Beim Erstellen werden nie Nachrichten gesendet.",
+    "cfg.templates": "Nachrichtenvorlagen (eine pro Zeile, zufällige Auswahl)",
+    "cfg.sync": "Stats aktualisieren", "cfg.syncSub": "Likes, Besucher, Nachrichten und Matches werden nur auf Klick von Jaumo gelesen, nie im Hintergrund.",
+    "cfg.syncDelay": "Pause zwischen Accounts bei „alle aktualisieren“ (Sekunden)",
+    "cfg.syncDelaySub": "Die Accounts werden nacheinander mit dieser Pause gelesen, damit Jaumo keine Anfragespitze sieht.",
+    "cfg.advanced": "Erweitert — die Standardwerte funktionieren; nur bei Bedarf ändern",
+    "cfg.signup": "Registrierungsdaten", "cfg.signupSub": "Werte, die bei der Registrierung an Jaumo gesendet werden",
+    "cfg.devices": "Geräte", "cfg.devicesSub": "{n} Handymodelle — eins wird pro Account gewählt",
+    "cfg.delays": "Pausen", "cfg.delaysSub": "Zufällige Pausen zwischen den Schritten in Sekunden (min – max)",
+    "names.pageSub": "Namen für neue Accounts", "names.source": "Namensquelle", "names.sourceSub": "Woher die Namen neuer Accounts kommen.",
+    "names.auto": "Automatische Namen", "names.autoSub": "Eingebaute Liste mit {n} gängigen weiblichen Vornamen",
+    "names.custom": "Eigene Liste", "names.customSub": "Nur die Namen, die du unten einfügst",
+    "names.list": "Eigene Namen (einer pro Zeile)", "names.rules": "Regel", "names.unique": "Namen nie wiederverwenden",
+    "names.uniqueSub": "Ein Name, den schon ein Account hat, wird nie wieder vergeben. {n} Namen sind bereits vergeben.",
+    "names.stats": "{u} frei · {d} bereits vergeben von {n}", "names.repeat": "· Wiederverwendung erlaubt",
+    "names.dropUsed": "Vergebene Namen entfernen", "names.emptyCustom": "Noch keine Namen — einen pro Zeile oben einfügen.",
+    "names.noneUsed": "Noch keiner der automatischen Namen wurde vergeben.", "names.usedTip": "schon von einem Account benutzt", "names.freeTip": "frei",
+    "names.loadFail": "Namensnutzung konnte nicht geladen werden",
+    "cities.pageSub": "Standorte für neue Accounts", "cities.title": "Städte",
+    "cities.sub": "Für jeden Account wird zufällig eine Stadt gewählt. Mit Radius bekommt jeder Account einen eigenen Punkt im Umkreis.",
+    "cities.radius": "Standard-Radius um jede Stadt (km)", "cities.radiusSub": "0 = genau das Stadtzentrum · z. B. 15 = irgendwo im Umkreis von 15 km",
+    "cities.list": "Städte — eine pro Zeile:", "cities.or": "oder", "cities.count": "{n} Städte",
+    "cities.none": "Mindestens eine Stadt eintragen.", "cities.bad": "Zeile {i} ist ungültig: „{l}“ (Name,Breitengrad,Längengrad[,Radius_km 0–100])",
+    "devices.bad": "Gerät in Zeile {i} ist ungültig: „{l}“ (Hersteller;Modell;Marke)",
+    "msg.confirm": "Alle ausstehenden Matches dieser Accounts mit den Nachrichtenvorlagen anschreiben.",
+    "msg.off": "Das Anschreiben ist ausgeschaltet. Aktiviere „Matches anschreiben erlaubt“ unter Konfiguration → Nachrichten.",
+    "infra.apk": "Jaumo-Zugang (APK)", "infra.cities": "Städte",
     "sys.online": "System online", "sys.offline": "Verbindung wird hergestellt…", "sys.version": "Version 1.0",
     "top.online": "Online", "top.offline": "Offline", "top.admin": "Administrator", "top.logout": "Abmelden",
     "top.theme": "Hell / Dunkel", "top.lang": "English", "top.notifications": "Benachrichtigungen", "top.noNotif": "Keine neuen Benachrichtigungen",
@@ -134,7 +183,7 @@ const I18N = {
     "new.blocked": "So kann noch nicht gestartet werden:", "new.fix": "Beheben",
     "new.p.apk": "Keine aktive APK-Konfiguration für diese Konfiguration.", "new.p.photos": "Nicht genug freie Fotos.",
     "new.p.names": "Nicht genug freie Namen.", "new.p.proxy": "Kein aktiver Proxy — die Konfiguration verlangt einen.",
-    "setup.title": "Einrichtung", "setup.sub": "Das fehlt noch, bevor Accounts mit „{c}“ erstellt werden können:",
+    "setup.title": "Einrichtung", "setup.sub": "Das fehlt noch, bevor Accounts erstellt werden können:",
     "setup.apk": "APK-Profil", "setup.proxy": "Proxy", "setup.photos": "Fotos", "setup.names": "Namen",
     "setup.ok": "Bereit", "setup.proxyOff": "nicht verlangt",
     "edit.title": "Account bearbeiten", "edit.status": "Status", "edit.notes": "Notizen", "edit.save": "Speichern", "edit.saved": "Gespeichert",
@@ -147,8 +196,57 @@ const I18N = {
   en: {
     "brand.sub": "Account management & automation",
     "sec.overview": "Overview", "sec.automation": "Automation", "sec.data": "Data", "sec.system": "System",
-    "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Runs & logs", "nav.configs": "Configurations",
-    "nav.proxies": "Proxies", "nav.photos": "Photo library", "nav.settings": "Settings",
+    "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs", "nav.configs": "Configurations",
+    "nav.proxies": "Proxies", "nav.photos": "Photos", "nav.settings": "Settings",
+    "nav.jaumo": "Jaumo", "nav.config": "Configuration", "nav.names": "Nicknames", "nav.cities": "Cities",
+    "nav.toggle": "Expand / collapse menu",
+    "cfg.pageSub": "Settings for new Jaumo accounts", "cfg.save": "Save", "cfg.saved": "Saved",
+    "cfg.apkTitle": "Jaumo access (APK)", "cfg.apkSub": "Keys of the Jaumo app used to sign every request.",
+    "cfg.source": "Source", "cfg.srcEnv": "Environment variables (Coolify)",
+    "cfg.srcStored": "Stored profile — environment variables are not set", "cfg.srcNone": "No keys available",
+    "cfg.apkNone": "No APK keys — set JAUMO_CLIENT_ID and JAUMO_SIGN_SECRET.",
+    "cfg.apkDisabled": "The APK keys are disabled.", "cfg.apkFailing": "{n} failed Jaumo logins in a row.",
+    "cfg.apkOk": "APK ready", "cfg.apkReset": "Reset failure count", "cfg.lastOk": "Last success", "cfg.failed": "failed",
+    "cfg.apkHow": "To change: set the environment variables in Coolify and redeploy —",
+    "health.ok": "OK", "health.warning": "Warning", "health.failing": "Failing", "health.disabled": "Disabled", "health.untested": "Not tested yet",
+    "cfg.creation": "Account creation", "cfg.creationSub": "Workers take accounts from the queue in the order they were requested.",
+    "cfg.workers": "Workers (accounts at the same time)",
+    "cfg.workersSub": "1 = one by one. More workers run in parallel, each with its own proxy and device. Applies immediately, even while accounts are being created.",
+    "cfg.requireProxy": "Proxy required", "cfg.requireProxySub": "No account is created without an enabled proxy (never directly from the server IP).",
+    "cfg.swiping": "Swiping", "cfg.likeRatio": "Like ratio (0–1)", "cfg.maxSwipes": "Max swipes (0 = until blocked)",
+    "cfg.blockAfter": "Blocked after N failures in a row", "cfg.emptyBatches": "Finish after N empty card batches", "cfg.timeout": "Request timeout (s)",
+    "cfg.profile": "Profile", "cfg.profileSub": "Always female. The age is picked at random within the range.",
+    "cfg.ageMin": "Age from", "cfg.ageMax": "Age to",
+    "cfg.uniquePhotos": "Never reuse a photo", "cfg.uniquePhotosSub": "Each photo is used by one account only. {a} of {n} photos are still free.",
+    "cfg.photoPool": "Profile photos", "cfg.photoPoolSub": "None selected = any free photo in the library ({n} free). Select photos to use only those.",
+    "cfg.noPhotos": "No photos uploaded yet", "cfg.messaging": "Messages",
+    "cfg.msgOn": "Messaging matches allowed", "cfg.msgOnSub": "Allows the “Message matches” job on the Accounts page. Creating accounts never sends messages.",
+    "cfg.templates": "Message templates (one per line, random pick)",
+    "cfg.sync": "Stats refresh", "cfg.syncSub": "Likes, visitors, messages and matches are read from Jaumo only on click, never in the background.",
+    "cfg.syncDelay": "Pause between accounts for “refresh all” (seconds)",
+    "cfg.syncDelaySub": "Accounts are read one after another with this pause, so Jaumo sees no burst of requests.",
+    "cfg.advanced": "Advanced — the defaults work; change only if needed",
+    "cfg.signup": "Signup details", "cfg.signupSub": "Values sent to Jaumo at registration",
+    "cfg.devices": "Devices", "cfg.devicesSub": "{n} phone models — one is picked per account",
+    "cfg.delays": "Delays", "cfg.delaysSub": "Random pauses between steps in seconds (min – max)",
+    "names.pageSub": "Names for new accounts", "names.source": "Name source", "names.sourceSub": "Where the names of new accounts come from.",
+    "names.auto": "Auto names", "names.autoSub": "Built-in list of {n} common female first names",
+    "names.custom": "Custom list", "names.customSub": "Only the names you paste below",
+    "names.list": "Custom names (one per line)", "names.rules": "Rule", "names.unique": "Never reuse a name",
+    "names.uniqueSub": "A name that an account already has is never given out again. {n} names are taken so far.",
+    "names.stats": "{u} free · {d} already used of {n}", "names.repeat": "· reuse allowed",
+    "names.dropUsed": "Remove used names", "names.emptyCustom": "No names yet — paste one per line above.",
+    "names.noneUsed": "None of the auto names have been used yet.", "names.usedTip": "already used by an account", "names.freeTip": "free",
+    "names.loadFail": "Could not load name usage",
+    "cities.pageSub": "Locations for new accounts", "cities.title": "Cities",
+    "cities.sub": "A city is picked at random for each account. With a radius each account gets its own point around the city.",
+    "cities.radius": "Default radius around each city (km)", "cities.radiusSub": "0 = exact city centre · e.g. 15 = anywhere within 15 km",
+    "cities.list": "Cities — one per line:", "cities.or": "or", "cities.count": "{n} cities",
+    "cities.none": "Add at least one city.", "cities.bad": "Line {i} is invalid: “{l}” (name,latitude,longitude[,radius_km 0–100])",
+    "devices.bad": "Device line {i} is invalid: “{l}” (manufacturer;model;brand)",
+    "msg.confirm": "Message all pending matches of these accounts with the message templates.",
+    "msg.off": "Messaging is turned off. Enable “Messaging matches allowed” under Configuration → Messages.",
+    "infra.apk": "Jaumo access (APK)", "infra.cities": "Cities",
     "sys.online": "System online", "sys.offline": "Reconnecting…", "sys.version": "Version 1.0",
     "top.online": "Online", "top.offline": "Offline", "top.admin": "Administrator", "top.logout": "Sign out",
     "top.theme": "Light / dark", "top.lang": "Deutsch", "top.notifications": "Notifications", "top.noNotif": "No new notifications",
@@ -202,7 +300,7 @@ const I18N = {
     "new.blocked": "Cannot start yet:", "new.fix": "Fix",
     "new.p.apk": "No enabled APK profile for this configuration.", "new.p.photos": "Not enough free photos.",
     "new.p.names": "Not enough free names.", "new.p.proxy": "No enabled proxy — the configuration requires one.",
-    "setup.title": "Setup", "setup.sub": "Still missing before accounts can be created with “{c}”:",
+    "setup.title": "Setup", "setup.sub": "Still missing before accounts can be created:",
     "setup.apk": "APK profile", "setup.proxy": "Proxy", "setup.photos": "Photos", "setup.names": "Names",
     "setup.ok": "Ready", "setup.proxyOff": "not required",
     "edit.title": "Edit account", "edit.status": "Status", "edit.notes": "Notes", "edit.save": "Save", "edit.saved": "Saved",
@@ -317,6 +415,9 @@ const ICONS = {
   arrowDown: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
   copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
   pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+  database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+  mapPin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   shieldCheck: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
   imagePlus: '<path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/>',
@@ -411,7 +512,7 @@ async function showApp(user) {
     $("#top-username").textContent = user;
     $("#top-avatar").textContent = user.charAt(0).toUpperCase();
   }
-  await Promise.all([loadConfigs(), loadApks(), loadPhotos()]);
+  await Promise.all([loadConfig(), loadPhotos()]);
   guard(loadStats)();
   checkServerVersion();
   openEvents();
@@ -443,10 +544,11 @@ $("#logout-btn").onclick = guard(async () => {
 const TAB_LOADERS = {
   dashboard: () => loadDashboard(),
   runs: () => loadRuns(),
-  configs: () => Promise.all([loadConfigs(), loadApks(), loadPhotos()]),
+  configs: () => loadConfigPage(),
+  names: () => loadNamesPage(),
+  cities: () => loadCitiesPage(),
   proxies: () => loadProxies(),
   photos: () => loadPhotos(),
-  settings: () => loadSettings(),
   accounts: () => Promise.all([loadAccounts(), loadLocations()]),
 };
 
@@ -462,6 +564,7 @@ function switchTab(route) {
   if (location.hash !== hash) history.replaceState(null, "", hash);
   const navTab = tab === "account" ? "accounts" : tab;
   $$("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === navTab));
+  if (navTab !== "dashboard") $("#nav-jaumo").classList.remove("collapsed");   // the Jaumo group holds every other page
   $$(".tab").forEach((s) => s.classList.toggle("hidden", s.id !== "tab-" + tab));
   $("#app-view").classList.remove("nav-open");
   window.scrollTo(0, 0);
@@ -471,6 +574,18 @@ window.addEventListener("hashchange", () => {
   if (!$("#app-view").classList.contains("hidden")) switchTab(location.hash.slice(1) || "dashboard");
 });
 $$("#tabs button").forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
+
+// Jaumo menu group: the header opens the accounts; the arrow folds the sub-menu (remembered per browser).
+try { if (localStorage.getItem("navJaumo") === "0") $("#nav-jaumo").classList.add("collapsed"); } catch { /* storage blocked */ }
+const toggleJaumoNav = (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  const g = $("#nav-jaumo");
+  g.classList.toggle("collapsed");
+  try { localStorage.setItem("navJaumo", g.classList.contains("collapsed") ? "0" : "1"); } catch { /* storage blocked */ }
+};
+$("#nav-jaumo-toggle").addEventListener("click", toggleJaumoNav);
+$("#nav-jaumo-toggle").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") toggleJaumoNav(e); });
 $("#sb-toggle").onclick = () => $("#app-view").classList.toggle("nav-open");
 
 // --- Header: search, notifications, user menu ------------------------------
@@ -513,7 +628,8 @@ function renderNotifications() {
   const s = state.stats;
   if (!s) return;
   const items = [];
-  for (const w of s.apk_warnings || []) items.push({ icon: "alert", tone: "danger", text: `APK "${w.name}": ${w.problem}`, href: "#configs" });
+  const apkBad = apkProblem(state.config);
+  if (state.config && apkBad) items.push({ icon: "alert", tone: "danger", text: `APK: ${apkBad}`, href: "#configs" });
   const blocked = (s.accounts_by_status || {}).blocked || 0;
   if (blocked) items.push({ icon: "ban", tone: "danger", text: `${blocked} × ${t("state.blocked")}`, href: "#accounts" });
   if (!s.proxies_enabled) items.push({ icon: "globe", tone: "warn", text: "No proxy enabled", href: "#proxies" });
@@ -577,7 +693,7 @@ function openEvents() {
       if (state.tab === "dashboard") guard(renderSetupCheck)();
     } else if (msg.type === "apk") {
       refreshStatsSoon();
-      if (state.tab === "configs") reloadApksSoon();
+      reloadApksSoon();
     }
   };
   ws.onclose = (e) => {
@@ -638,7 +754,7 @@ document.addEventListener("visibilitychange", () => {
   guard(loadStats)();
   if (state.tab !== "account") guard(TAB_LOADERS[state.tab])();
 });
-const reloadApksSoon = throttle(() => guard(() => Promise.all([loadApks(), loadConfigs()]))(), 1500);
+const reloadApksSoon = throttle(() => guard(loadConfig)(), 1500);
 
 // ---------------------------------------------------------------------------
 // Dashboard
@@ -667,15 +783,15 @@ async function loadDashboard() {
 // First-run checklist: the same server check as "Neuer Account", shown only while something is missing.
 async function renderSetupCheck() {
   const box = $("#setup-check");
-  const c = state.configs.find((x) => String(x.id) === ($("#launch-config") || {}).value) || state.configs[0];
+  const c = state.config;
   if (!c) { box.classList.add("hidden"); return; }
-  const res = await api("/api/runs/check", { method: "POST", body: { config_id: c.id, count: 1, names: [] } });
+  const res = await api("/api/runs/check", { method: "POST", body: { count: 1, names: [] } });
   if (state.tab !== "dashboard") return;
   box.classList.toggle("hidden", res.ok);
   if (res.ok) { box.innerHTML = ""; return; }
   const byCode = Object.fromEntries(res.problems.map((p) => [p.code, p]));
   const proxyRequired = (c.settings || {}).require_proxy !== false;
-  const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "settings"]].map(([code, page]) => {
+  const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "names"]].map(([code, page]) => {
     const p = byCode[code];
     const note = p ? t("new.p." + code) : code === "proxy" && !proxyRequired ? t("setup.proxyOff") : t("setup.ok");
     return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? p.message : "")}">
@@ -684,7 +800,7 @@ async function renderSetupCheck() {
       ${p ? `<a class="btn ghost sm" href="#${page}">${esc(t("new.fix"))}</a>` : ""}</li>`;
   }).join("");
   box.innerHTML = `<div class="card-head"><div><h2>${icon("sliders")} ${esc(t("setup.title"))}</h2>
-    <p class="card-sub">${esc(t("setup.sub", { c: c.name }))}</p></div></div><ul class="setup-list">${rows}</ul>`;
+    <p class="card-sub">${esc(t("setup.sub"))}</p></div></div><ul class="setup-list">${rows}</ul>`;
 }
 
 async function loadStats() {
@@ -692,25 +808,22 @@ async function loadStats() {
   const s = state.stats;
   renderNotifications();
   $("#nav-running").textContent = s.running || "";
-  $("#nav-apk").textContent = (s.apk_warnings || []).length || "";
+  $("#nav-apk").textContent = state.config && apkProblem(state.config) ? "!" : "";
   if (state.tab !== "dashboard") return;
   renderKpis();
   renderStatusBreakdown();
   renderEngagement();
   renderInfra();
   renderLaunchInfo();
-  $("#apk-warnings").innerHTML = (s.apk_warnings || []).map((w) => `<div class="alert">
+  // Only the APK keys of the one configuration matter (old stored profiles are ignored).
+  const apkBad = apkProblem(state.config);
+  const lastErr = state.config && state.config.apk && state.config.apk.last_error;
+  $("#apk-warnings").innerHTML = apkBad ? `<div class="alert">
       <span class="alert-icon">${icon("alert")}</span>
-      <div class="alert-body"><b>APK profile "${esc(w.name)}"</b> — ${esc(w.problem)}${w.configs.length ? ` · used by ${esc(w.configs.join(", "))}` : ""}
-        ${w.last_error ? `<div class="muted mono">${esc(w.last_error)}</div>` : ""}</div>
-      <button class="btn small" data-goto-apk>Manage APK profiles</button></div>`).join("");
+      <div class="alert-body"><b>${esc(t("cfg.apkTitle"))}</b> — ${esc(apkBad)}
+        ${lastErr ? `<div class="muted mono">${esc(lastErr)}</div>` : ""}</div>
+      <a class="btn small" href="#configs">${esc(t("nav.config"))}</a></div>` : "";
 }
-$("#apk-warnings").addEventListener("click", (e) => {
-  if (e.target.closest("[data-goto-apk]")) {
-    switchTab("configs");
-    setTimeout(() => $("#apk-table").scrollIntoView({ behavior: "smooth" }), 300);
-  }
-});
 
 async function loadDaily() {
   state.daily = await api(`/api/stats/daily?days=${state.days}&tz_offset=${new Date().getTimezoneOffset()}`);
@@ -803,15 +916,13 @@ function renderEngagement() {
 function renderInfra() {
   const s = state.stats;
   const onProxy = Object.values(s.proxies_in_use || {}).reduce((a, b) => a + b, 0);
-  const apks = state.apks || [];
-  const healthy = apks.filter((a) => a.enabled && a.health !== "failing").length;
-  const failing = apks.filter((a) => a.health === "failing").length;
+  const apkBad = apkProblem(state.config);
   $("#infra").innerHTML = `<div class="stat-rows">
     ${statRow({ iconName: "bot", tone: "accent", label: "Workers (parallel accounts)", value: fmtNum(s.parallel), sub: s.parallel === 1 ? "one by one" : "parallel" })}
     ${statRow({ iconName: "image", tone: "info", label: "Unused photos", value: fmtNum((state.photos || []).filter((p) => p.status === "available").length) })}
     ${statRow({ iconName: "globe", tone: s.proxies_enabled ? "info" : "warn", label: "Proxies enabled", value: fmtNum(s.proxies_enabled), sub: `${onProxy} bots connected` })}
-    ${statRow({ iconName: "key", tone: failing ? "danger" : "ok", label: "APK profiles healthy", value: `${healthy} / ${apks.length}`, sub: failing ? `${failing} failing` : "" , ratio: apks.length ? healthy / apks.length : 0 })}
-    ${statRow({ iconName: "sliders", tone: "neutral", label: "Configurations", value: fmtNum(state.configs.length) })}
+    ${statRow({ iconName: "key", tone: apkBad ? "danger" : "ok", label: t("infra.apk"), value: apkBad ? "!" : "OK", sub: apkBad })}
+    ${statRow({ iconName: "mapPin", tone: "neutral", label: t("infra.cities"), value: fmtNum(state.config ? state.config.settings.locations.length : 0) })}
   </div>`;
 }
 
@@ -1011,20 +1122,8 @@ setInterval(() => { if (state.tab === "dashboard" && !document.hidden) renderLiv
 
 // --- Launch -------------------------------------------------------------------
 
-function fillConfigSelects() {
-  const opts = (msg) => state.configs.map((c) =>
-    `<option value="${c.id}">${esc(c.name)}${c.apk_profile_id ? "" : " (no APK profile!)"}${
-      msg && !c.settings.messaging_enabled ? " — messaging off" : ""}</option>`).join("");
-  for (const sel of [$("#launch-config"), $("#msg-config")].filter(Boolean)) {
-    const prev = sel.value;
-    sel.innerHTML = opts(sel.id === "msg-config") || `<option value="">— create a configuration first —</option>`;
-    if (prev && state.configs.some((c) => String(c.id) === prev)) sel.value = prev;
-  }
-  renderLaunchInfo();
-}
-
 function renderLaunchInfo() {
-  const c = state.configs.find((x) => String(x.id) === $("#launch-config").value);
+  const c = state.config;
   const s = state.stats;
   if (s) {
     const busy = s.running || s.queued;
@@ -1035,10 +1134,10 @@ function renderLaunchInfo() {
   }
   if (!c) { $("#launch-config-info").innerHTML = ""; return; }
   const st = c.settings;
-  const apkBad = !c.apk_profile_name || c.apk_profile_enabled === false;
-  const chip = (t, bad) => `<span class="chip${bad ? " bad" : ""}">${esc(t)}</span>`;
+  const apkBad = apkProblem(c);
+  const chip = (text, bad) => `<span class="chip${bad ? " bad" : ""}">${esc(text)}</span>`;
   $("#launch-config-info").innerHTML = [
-    chip(c.apk_profile_name ? `APK: ${c.apk_profile_name}${c.apk_profile_enabled === false ? " (disabled)" : ""}` : "No APK profile", apkBad),
+    chip(apkBad || t("cfg.apkOk"), !!apkBad),
     chip(`${Math.round(st.like_ratio * 100)}% likes`),
     chip(st.max_swipes ? `max ${st.max_swipes} swipes` : "swipe until blocked"),
     chip(st.require_proxy ? "proxy required" : "proxy optional", st.require_proxy && state.stats && !state.stats.proxies_enabled),
@@ -1049,7 +1148,6 @@ function renderLaunchInfo() {
       !(state.photos || []).some((p) => p.status === "available")),
   ].join("");
 }
-$("#launch-config").addEventListener("change", () => { renderLaunchInfo(); guard(renderSetupCheck)(); });
 
 $("#launch-form").addEventListener("click", (e) => {
   const b = e.target.closest("[data-step]");
@@ -1061,7 +1159,7 @@ $("#launch-form").addEventListener("click", (e) => {
 $("#launch-form").addEventListener("submit", guard(async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
-  const body = { config_id: +f.get("config_id"), count: +f.get("count"), names: lines(f.get("names")) };
+  const body = { count: +f.get("count"), names: lines(f.get("names")) };
   const res = await api("/api/runs", { method: "POST", body });
   toast(`Creating ${res.run_ids.length} account(s)`);
   e.target.elements.names.value = "";
@@ -1234,65 +1332,31 @@ function renderPager(sel, total, limit, page, go) {
 }
 
 // ---------------------------------------------------------------------------
-// Configurations
+// Jaumo configuration — one configuration, edited on the pages
+// Konfiguration · Nicknamen · Städte (each page saves only its own fields)
 // ---------------------------------------------------------------------------
 
-async function loadConfigs() {
-  state.configs = await api("/api/configs");
-  fillConfigSelects();
-  $("#configs-table").innerHTML = `<thead><tr>
-      <th>Name</th><th>APK profile</th><th class="num">Like ratio</th><th class="num">Max swipes</th>
-      <th class="num">Block after</th><th>Proxy</th><th class="num">Photos</th><th class="num">Locations</th><th>Names</th><th>Messaging</th>
-      <th>Updated</th><th></th></tr></thead>
-    <tbody>${state.configs.map((c) => {
-      const s = c.settings;
-      return `<tr>
-        <td><b>${esc(c.name)}</b></td>
-        <td>${!c.apk_profile_name ? `<span class="badge bad">missing</span>`
-          : esc(c.apk_profile_name) + (c.apk_profile_enabled === false ? ` <span class="badge bad">disabled</span>`
-          : c.apk_profile_fail_streak >= 3 ? ` <span class="badge warn">failing</span>` : "")}</td>
-        <td class="num">${Math.round(s.like_ratio * 100)}%</td>
-        <td class="num">${s.max_swipes || "∞"}</td>
-        <td class="num">${s.block_threshold} fails</td>
-        <td>${s.require_proxy ? "required" : "optional"}</td>
-        <td class="num">${s.photo_pool.length || "all"}</td>
-        <td class="num">${s.locations.length}</td>
-        <td>${esc(s.name_source === "auto" ? "Auto" : "Custom")} · <span class="${c.names_unused ? "" : "sr-danger"}">${fmtNum(c.names_unused)} unused</span></td>
-        <td>${s.messaging_enabled ? `<span class="badge ok">on</span>` : `<span class="badge">off</span>`}</td>
-        <td>${fmtDate(c.updated_at)}</td>
-        <td class="actions">
-          <button class="btn small primary" data-launch="${c.id}">${icon("play")}Start</button>
-          ${iconBtn("pencil", `data-edit="${c.id}"`, "Edit configuration")}
-          ${iconBtn("copy", `data-dup="${c.id}"`, "Duplicate configuration")}
-          ${iconBtn("trash", `data-del="${c.id}"`, "Delete configuration", "danger")}
-        </td></tr>`;
-    }).join("") || `<tr><td colspan="12" class="muted">No configurations</td></tr>`}</tbody>`;
+async function loadConfig() {
+  state.config = await api("/api/config");
+  renderLaunchInfo();
+  return state.config;
 }
 
-$("#configs-table").addEventListener("click", guard(async (e) => {
-  const b = e.target.closest("button");
-  if (!b) return;
-  if (b.dataset.launch) {
-    switchTab("dashboard");
-    $("#launch-config").value = b.dataset.launch;
-    $("#launch-form").elements.count.focus();
-  } else if (b.dataset.edit) {
-    openConfigEditor(state.configs.find((c) => c.id === +b.dataset.edit));
-  } else if (b.dataset.dup) {
-    await api(`/api/configs/${b.dataset.dup}/duplicate`, { method: "POST" });
-    await loadConfigs();
-  } else if (b.dataset.del) {
-    const c = state.configs.find((x) => x.id === +b.dataset.del);
-    if (!confirm(`Delete configuration "${c.name}"?`)) return;
-    await api(`/api/configs/${c.id}`, { method: "DELETE" });
-    await loadConfigs();
-  }
-}));
+// What is wrong with the APK keys ("" when they are fine).
+function apkProblem(c) {
+  const a = c && c.apk;
+  if (!a) return t("cfg.apkNone");
+  if (!a.enabled) return t("cfg.apkDisabled");
+  if (a.health === "failing") return t("cfg.apkFailing", { n: a.fail_streak });
+  return "";
+}
 
-$("#new-config-btn").onclick = guard(async () => {
-  const meta = await api("/api/meta");
-  openConfigEditor({ id: null, name: "", apk_profile_id: state.apks[0]?.id ?? null, settings: meta.default_settings });
-});
+// Save part of the settings; the server merges it into the configuration.
+async function saveConfig(settings) {
+  state.config = await api("/api/config", { method: "PUT", body: { settings } });
+  renderLaunchInfo();
+  return state.config;
+}
 
 // Values the decoded APK knows for both relationship fields (RelationshipItem.isFlirt / isFriendship).
 const RELATIONSHIP_LABELS = { FLIRT: "Flirt / Dating (FLIRT)", FRIENDSHIP: "Freundschaft / Friendship (FRIENDSHIP)" };
@@ -1328,90 +1392,132 @@ const DELAY_LABELS = {
   between_swipes: "Between swipes", between_batches: "Between card batches", before_message: "Before each message",
 };
 
-async function openConfigEditor(c) {
-  const s = c.settings;
-  state.meta = await api("/api/meta");
-  if (!state.settings) state.settings = await api("/api/settings");
-  await loadPhotos();
-  const apkOpts = `<option value="">— none —</option>` + state.apks.map((a) =>
-    `<option value="${a.id}" ${a.id === c.apk_profile_id ? "selected" : ""}>${esc(a.name)}</option>`).join("");
+const HEALTH_BADGE = { ok: "ok", warning: "warn", failing: "bad", disabled: "bad", untested: "" };
+
+function parseLocations(text) {
+  const out = lines(text).map((l, i) => {
+    const [label, lat, lon, radius] = l.split(",").map((x) => x.trim());
+    if (!label || !lat || !lon || isNaN(+lat) || isNaN(+lon) || Math.abs(+lat) > 90 || Math.abs(+lon) > 180
+        || (radius !== undefined && radius !== "" && (isNaN(+radius) || +radius < 0 || +radius > 100))) {
+      throw new Error(t("cities.bad", { i: i + 1, l }));
+    }
+    return { label, lat, lon, radius_km: radius === undefined || radius === "" ? null : +radius };
+  });
+  if (!out.length) throw new Error(t("cities.none"));
+  return out;
+}
+
+function parseDevices(text) {
+  return lines(text).map((l, i) => {
+    const [manufacturer, model, brand] = l.split(";").map((x) => x.trim());
+    if (!manufacturer || !model || !brand) throw new Error(t("devices.bad", { i: i + 1, l }));
+    return { manufacturer, model, brand };
+  });
+}
+
+function cfgCard(iconName, titleKey, subKey, body, extra = "") {
+  return `<div class="card cfg-card"><div class="card-head"><div><h2>${icon(iconName)} ${esc(t(titleKey))}</h2>
+      ${subKey ? `<p class="card-sub">${esc(t(subKey))}</p>` : ""}</div>${extra}</div>${body}</div>`;
+}
+
+function advSection(key, title, sub, body) {
+  return `<details class="form-section adv" data-adv="${key}"><summary><span><b>${esc(title)}</b><small>${esc(sub)}</small></span></summary>
+    ${body}</details>`;
+}
+
+function saveBar(id) {
+  return `<div class="save-bar"><p class="error" id="${id}-error"></p>
+    <button type="submit" class="btn primary">${icon("check")}${esc(t("cfg.save"))}</button></div>`;
+}
+
+// Submit handler shared by the three pages: shows the error in the save bar, toasts on success.
+function onSave(form, id, fn) {
+  form.addEventListener("invalid", (e) => { const d = e.target.closest("details"); if (d) d.open = true; }, true);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $(`#${id}-error`).textContent = "";
+    try {
+      await fn(form.elements);
+      toast(t("cfg.saved"));
+      guard(TAB_LOADERS[state.tab])();
+    } catch (err) {
+      $(`#${id}-error`).textContent = err.message;
+    }
+  });
+}
+
+function renderApkCard(c) {
+  const a = c.apk;
+  const problem = apkProblem(c);
+  const src = { env: t("cfg.srcEnv"), stored: t("cfg.srcStored"), none: t("cfg.srcNone") }[c.apk_source];
+  const health = a ? `<span class="badge ${HEALTH_BADGE[a.health]}">${esc(t("health." + a.health))}</span>` : "";
+  return cfgCard("key", "cfg.apkTitle", "cfg.apkSub", `
+    ${problem ? `<div class="alert"><span class="alert-icon">${icon("alert")}</span>
+        <div class="alert-body">${esc(problem)}${a && a.last_error ? `<div class="muted mono">${esc(a.last_error)}</div>` : ""}</div>
+        ${a && a.fail_streak ? `<button class="btn small" type="button" id="apk-reset">${esc(t("cfg.apkReset"))}</button>` : ""}</div>` : ""}
+    <dl class="kv">
+      <dt>${esc(t("cfg.source"))}</dt><dd class="${c.apk_source === "env" ? "" : "sr-warn"}">${esc(src)}</dd>
+      ${a ? `<dt>Client ID</dt><dd class="mono">${esc(a.client_id)}</dd>
+        <dt>Sign secret</dt><dd class="mono">${esc(a.sign_secret_hint || "—")}</dd>
+        <dt>User-Agent</dt><dd class="mono">${esc(a.user_agent)}</dd>
+        <dt>${esc(t("cfg.lastOk"))}</dt><dd>${fmtDate(a.last_ok_at)} · ${fmtNum(a.ok_count)} OK / ${fmtNum(a.fail_count)} ${esc(t("cfg.failed"))}</dd>` : ""}
+    </dl>
+    <p class="field-hint">${esc(t("cfg.apkHow"))} <code>JAUMO_CLIENT_ID</code> · <code>JAUMO_SIGN_SECRET</code> · <code>JAUMO_USER_AGENT</code></p>`, health);
+}
+
+// --- Konfiguration -------------------------------------------------------------
+
+async function loadConfigPage() {
+  const [c, settings, meta] = await Promise.all([loadConfig(), api("/api/settings"), api("/api/meta"), loadPhotos()]);
+  if (state.tab !== "configs") return;
+  state.settings = settings;
+  state.meta = meta;
+  const s = c.settings, b = settings.bot;
   const photoSet = new Set(s.photo_pool);
   const photos = state.photos.map((p) => `<label class="pp-${p.status}" title="${esc(p.name)} — ${p.status}">
       <input type="checkbox" name="photo_pool" value="${esc(p.name)}" ${photoSet.has(p.name) ? "checked" : ""}
         ${p.status !== "available" && !photoSet.has(p.name) ? "disabled" : ""}>
       <img src="/api/photos/${encodeURIComponent(p.name)}/thumb" loading="lazy" alt="">
       <span>${p.status === "available" ? esc(p.name) : esc(p.status)}</span></label>`).join("");
-  const availablePhotos = state.photos.filter((p) => p.status === "available").length;
+  const free = state.photos.filter((p) => p.status === "available").length;
   const delays = Object.entries(DELAY_LABELS).map(([k, label]) => `<label>${esc(label)}
-      <span class="pair"><input type="number" step="any" min="0" name="d_${k}_0" value="${s.delays[k][0]}"> –
-      <input type="number" step="any" min="0" name="d_${k}_1" value="${s.delays[k][1]}"> s</span></label>`).join("");
+      <span class="pair"><input type="number" step="any" min="0" name="d_${k}_0" value="${s.delays[k][0]}" required> –
+      <input type="number" step="any" min="0" name="d_${k}_1" value="${s.delays[k][1]}" required> s</span></label>`).join("");
+  const num = (name, key, attrs, value) => `<label>${esc(t(key))}<input type="number" name="${name}" ${attrs} value="${value}" required></label>`;
 
-  openModal(c.id ? `Edit configuration — ${c.name}` : "New configuration", `
-  <form id="config-form">
-    <div class="form-grid">
-      <label class="span-2">Name<input name="name" value="${esc(c.name)}" required></label>
-      <label>APK profile<select name="apk_profile_id">${apkOpts}</select></label>
-      <label class="inline" style="align-self:end"><input type="checkbox" name="require_proxy" ${s.require_proxy ? "checked" : ""}> Require proxy</label>
-    </div>
-
-    <div class="form-section"><h3>Swiping</h3>
-      <div class="form-grid">
-        <label>Like ratio (0–1)<input type="number" name="like_ratio" step="any" min="0" max="1" value="${s.like_ratio}"></label>
-        <label>Max swipes (0 = until blocked/stopped)<input type="number" name="max_swipes" min="0" value="${s.max_swipes}"></label>
-        <label>Blocked after N consecutive failures<input type="number" name="block_threshold" min="1" value="${s.block_threshold}"></label>
-        <label>Finish after N empty card batches<input type="number" name="max_empty_batches" min="1" value="${s.max_empty_batches}"></label>
-        <label>Request timeout (s)<input type="number" name="request_timeout" min="5" value="${s.request_timeout}"></label>
-      </div>
-    </div>
-
-    <div class="form-section"><h3>Profile (always female)</h3>
-      <div class="form-grid">
-        <label>Age min<input type="number" name="age_min" min="18" max="99" value="${s.age_min}"></label>
-        <label>Age max<input type="number" name="age_max" min="18" max="99" value="${s.age_max}"></label>
-      </div>
-      <h3>Names</h3>
-      <div class="choice-cards">
-        <label class="choice"><input type="radio" name="name_source" value="auto" ${s.name_source === "auto" ? "checked" : ""}>
-          <div><b>Auto names</b><span>Built-in list of ${state.meta.auto_names.length} common female first names</span></div></label>
-        <label class="choice"><input type="radio" name="name_source" value="custom" ${s.name_source === "custom" ? "checked" : ""}>
-          <div><b>Custom list</b><span>Only the names you paste below</span></div></label>
-      </div>
-      <p class="field-hint rule-hint">${icon("shieldCheck")}Whether names and photos may be reused is one global rule for all configurations —
-        see <a href="#settings" data-close-modal>Settings</a>.</p>
-      <label id="custom-names-box" class="${s.name_source === "custom" ? "" : "hidden"}">Custom names (one per line)
-        <textarea name="name_pool" rows="6">${esc(s.name_pool.join("\n"))}</textarea></label>
-      <div class="name-usage" id="name-usage"><span class="muted">Checking which names are used…</span></div>
-      <h3 style="margin-top:14px">Profile photo</h3>
-      <p class="field-hint">None checked = any unused photo from the whole library (${fmtNum(availablePhotos)} available).
-        Check photos to limit this configuration to them. Used photos are greyed out. <a href="#photos" data-close-modal>Manage photo library</a></p>
-      <div class="photo-pick">${photos || `<span class="muted">No photos uploaded yet</span>`}</div>
-    </div>
-
-    <div class="form-section"><h3>Locations</h3>
-      <div class="form-grid one-col">
-        <label class="span-2"><span>Locations — <code>label,lat,lon</code> or <code>label,lat,lon,radius_km</code> per line</span>
-          <span class="field-hint">One city is picked at random for each account. With a radius, each account gets its own random
-            point inside that circle around the city centre (like real users spread over a city). Jaumo turns the point into the
-            real city at run time.</span>
-          <span class="radius-row">Default radius around each city
-            <input type="number" name="location_radius_km" min="0" max="100" step="any" value="${s.location_radius_km ?? 0}"> km
-            <span class="field-hint">0 = exact city centre · e.g. 15 = anywhere within 15 km · a 4th value on a line overrides it for that city</span></span>
-          <textarea name="locations" rows="8">${esc(s.locations.map((l) => `${l.label},${l.lat},${l.lon}${l.radius_km != null ? `,${l.radius_km}` : ""}`).join("\n"))}</textarea></label>
-      </div>
-    </div>
-
-    <div class="form-section"><h3>Messaging</h3>
-      <label class="toggle-row"><input type="checkbox" class="switch" name="messaging_enabled" ${s.messaging_enabled ? "checked" : ""}>
-        <div><b>Messaging enabled</b><span>Allow the messaging job (Accounts page) to message matches with this configuration. Signup bots never send messages.</span></div></label>
-      <label>Message templates (one per line, random pick)
-        <textarea name="message_templates" rows="5">${esc(s.message_templates.join("\n"))}</textarea></label>
-    </div>
-
-    <div class="adv-head">Advanced — the defaults work; change only if needed</div>
-    <details class="form-section adv" data-adv="signup"><summary><span><b>Signup details</b><small>Values sent to Jaumo at registration (relationship, looking for, brands)</small></span></summary>
-      <p class="field-hint">Exactly the fields sent to Jaumo when an account is registered. The defaults are the values used
-        so far — change them only if the APK expects other values.</p>
-      <div class="form-grid" style="margin-top:10px">
+  $("#config-body").innerHTML = renderApkCard(c) + `<form id="cfg-form">
+    ${cfgCard("cpu", "cfg.creation", "cfg.creationSub", `
+      <div class="setting-row"><div><b>${esc(t("cfg.workers"))}</b><span>${esc(t("cfg.workersSub"))}</span></div>
+        <div class="stepper sm" id="cfg-workers"><button type="button" data-step="-1" aria-label="−">−</button>
+          <input type="number" name="parallel_accounts" min="1" max="20" value="${b.parallel_accounts}" required>
+          <button type="button" data-step="1" aria-label="+">+</button></div></div>
+      <label class="setting-row"><div><b>${esc(t("cfg.requireProxy"))}</b><span>${esc(t("cfg.requireProxySub"))}</span></div>
+        <input type="checkbox" class="switch" name="require_proxy" ${s.require_proxy ? "checked" : ""}></label>`)}
+    ${cfgCard("heart", "cfg.swiping", "", `<div class="form-grid">
+      ${num("like_ratio", "cfg.likeRatio", 'step="any" min="0" max="1"', s.like_ratio)}
+      ${num("max_swipes", "cfg.maxSwipes", 'min="0"', s.max_swipes)}
+      ${num("block_threshold", "cfg.blockAfter", 'min="1"', s.block_threshold)}
+      ${num("max_empty_batches", "cfg.emptyBatches", 'min="1"', s.max_empty_batches)}
+      ${num("request_timeout", "cfg.timeout", 'min="5" max="300"', s.request_timeout)}</div>`)}
+    ${cfgCard("user", "cfg.profile", "cfg.profileSub", `<div class="form-grid">
+      ${num("age_min", "cfg.ageMin", 'min="18" max="99"', s.age_min)}
+      ${num("age_max", "cfg.ageMax", 'min="18" max="99"', s.age_max)}</div>
+      <label class="setting-row"><div><b>${esc(t("cfg.uniquePhotos"))}</b>
+          <span>${esc(t("cfg.uniquePhotosSub", { a: fmtNum(settings.counts.photos_available), n: fmtNum(settings.counts.photos_total) }))}</span></div>
+        <input type="checkbox" class="switch" name="unique_photos" ${settings.identity.unique_photos ? "checked" : ""}></label>
+      <h3 class="cfg-h3">${esc(t("cfg.photoPool"))}</h3>
+      <p class="field-hint">${esc(t("cfg.photoPoolSub", { n: fmtNum(free) }))} <a href="#photos">${esc(t("nav.photos"))}</a></p>
+      <div class="photo-pick">${photos || `<span class="muted">${esc(t("cfg.noPhotos"))}</span>`}</div>`)}
+    ${cfgCard("send", "cfg.messaging", "", `
+      <label class="setting-row"><div><b>${esc(t("cfg.msgOn"))}</b><span>${esc(t("cfg.msgOnSub"))}</span></div>
+        <input type="checkbox" class="switch" name="messaging_enabled" ${s.messaging_enabled ? "checked" : ""}></label>
+      <label>${esc(t("cfg.templates"))}<textarea name="message_templates" rows="5">${esc(s.message_templates.join("\n"))}</textarea></label>`)}
+    ${cfgCard("refresh", "cfg.sync", "cfg.syncSub", `
+      <div class="setting-row"><div><b>${esc(t("cfg.syncDelay"))}</b><span>${esc(t("cfg.syncDelaySub"))}</span></div>
+        <input type="number" name="sync_delay_seconds" min="2" max="600" step="1" value="${b.sync_delay_seconds}" required style="width:110px"></div>`)}
+    <div class="adv-head">${esc(t("cfg.advanced"))}</div>
+    ${advSection("signup", t("cfg.signup"), t("cfg.signupSub"), `
+      <div class="form-grid" style="margin-top:4px">
         <label>Gender<input value="Female (2)" disabled></label>
         <label>Looking for<select name="looking_for_gender">
           <option value="1" ${s.looking_for_gender === 1 ? "selected" : ""}>Men (1)</option>
@@ -1423,226 +1529,156 @@ async function openConfigEditor(c) {
       <label class="toggle-row"><input type="checkbox" class="switch" name="allow_in_all_brands" ${s.allow_in_all_brands ? "checked" : ""}>
         <div><b>Allow in all brands</b><span>Sent as allow_in_all_brands=1 (profile visible across Jaumo's partner apps).</span></div></label>
       <div class="sent-list">
-        <span>Also sent:</span><code>name</code> from Names · <code>birthday</code> from the age range · <code>photo_url</code> (fixed value from the original script) ·
+        <span>Also sent:</span><code>name</code> from Nicknamen · <code>birthday</code> from the age range · <code>photo_url</code> (fixed value from the original script) ·
         <code>location_permission</code> and <code>notifications_services</code> empty (as the app does).
-        After signup the location is set and the profile photo uploaded. Nothing else (bio, height, …) is set.
-      </div>
-    </details>
-    <details class="form-section adv" data-adv="devices"><summary><span><b>Devices</b><small>${s.devices.length} phone models — one is picked per account</small></span></summary>
+        After signup the location (Städte) is set and the profile photo uploaded. Nothing else (bio, height, …) is set.
+      </div>`)}
+    ${advSection("devices", t("cfg.devices"), t("cfg.devicesSub", { n: s.devices.length }), `
       <label><span>Devices — <code>manufacturer;model;brand</code> per line</span>
-        <textarea name="devices" rows="8">${esc(s.devices.map((d) => `${d.manufacturer};${d.model};${d.brand}`).join("\n"))}</textarea></label>
-    </details>
-    <details class="form-section adv" data-adv="delays"><summary><span><b>Delays</b><small>Random pauses between steps, in seconds (min – max)</small></span></summary>
-      <div class="delay-grid">${delays}</div>
-    </details>
+        <textarea name="devices" rows="8">${esc(s.devices.map((d) => `${d.manufacturer};${d.model};${d.brand}`).join("\n"))}</textarea></label>`)}
+    ${advSection("delays", t("cfg.delays"), t("cfg.delaysSub"), `<div class="delay-grid">${delays}</div>`)}
+    ${saveBar("cfg")}
+  </form>`;
 
-    <p class="error" id="config-error"></p>
-    <div class="modal-foot">
-      <button type="button" class="btn ghost" id="config-cancel">Cancel</button>
-      <button type="submit" class="btn primary">Save</button>
-    </div>
-  </form>`);
+  const reset = $("#apk-reset");
+  if (reset) reset.onclick = guard(async () => {
+    await api(`/api/apk-profiles/${c.apk.id}/reset-health`, { method: "POST" });
+    await loadConfigPage();
+  });
+  const form = $("#cfg-form");
+  $("#cfg-workers").onclick = (e) => {
+    const step = e.target.closest("[data-step]");
+    if (!step) return;
+    const inp = form.elements.parallel_accounts;
+    inp.value = Math.min(20, Math.max(1, (+inp.value || 1) + +step.dataset.step));
+  };
+  onSave(form, "cfg", async (f) => {
+    const devices = parseDevices(f.devices.value);
+    const delaysOut = {};
+    for (const k of Object.keys(DELAY_LABELS)) delaysOut[k] = [+f[`d_${k}_0`].value, +f[`d_${k}_1`].value];
+    await saveConfig({
+      require_proxy: f.require_proxy.checked,
+      like_ratio: +f.like_ratio.value,
+      max_swipes: +f.max_swipes.value,
+      block_threshold: +f.block_threshold.value,
+      max_empty_batches: +f.max_empty_batches.value,
+      request_timeout: +f.request_timeout.value,
+      age_min: +f.age_min.value,
+      age_max: +f.age_max.value,
+      photo_pool: new FormData(form).getAll("photo_pool"),
+      messaging_enabled: f.messaging_enabled.checked,
+      message_templates: lines(f.message_templates.value),
+      looking_for_gender: +f.looking_for_gender.value,
+      relationship_search: f.relationship_search.value,
+      dating_relationship_search: f.dating_relationship_search.value,
+      allow_in_all_brands: f.allow_in_all_brands.checked,
+      devices,
+      delays: delaysOut,
+    });
+    await api("/api/settings", { method: "PUT", body: {
+      bot: { parallel_accounts: Math.min(20, Math.max(1, +f.parallel_accounts.value || 1)),
+             sync_delay_seconds: Math.min(600, Math.max(2, +f.sync_delay_seconds.value || 10)) },
+      identity: { unique_names: settings.identity.unique_names, unique_photos: f.unique_photos.checked },
+    } });
+  });
+}
 
-  $("#config-cancel").onclick = closeModal;
-  const form = $("#config-form");
-  form.addEventListener("invalid", (e) => { const d = e.target.closest("details"); if (d) d.open = true; }, true);
+// --- Nicknamen -----------------------------------------------------------------
+
+async function loadNamesPage() {
+  const [c, settings, meta] = await Promise.all([loadConfig(), api("/api/settings"), api("/api/meta")]);
+  if (state.tab !== "names") return;
+  state.settings = settings;
+  state.meta = meta;
+  const s = c.settings;
+  $("#names-body").innerHTML = `<form id="names-form">
+    ${cfgCard("user", "names.source", "names.sourceSub", `
+      <div class="choice-cards">
+        <label class="choice"><input type="radio" name="name_source" value="auto" ${s.name_source === "auto" ? "checked" : ""}>
+          <div><b>${esc(t("names.auto"))}</b><span>${esc(t("names.autoSub", { n: meta.auto_names.length }))}</span></div></label>
+        <label class="choice"><input type="radio" name="name_source" value="custom" ${s.name_source === "custom" ? "checked" : ""}>
+          <div><b>${esc(t("names.custom"))}</b><span>${esc(t("names.customSub"))}</span></div></label>
+      </div>
+      <label id="custom-names-box" class="${s.name_source === "custom" ? "" : "hidden"}">${esc(t("names.list"))}
+        <textarea name="name_pool" rows="10">${esc(s.name_pool.join("\n"))}</textarea></label>
+      <div class="name-usage" id="name-usage"><span class="muted">…</span></div>`)}
+    ${cfgCard("shieldCheck", "names.rules", "", `
+      <label class="setting-row"><div><b>${esc(t("names.unique"))}</b><span>${esc(t("names.uniqueSub", { n: fmtNum(settings.counts.names_used) }))}</span></div>
+        <input type="checkbox" class="switch" name="unique_names" ${settings.identity.unique_names ? "checked" : ""}></label>`)}
+    ${saveBar("names")}
+  </form>`;
+
+  const form = $("#names-form");
   let usage = {};
-  const renderNameUsage = () => {
+  const render = () => {
     const custom = form.elements.name_source.value === "custom";
     $("#custom-names-box").classList.toggle("hidden", !custom);
     const seen = new Set();
-    const pool = (custom ? lines(form.elements.name_pool.value) : state.meta.auto_names)
+    const pool = (custom ? lines(form.elements.name_pool.value) : meta.auto_names)
       .filter((n) => !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
     const isUsed = (n) => (usage[n.trim().toLocaleLowerCase()] || 0) > 0;
     const used = pool.filter(isUsed);
-    const unique = state.settings ? state.settings.identity.unique_names : true;
     const shown = custom ? pool : used;
     $("#name-usage").innerHTML = `<div class="name-usage-head">
-        <span><b>${fmtNum(pool.length - used.length)}</b> unused · <b>${fmtNum(used.length)}</b> already used of ${fmtNum(pool.length)}
-          ${unique ? "" : `<span class="muted">· unique off, names may repeat</span>`}</span>
-        ${custom && used.length ? `<button type="button" class="btn small" id="drop-used">Remove used names</button>` : ""}
+        <span>${esc(t("names.stats", { u: fmtNum(pool.length - used.length), d: fmtNum(used.length), n: fmtNum(pool.length) }))}
+          ${form.elements.unique_names.checked ? "" : `<span class="muted">${esc(t("names.repeat"))}</span>`}</span>
+        ${custom && used.length ? `<button type="button" class="btn small" id="drop-used">${esc(t("names.dropUsed"))}</button>` : ""}
       </div>
       ${shown.length ? `<div class="name-chips">${shown.map((n) =>
-        `<span class="name-chip${isUsed(n) ? " used" : ""}" title="${isUsed(n) ? "already used by an account" : "available"}">${esc(n)}</span>`).join("")}</div>`
-        : `<span class="muted">${custom ? "No names yet — paste one per line above." : "None of the auto names have been used yet."}</span>`}`;
+        `<span class="name-chip${isUsed(n) ? " used" : ""}" title="${esc(t(isUsed(n) ? "names.usedTip" : "names.freeTip"))}">${esc(n)}</span>`).join("")}</div>`
+        : `<span class="muted">${esc(t(custom ? "names.emptyCustom" : "names.noneUsed"))}</span>`}`;
     const drop = $("#drop-used");
     if (drop) drop.onclick = () => {
       form.elements.name_pool.value = lines(form.elements.name_pool.value).filter((n) => !isUsed(n)).join("\n");
-      renderNameUsage();
+      render();
     };
   };
-  form.addEventListener("change", (e) => { if (["name_source", "unique_names"].includes(e.target.name)) renderNameUsage(); });
-  form.elements.name_pool.addEventListener("input", debounce(renderNameUsage, 250));
-  api("/api/names/usage").then((u) => { usage = u; if (document.body.contains(form)) renderNameUsage(); })
-    .catch(() => { $("#name-usage").textContent = "Could not load name usage"; });
+  form.addEventListener("change", (e) => { if (["name_source", "unique_names"].includes(e.target.name)) render(); });
+  form.elements.name_pool.addEventListener("input", debounce(render, 250));
+  api("/api/names/usage").then((u) => { usage = u; if (document.body.contains(form)) render(); })
+    .catch(() => { $("#name-usage").textContent = t("names.loadFail"); });
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const f = e.target.elements;
-    const fd = new FormData(e.target);
-    $("#config-error").textContent = "";
-    try {
-      const locations = lines(f.locations.value).map((l, i) => {
-        const [label, lat, lon, radius] = l.split(",").map((x) => x.trim());
-        if (!label || !lat || !lon || isNaN(+lat) || isNaN(+lon) || Math.abs(+lat) > 90 || Math.abs(+lon) > 180
-            || (radius !== undefined && radius !== "" && (isNaN(+radius) || +radius < 0 || +radius > 100))) {
-          throw new Error(`Location line ${i + 1} is invalid: "${l}" (label,lat,lon[,radius_km 0–100])`);
-        }
-        return { label, lat, lon, radius_km: radius === undefined || radius === "" ? null : +radius };
-      });
-      const devices = lines(f.devices.value).map((l, i) => {
-        const [manufacturer, model, brand] = l.split(";").map((x) => x.trim());
-        if (!manufacturer || !model || !brand) throw new Error(`Device line ${i + 1} is invalid: "${l}"`);
-        return { manufacturer, model, brand };
-      });
-      const delaysOut = {};
-      for (const k of Object.keys(DELAY_LABELS)) delaysOut[k] = [+f[`d_${k}_0`].value, +f[`d_${k}_1`].value];
-      const body = {
-        name: f.name.value.trim(),
-        apk_profile_id: f.apk_profile_id.value ? +f.apk_profile_id.value : null,
-        settings: {
-          require_proxy: f.require_proxy.checked,
-          like_ratio: +f.like_ratio.value,
-          location_radius_km: +f.location_radius_km.value || 0,
-          max_swipes: +f.max_swipes.value,
-          block_threshold: +f.block_threshold.value,
-          max_empty_batches: +f.max_empty_batches.value,
-          request_timeout: +f.request_timeout.value,
-          age_min: +f.age_min.value,
-          age_max: +f.age_max.value,
-          name_source: f.name_source.value,
-          looking_for_gender: +f.looking_for_gender.value,
-          relationship_search: f.relationship_search.value.trim(),
-          dating_relationship_search: f.dating_relationship_search.value.trim(),
-          allow_in_all_brands: f.allow_in_all_brands.checked,
-          messaging_enabled: f.messaging_enabled.checked,
-          name_pool: lines(f.name_pool.value),
-          photo_pool: fd.getAll("photo_pool"),
-          locations, devices,
-          message_templates: lines(f.message_templates.value),
-          delays: delaysOut,
-        },
-      };
-      await api(c.id ? `/api/configs/${c.id}` : "/api/configs", { method: c.id ? "PUT" : "POST", body });
-      closeModal();
-      toast("Configuration saved");
-      await loadConfigs();
-    } catch (err) {
-      $("#config-error").textContent = err.message;
-    }
+  onSave(form, "names", async (f) => {
+    await saveConfig({ name_source: f.name_source.value, name_pool: lines(f.name_pool.value) });
+    await api("/api/settings", { method: "PUT", body: {
+      identity: { unique_names: f.unique_names.checked, unique_photos: settings.identity.unique_photos } } });
   });
 }
 
-// --- APK profiles ----------------------------------------------------------
+// --- Städte --------------------------------------------------------------------
 
-const HEALTH_BADGE = { ok: "ok", warning: "warn", failing: "bad", disabled: "bad", untested: "" };
-
-async function loadApks() {
-  state.apks = await api("/api/apk-profiles");
-  $("#apk-table").innerHTML = `<thead><tr><th>Name</th><th>Health</th><th>Enabled</th><th>Used by</th>
-      <th>Last OK</th><th>Last failure</th><th class="num">OK / fail</th><th>Client ID</th><th>User-Agent</th><th></th></tr></thead>
-    <tbody>${state.apks.map((a) => `<tr>
-      <td><b>${esc(a.name)}</b>${a.notes ? `<div class="muted wrapcell" title="${esc(a.notes)}">${esc(a.notes)}</div>` : ""}</td>
-      <td><span class="badge ${HEALTH_BADGE[a.health]}">${esc(a.health)}</span>${a.fail_streak ? ` <span class="muted">streak ${a.fail_streak}</span>` : ""}</td>
-      <td><input type="checkbox" data-toggle="${a.id}" ${a.enabled ? "checked" : ""}></td>
-      <td>${a.used_by.length ? esc(a.used_by.join(", ")) : `<span class="muted">—</span>`}</td>
-      <td>${fmtDate(a.last_ok_at)}</td>
-      <td title="${esc(a.last_error)}">${fmtDate(a.last_fail_at)}${a.last_error ? `<div class="muted mono wrapcell">${esc(a.last_error)}</div>` : ""}</td>
-      <td class="num">${a.ok_count} / ${a.fail_count}</td>
-      <td class="mono wrapcell" title="${esc(a.client_id)}">${esc(a.client_id)}</td>
-      <td class="mono wrapcell" title="${esc(a.user_agent)}">${esc(a.user_agent)}</td>
-      <td class="actions">${iconBtn("pencil", `data-edit="${a.id}"`, "Edit APK profile")}
-        ${a.used_by.length ? `<button class="btn small" data-move="${a.id}">Switch configs…</button>` : ""}
-        ${a.fail_streak ? iconBtn("refresh", `data-reset="${a.id}"`, "Clear failure streak") : ""}
-        ${iconBtn("trash", `data-del="${a.id}"`, "Delete APK profile", "danger")}</td></tr>`).join("")
-      || `<tr><td colspan="10" class="muted">No APK profiles — add one, bots cannot run without it</td></tr>`}</tbody>`;
-}
-
-$("#apk-table").addEventListener("change", guard(async (e) => {
-  const t = e.target;
-  if (!t.dataset.toggle) return;
-  const a = state.apks.find((x) => x.id === +t.dataset.toggle);
-  await api(`/api/apk-profiles/${a.id}`, { method: "PATCH", body: { enabled: t.checked } });
-  toast(`APK profile "${a.name}" ${t.checked ? "enabled" : "disabled"}`);
-  await Promise.all([loadApks(), loadConfigs()]);
-  if (!t.checked && a.used_by.length) openMoveConfigs(state.apks.find((x) => x.id === a.id));
-}));
-
-$("#apk-table").addEventListener("click", guard(async (e) => {
-  const b = e.target.closest("button");
-  if (!b) return;
-  const id = +(b.dataset.edit || b.dataset.del || b.dataset.move || b.dataset.reset);
-  const a = state.apks.find((x) => x.id === id);
-  if (b.dataset.edit) return openApkEditor(a);
-  if (b.dataset.move) return openMoveConfigs(a);
-  if (b.dataset.reset) {
-    await api(`/api/apk-profiles/${id}/reset-health`, { method: "POST" });
-    return Promise.all([loadApks(), loadConfigs()]);
-  }
-  if (!confirm(`Delete APK profile "${a.name}"?`)) return;
-  await api(`/api/apk-profiles/${a.id}`, { method: "DELETE" });
-  await Promise.all([loadApks(), loadConfigs()]);
-}));
-
-function openMoveConfigs(a) {
-  const targets = state.apks.filter((x) => x.id !== a.id);
-  if (!targets.length) return toast("Add another APK profile first, then switch the configs to it", true);
-  const rank = { ok: 0, untested: 1, warning: 2, failing: 3, disabled: 4 };
-  const best = [...targets].sort((x, y) => rank[x.health] - rank[y.health])[0];
-  openModal(`Switch configs away from "${a.name}"`, `
-    <p>These configurations use <b>${esc(a.name)}</b>: ${esc(a.used_by.join(", "))}</p>
-    <p class="hint">Accounts already in progress keep their current APK profile; new ones use the new profile.</p>
-    <label>Switch to<select id="move-target">${targets.map((x) =>
-      `<option value="${x.id}" ${x.id === best.id ? "selected" : ""}>${esc(x.name)} — ${esc(x.health)}${x.enabled ? "" : " (disabled)"}</option>`).join("")}</select></label>
-    <div class="modal-foot"><button class="btn ghost" id="move-cancel">Cancel</button>
-      <button class="btn primary" id="move-ok">Switch ${a.used_by.length} config(s)</button></div>`);
-  $("#move-cancel").onclick = closeModal;
-  $("#move-ok").onclick = guard(async () => {
-    const res = await api(`/api/apk-profiles/${a.id}/move-configs`, { method: "POST",
-      body: { to_apk_profile_id: +$("#move-target").value } });
-    closeModal();
-    toast(`Switched ${res.moved} config(s) to "${res.to}"`);
-    await Promise.all([loadApks(), loadConfigs()]);
-    guard(loadStats)();
-  });
-}
-$("#new-apk-btn").onclick = () => openApkEditor(null);
-
-function openApkEditor(a) {
-  const v = a || { name: "", client_id: "", user_agent: "Android 202609.1.4 (1001864) (GooglePlay;Free)",
-    package_id: "com.jaumo", os_version: "14", accept_language: "en_US" };
-  openModal(a ? `Edit APK profile — ${a.name}` : "New APK profile", `
-    <form id="apk-form">
-      <div class="form-grid">
-        <label class="span-2">Name<input name="name" value="${esc(v.name)}" required></label>
-        <label class="span-2">Client ID<input name="client_id" value="${esc(v.client_id)}" required class="mono"></label>
-        <label class="span-2">Sign secret ${a ? `(leave empty to keep ${esc(a.sign_secret_hint)})` : ""}
-          <input name="sign_secret" type="password" autocomplete="off" ${a ? "" : "required"} class="mono"></label>
-        <label class="span-2">User-Agent<input name="user_agent" value="${esc(v.user_agent)}" required class="mono"></label>
-        <label>Package ID<input name="package_id" value="${esc(v.package_id)}"></label>
-        <label>Android OS version<input name="os_version" value="${esc(v.os_version)}"></label>
-        <label>Accept-Language<input name="accept_language" value="${esc(v.accept_language)}"></label>
-        <label class="inline" style="align-self:end"><input type="checkbox" name="enabled" ${v.enabled === false ? "" : "checked"}> Enabled</label>
-        <label class="span-2">Notes (e.g. APK version, where it came from, why it was disabled)
-          <textarea name="notes" rows="2">${esc(v.notes || "")}</textarea></label>
-      </div>
-      <p class="error" id="apk-error"></p>
-      <div class="modal-foot"><button type="button" class="btn ghost" id="apk-cancel">Cancel</button>
-        <button class="btn primary" type="submit">Save</button></div>
-    </form>`);
-  $("#apk-cancel").onclick = closeModal;
-  $("#apk-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const body = Object.fromEntries(new FormData(e.target));
-    body.enabled = e.target.elements.enabled.checked;
+async function loadCitiesPage() {
+  const c = await loadConfig();
+  if (state.tab !== "cities") return;
+  const s = c.settings;
+  const text = s.locations.map((l) => `${l.label},${l.lat},${l.lon}${l.radius_km != null ? `,${l.radius_km}` : ""}`).join("\n");
+  $("#cities-body").innerHTML = `<form id="cities-form">
+    ${cfgCard("mapPin", "cities.title", "cities.sub", `
+      <div class="setting-row"><div><b>${esc(t("cities.radius"))}</b><span>${esc(t("cities.radiusSub"))}</span></div>
+        <input type="number" name="location_radius_km" min="0" max="100" step="any" value="${s.location_radius_km ?? 0}" required style="width:110px"></div>
+      <label><span>${esc(t("cities.list"))} <code>Name,lat,lon</code> ${esc(t("cities.or"))} <code>Name,lat,lon,radius_km</code></span>
+        <textarea name="locations" rows="14" class="mono">${esc(text)}</textarea></label>
+      <div class="city-preview" id="city-preview"></div>`)}
+    ${saveBar("cities")}
+  </form>`;
+  const form = $("#cities-form");
+  const preview = () => {
+    const box = $("#city-preview");
     try {
-      await api(a ? `/api/apk-profiles/${a.id}` : "/api/apk-profiles", { method: a ? "PUT" : "POST", body });
-      closeModal();
-      toast("APK profile saved");
-      await Promise.all([loadApks(), loadConfigs()]);
+      const locs = parseLocations(form.elements.locations.value);
+      const r = +form.elements.location_radius_km.value || 0;
+      box.innerHTML = `<div class="muted">${esc(t("cities.count", { n: locs.length }))}</div><div class="name-chips">${locs.map((l) => {
+        const radius = l.radius_km ?? r;
+        return `<span class="name-chip">${icon("mapPin")}${esc(l.label)}${radius ? ` · ${radius} km` : ""}</span>`;
+      }).join("")}</div>`;
     } catch (err) {
-      $("#apk-error").textContent = err.message;
+      box.innerHTML = `<p class="error">${esc(err.message)}</p>`;
     }
+  };
+  preview();
+  form.addEventListener("input", debounce(preview, 250));
+  onSave(form, "cities", async (f) => {
+    await saveConfig({ locations: parseLocations(f.locations.value), location_radius_km: +f.location_radius_km.value || 0 });
   });
 }
 
@@ -2307,23 +2343,21 @@ function openAccountEdit(id) {
 }
 
 function openMessageDialog(ids) {
-  const usable = state.configs.filter((c) => c.settings.messaging_enabled);
-  if (!usable.length) {
+  if (!state.config || !state.config.settings.messaging_enabled) {
     openModal(t("msg.title"), `<div class="narrow-form">
-        <p>${esc(t("msg.noneEnabled"))}</p>
+        <p>${esc(t("msg.off"))}</p>
         <div class="modal-foot"><button type="button" class="btn ghost" data-close-modal>${esc(t("common.cancel"))}</button>
-          <a class="btn primary" href="#configs" data-close-modal>${icon("sliders")}${esc(t("nav.configs"))}</a></div></div>`);
+          <a class="btn primary" href="#configs" data-close-modal>${icon("settings")}${esc(t("nav.config"))}</a></div></div>`);
     return;
   }
-  const opts = usable.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
   openModal(t("msg.title"), `<form id="msg-form" class="narrow-form">
       <p class="muted">${ids.length ? esc(t("bulk.selected", { n: ids.length })) : ""}</p>
-      <label>${esc(t("msg.config"))}<select name="config">${opts}</select></label>
+      <p>${esc(t("msg.confirm"))}</p>
       <div class="modal-foot"><button type="button" class="btn ghost" data-close-modal>${esc(t("common.cancel"))}</button>
         <button class="btn primary">${icon("send")}${esc(t("msg.start"))}</button></div></form>`);
   $("#msg-form").addEventListener("submit", guard(async (e) => {
     e.preventDefault();
-    const res = await api("/api/messages", { method: "POST", body: { config_id: +e.target.elements.config.value, account_ids: ids } });
+    const res = await api("/api/messages", { method: "POST", body: { account_ids: ids } });
     closeModal();
     toast(res.run_ids.length ? `${res.run_ids.length} ✓` : "No eligible accounts (need pending matches and a login token)", !res.run_ids.length);
   }));
@@ -2376,10 +2410,8 @@ $("#bulk-sync").onclick = guard(openSyncDialog);
 async function openNewAccounts() {
   const [settings, stats] = await Promise.all([api("/api/settings"), api("/api/stats")]);
   const par = settings.bot.parallel_accounts;
-  const opts = state.configs.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
   openModal(t("new.title"), `<form id="new-acc-form" class="narrow-form">
       <p class="muted">${esc(stats.running || stats.queued ? t("new.busy", { w: stats.running, q: stats.queued }) : t("new.idle"))}</p>
-      <label>${esc(t("new.config"))}<select name="config_id" required>${opts}</select></label>
       <div id="new-config-info" class="config-info"></div>
       <label>${esc(t("new.count"))}
         <div class="stepper"><button type="button" data-step="-1">−</button>
@@ -2403,21 +2435,17 @@ async function openNewAccounts() {
         <button id="new-submit" class="btn primary">${icon("plus")}${esc(t("new.submit"))}</button></div></form>`);
   const form = $("#new-acc-form");
   const showInfo = () => {
-    const prev = $("#launch-config").value;
-    $("#launch-config").value = form.elements.config_id.value;
     renderLaunchInfo();
     $("#new-config-info").innerHTML = $("#launch-config-info").innerHTML;
-    $("#launch-config").value = prev;
   };
   // Ask the server whether this start would be refused, so the reason is shown here instead of a toast.
   let checkSeq = 0;
   const check = async () => {
     const seq = ++checkSeq, f = form.elements;
-    if (!f.config_id.value) return;
     let res;
     try {
       res = await api("/api/runs/check", { method: "POST",
-        body: { config_id: +f.config_id.value, count: Math.min(500, Math.max(1, +f.count.value || 1)), names: lines(f.names.value) } });
+        body: { count: Math.min(500, Math.max(1, +f.count.value || 1)), names: lines(f.names.value) } });
     } catch { return; }
     if (seq !== checkSeq || !$("#new-problems")) return;
     const box = $("#new-problems");
@@ -2430,7 +2458,6 @@ async function openNewAccounts() {
   const checkSoon = throttle(check, 400);
   showInfo();
   check();
-  form.elements.config_id.onchange = () => { showInfo(); check(); };
   form.addEventListener("input", (e) => { if (e.target.name === "count" || e.target.name === "names") checkSoon(); });
   form.addEventListener("change", (e) => { if (e.target.name === "mode") $("#par-box").classList.toggle("hidden", e.target.value !== "par"); });
   form.addEventListener("click", (e) => {
@@ -2443,7 +2470,7 @@ async function openNewAccounts() {
     const f = form.elements;
     const workers = f.mode.value === "par" ? Math.min(20, Math.max(2, +f.workers.value || 2)) : 1;
     if (workers !== par) await api("/api/settings", { method: "PUT", body: { bot: { parallel_accounts: workers } } });
-    const res = await api("/api/runs", { method: "POST", body: { config_id: +f.config_id.value, count: +f.count.value, names: lines(f.names.value) } });
+    const res = await api("/api/runs", { method: "POST", body: { count: +f.count.value, names: lines(f.names.value) } });
     closeModal();
     toast(t("new.queued", { n: res.run_ids.length }));
     guard(loadStats)();
@@ -2593,9 +2620,7 @@ function renderAccountSections() {
   const run = activeRun();
   const age = ageFrom(a.birthday);
   const dev = a.device_info ? `${a.device_info.manufacturer} ${a.device_info.model}` : "Unknown device";
-  const config = state.configs.find((c) => c.id === a.config_id);
-  const msgOpts = state.configs.map((c) =>
-    `<option value="${c.id}" ${c.id === a.config_id ? "selected" : ""}>${esc(c.name)}${c.settings.messaging_enabled ? "" : " — messaging off"}</option>`).join("");
+  const msgOff = !state.config || !state.config.settings.messaging_enabled;
   $("#acc-hero").innerHTML = `<div class="card acc-hero">
     <div class="acc-photo">${a.photo ? `<img src="${thumbUrl(a.photo)}" alt="" data-full="${esc(a.photo)}">` : icon("user")}</div>
     <div class="acc-main">
@@ -2604,19 +2629,19 @@ function renderAccountSections() {
       <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? ` · ${age} years` : ""} · ${esc(a.location || "—")} · joined ${fmtDate(a.created_at)}</div>
       <div class="acc-chips">
         <span class="chip">${icon("smartphone")}${esc(dev)}</span>
-        <span class="chip">${icon("sliders")}${esc(config ? config.name : a.config_id ? `config #${a.config_id}` : "legacy import")}</span>
+        ${a.config_id ? "" : `<span class="chip">${icon("archive")}legacy import</span>`}
         <span class="chip">${icon("globe")}${a.proxy_id ? `proxy #${a.proxy_id}` : "no proxy"}</span>
         <span class="chip ${a.has_token ? "" : "bad"}">${icon("key")}${a.has_token ? "login token stored" : "no login token"}</span>
       </div>
     </div>
     <div class="acc-actions">
-      <label>Message matches with<select id="acc-msg-config">${msgOpts}</select></label>
-      <button class="btn primary" id="acc-msg" ${a.pending_messages ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
+      ${msgOff ? `<a class="field-hint" href="#configs">${esc(t("msg.off"))}</a>` : ""}
+      <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
     </div>
   </div>`;
   $("#acc-hero [data-full]")?.addEventListener("click", () => openPhotoViewer(a.photo));
   $("#acc-msg").onclick = guard(async () => {
-    const res = await api("/api/messages", { method: "POST", body: { config_id: +$("#acc-msg-config").value, account_ids: [a.id] } });
+    const res = await api("/api/messages", { method: "POST", body: { account_ids: [a.id] } });
     toast(res.run_ids.length ? "Messaging session queued" : "Nothing to send (no pending matches or a session is already running)", !res.run_ids.length);
     refreshAccountSoon();
   });
@@ -2810,75 +2835,6 @@ function prependTimeline(e) {
   if (tl.querySelector(".empty")) tl.innerHTML = "";
   tl.insertAdjacentHTML("afterbegin", timelineItem(e));
   tl.firstElementChild.classList.add("fresh");
-}
-
-// ---------------------------------------------------------------------------
-// Settings (global rules)
-// ---------------------------------------------------------------------------
-
-async function loadSettings() {
-  const s = await api("/api/settings");
-  state.settings = s;
-  const c = s.counts;
-  $("#settings-body").innerHTML = `
-    <div class="card">
-      <div class="card-head"><div><h2>${icon("cpu")} Account creation</h2>
-        <p class="card-sub">New accounts are created by workers. They take accounts from the queue in the order they were requested.</p></div></div>
-      <div class="setting-row">
-        <div><b>Workers (accounts at the same time)</b>
-          <span>1 = one by one: a single worker finishes an account before the next starts. Higher values run several workers in
-            parallel (each with its own proxy and device). Changes apply immediately, even while accounts are being created.</span></div>
-        <div class="stepper sm" id="parallel-stepper">
-          <button type="button" data-step="-1" aria-label="Less">−</button>
-          <input type="number" id="parallel-input" min="1" max="20" value="${s.bot.parallel_accounts}">
-          <button type="button" data-step="1" aria-label="More">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div><h2>${icon("refresh")} Stats refresh</h2>
-        <p class="card-sub">Reading likes, visitors, messages and matches from Jaumo only happens when you click Refresh
-          (never in the background). Each account can be refreshed once at a time, then 15 s cooldown.</p></div></div>
-      <div class="setting-row">
-        <div><b>Pause between accounts for "refresh all" (seconds)</b>
-          <span>"Refresh all" works through the accounts one after another with this pause, so Jaumo sees no burst of requests.</span></div>
-        <input type="number" id="sync-delay-input" min="2" max="600" step="1" value="${s.bot.sync_delay_seconds}" style="width:110px">
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div><h2>${icon("shieldCheck")} Identity rules</h2>
-        <p class="card-sub">Apply to every configuration and every launch. Names and photos are reserved the moment an account is queued.</p></div></div>
-      <label class="setting-row">
-        <div><b>Never reuse a name</b><span>A name that any account already has is never given out again. ${fmtNum(c.names_used)} names are taken so far.</span></div>
-        <input type="checkbox" class="switch" id="rule-names" ${s.identity.unique_names ? "checked" : ""}>
-      </label>
-      <label class="setting-row">
-        <div><b>Never reuse a photo</b><span>Each photo in the library is used by one account only.
-          ${fmtNum(c.photos_available)} of ${fmtNum(c.photos_total)} photos are still available — <a href="#photos">open photo library</a>.</span></div>
-        <input type="checkbox" class="switch" id="rule-photos" ${s.identity.unique_photos ? "checked" : ""}>
-      </label>
-    </div>`;
-  const save = guard(async (body, msg) => { await api("/api/settings", { method: "PUT", body }); toast(msg); await loadSettings(); });
-  $("#rule-names").onchange = (e) => save({ identity: { unique_names: e.target.checked, unique_photos: $("#rule-photos").checked } },
-    e.target.checked ? "Names will never be reused" : "Names may now be reused");
-  $("#rule-photos").onchange = (e) => save({ identity: { unique_names: $("#rule-names").checked, unique_photos: e.target.checked } },
-    e.target.checked ? "Photos will never be reused" : "Photos may now be reused");
-  const commit = debounce(() => {
-    const v = Math.min(20, Math.max(1, +$("#parallel-input").value || 1));
-    save({ bot: { parallel_accounts: v } }, v === 1 ? "Accounts are now created one by one" : `Accounts are now created by ${v} workers in parallel`);
-  }, 600);
-  $("#parallel-stepper").onclick = (e) => {
-    const b = e.target.closest("[data-step]");
-    if (!b) return;
-    const inp = $("#parallel-input");
-    inp.value = Math.min(20, Math.max(1, (+inp.value || 1) + +b.dataset.step));
-    commit();
-  };
-  $("#parallel-input").onchange = commit;
-  $("#sync-delay-input").onchange = (e) => {
-    const v = Math.min(600, Math.max(2, +e.target.value || 10));
-    save({ bot: { parallel_accounts: +$("#parallel-input").value || 1, sync_delay_seconds: v } }, `Pause between refreshes: ${v} s`);
-  };
 }
 
 // ---------------------------------------------------------------------------
