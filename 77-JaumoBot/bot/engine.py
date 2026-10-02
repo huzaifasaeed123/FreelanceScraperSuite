@@ -1024,6 +1024,64 @@ class BotRunner(_RunnerBase):
             return False, False, None
 
 
+class SwipeRunner(BotRunner):
+    """
+    Continue swiping with an account that already exists (after an admin stop or when it ran out of cards):
+        refresh login with the account's own device identity -> GET /me (zapping link)
+        -> the same swipe loop as after signup.
+    No signup, no photo upload, no location change.
+    """
+
+    def __init__(self, settings, apk, account, proxy_url=None, emit=None, stop_event=None):
+        super().__init__(settings, apk, None, proxy_url=proxy_url, name=account.get("name"),
+                         emit=emit, stop_event=stop_event)
+        self.account = account
+        self.client = JaumoClient(
+            apk, proxy_url=proxy_url, timeout=self.settings["request_timeout"],
+            device_id=account.get("device_id"), android_id=account.get("android_id"),
+            device_info=account.get("device_info"), devices=self.settings["devices"],
+            log=self._client_log,
+        )
+        if not account.get("device_info"):
+            self.emit("account_update", device_info=self.client.device_info)
+        self.access_token = account.get("access_token") or None
+        self.refresh_token = account.get("refresh_token") or None
+        self.ready = True  # set up before; a stop keeps the account active
+
+    def _run(self):
+        acc = self.account
+        self.log(f"--- Continue swiping: {acc.get('name')} (account #{acc.get('id')}) ---")
+
+        self.step("login")
+        if not self._refresh():
+            self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
+        if not self.access_token:
+            return {"status": "failed", "reason": "no usable login token"}
+
+        self.step("profile")
+        me, status = self.client.get_profile(self.access_token, include_status=True)
+        if status == 401 and self._refresh():
+            me, status = self.client.get_profile(self.access_token, include_status=True)
+        if not me:
+            return {"status": "failed", "reason": f"profile not available (HTTP {status}) — login expired?"}
+
+        zapping_url = None
+        zapping = (me.get("links") or {}).get("zapping", {})
+        if isinstance(zapping, dict):
+            zapping_url = zapping.get("pop")
+        if not zapping_url and isinstance(zapping, str) and zapping:
+            zapping_url = zapping
+        zapping_url = zapping_url or "zapping/pop/"
+
+        self.step("swiping")
+        result = self._swipe_loop(zapping_url)
+        self.step("finished")
+        self.log(f"--- Done: {result['status']} ({result['reason']}) — "
+                 f"liked={self.counters['liked']} disliked={self.counters['disliked']} "
+                 f"matches={self.counters['matches']} ---")
+        return result
+
+
 # ---------------------------------------------------------------------------
 # Messaging job (separate, launched by admin for existing accounts)
 # ---------------------------------------------------------------------------

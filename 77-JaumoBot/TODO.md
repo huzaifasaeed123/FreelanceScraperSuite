@@ -243,6 +243,16 @@ saw in DevTools. Each call is small (12 rows), but it adds up with several open 
 
 ---
 
+## 8c. Continue swiping after a stop — ✅ done
+
+- New job `swipe` (`POST /api/accounts/swipe`, `POST /api/accounts/{id}/swipe`): an existing account logs in again
+  with its stored token and device identity and runs the same swipe loop — no signup, photo or location change.
+  Skips accounts that are working, blocked, never fully set up, or have no token. Same worker queue as creation.
+- Engine: new `SwipeRunner` class only (58 added lines; BotRunner unchanged).
+- Panel: "Weiter swipen" in the row menu, bulk bar and account page; "Stats aktualisieren" also in the row menu.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

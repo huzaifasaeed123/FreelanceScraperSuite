@@ -18,7 +18,7 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import Session, select
 
-from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StatsSyncRunner, StopRequested
+from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StatsSyncRunner, StopRequested, SwipeRunner
 
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Proxy, RunLog,
                      engine, iso, utcnow)
@@ -355,6 +355,76 @@ class RunManager:
             self.hub.publish("events", {"type": "run", "run": p})
             self._submit(rid, self._message_worker)
         return ids
+
+    SWIPE_STATUSES = ("active", "legacy", "stopped")   # set up accounts (stopped = stopped by admin)
+
+    def launch_swipe(self, account_ids: list[int]) -> dict:
+        """Continue swiping with existing accounts (same worker queue as account creation)."""
+        with Session(engine) as s:
+            config = get_main_config(s)
+            if not config:
+                raise LookupError("config not found")
+            snap = self._snapshot(s, config)
+            accounts = s.exec(select(Account).where(Account.id.in_(account_ids)).order_by(Account.id)).all()
+            busy = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES),
+                                                              BotRun.kind != "sync")).all())
+            runs, skipped = [], []
+            for acc in accounts:
+                reason = ("already working" if acc.id in busy
+                          else "blocked by Jaumo" if acc.status == "blocked"
+                          else "account was never fully set up (no photo)" if acc.status not in self.SWIPE_STATUSES
+                          else "no login token stored" if not (acc.refresh_token or acc.access_token) else "")
+                if reason:
+                    skipped.append({"id": acc.id, "name": acc.name, "reason": reason})
+                    continue
+                run = BotRun(kind="swipe", config_id=config.id, config_name=config.name,
+                             config_snapshot=snap, account_id=acc.id, requested_name=acc.name)
+                s.add(run)
+                runs.append(run)
+            s.commit()
+            ids = [r.id for r in runs]
+            payloads = [run_public(r) for r in runs]
+        for rid, p in zip(ids, payloads):
+            self.hub.publish("events", {"type": "run", "run": p})
+            self._submit(rid, self._swipe_worker)
+        return {"run_ids": ids, "skipped": skipped}
+
+    def _swipe_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            snap = run.config_snapshot
+            acc = s.get(Account, run.account_id)
+            if not acc:
+                return self._finish(run_id, {"status": "failed", "reason": "account not found"})
+            account = acc.model_dump()
+        settings = snap["settings"]
+
+        try:
+            proxy = self._acquire_proxy(run_id, ev, settings)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped while waiting for proxy"})
+        except NoProxyAvailable as e:
+            self._log(run_id, "error", f"[PROXY] {e}")
+            return self._finish(run_id, {"status": "failed", "reason": str(e)})
+
+        def emit(kind, data):
+            if kind == "log":
+                self._log(run_id, data.get("level", "info"), data.get("msg", ""))
+            elif kind == "step":
+                self._update_run(run_id, step=data["step"])
+            elif kind == "account_update":
+                self._update_account(account["id"], data, run_id)
+            elif kind == "swipe":
+                self._on_swipe(run_id, account["id"], data)
+
+        try:
+            runner = SwipeRunner(settings, snap["apk"], account,
+                                 proxy_url=proxy_url(proxy) if proxy else None,
+                                 emit=emit, stop_event=ev)
+            result = runner.run()
+        finally:
+            self.pool.release(proxy.id if proxy else None)
+        self._finish(run_id, result)
 
     def stop(self, run_id: int) -> bool:
         with self.lock:

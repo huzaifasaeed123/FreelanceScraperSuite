@@ -199,7 +199,7 @@
               <option value="">All</option><option>queued</option><option>running</option><option>done</option>
               <option>blocked</option><option>failed</option><option>stopped</option><option>interrupted</option>
             </select></label>
-            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option></select></label>
+            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option><option value="swipe">Continue swiping</option><option value="sync">Stats refresh</option></select></label>
           </div>
         </div>
         <div class="card table-card">
@@ -366,6 +366,7 @@
           <div class="bulk-bar hidden" id="acc-bulk">
             <b id="acc-bulk-count"></b>
             <button class="btn small" id="bulk-message"><i data-icon="send"></i><span data-i18n="bulk.message">Matches anschreiben</span></button>
+            <button class="btn small" id="bulk-swipe"><i data-icon="play"></i><span data-i18n="swipe.btn">Weiter swipen</span></button>
             <button class="btn small" id="bulk-sync"><i data-icon="refresh"></i><span data-i18n="sync.refresh">Stats aktualisieren</span></button>
             <button class="btn small" id="bulk-export"><i data-icon="download"></i><span data-i18n="bulk.export">Exportieren</span></button>
             <button class="btn small ghost" id="bulk-clear"><i data-icon="x"></i><span data-i18n="bulk.clear">Auswahl aufheben</span></button>

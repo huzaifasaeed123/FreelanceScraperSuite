@@ -82,6 +82,9 @@ const I18N = {
     "nav.dashboard": "Armaturenbrett", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs / Protokolle", "nav.configs": "Konfigurationen",
     "nav.proxies": "Proxies", "nav.photos": "Fotos", "nav.settings": "Einstellungen",
     "nav.jaumo": "Jaumo", "nav.config": "Konfiguration", "nav.names": "Nicknamen", "nav.cities": "Städte",
+    "swipe.btn": "Weiter swipen", "swipe.started": "{n} Account(s) swipen weiter",
+    "swipe.skipped": "{n} übersprungen — {r}", "swipe.kind": "Weiter swipen",
+    "swipe.tip": "Mit dem gespeicherten Login und Gerät weiter swipen (keine neue Registrierung)",
     "nav.toggle": "Menü auf-/zuklappen",
     "cfg.pageSub": "Einstellungen für neue Jaumo Accounts", "cfg.save": "Speichern", "cfg.saved": "Gespeichert",
     "cfg.apkTitle": "Jaumo-Zugang (APK)", "cfg.apkSub": "Schlüssel der Jaumo-App, mit denen jede Anfrage signiert wird.",
@@ -199,6 +202,9 @@ const I18N = {
     "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs", "nav.configs": "Configurations",
     "nav.proxies": "Proxies", "nav.photos": "Photos", "nav.settings": "Settings",
     "nav.jaumo": "Jaumo", "nav.config": "Configuration", "nav.names": "Nicknames", "nav.cities": "Cities",
+    "swipe.btn": "Continue swiping", "swipe.started": "{n} account(s) continue swiping",
+    "swipe.skipped": "{n} skipped — {r}", "swipe.kind": "Continue swiping",
+    "swipe.tip": "Continue swiping with the stored login and device (no new signup)",
     "nav.toggle": "Expand / collapse menu",
     "cfg.pageSub": "Settings for new Jaumo accounts", "cfg.save": "Save", "cfg.saved": "Saved",
     "cfg.apkTitle": "Jaumo access (APK)", "cfg.apkSub": "Keys of the Jaumo app used to sign every request.",
@@ -764,6 +770,7 @@ const STEP_FLOW = {
   signup: ["client_token", "signup", "location", "profile", "photo", "verify", "swiping"],
   message: ["login", "matches", "messaging"],
   sync: ["login", "links", "counters"],
+  swipe: ["login", "profile", "swiping"],
 };
 const STEP_LABELS = {
   starting: "Starting", waiting_proxy: "Waiting for proxy", client_token: "Client token", signup: "Signing up",
@@ -1065,7 +1072,7 @@ function stepBar(r) {
 }
 
 function botCard(r) {
-  const name = r.requested_name || (r.kind === "message" ? `Account #${r.account_id}` : "New account");
+  const name = r.requested_name || (r.kind !== "signup" ? `Account #${r.account_id}` : "New account");
   const initial = (r.requested_name || "?").trim().charAt(0).toUpperCase() || "?";
   const metrics = r.kind === "sync"
     ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${icon("refresh")}</b><span>stats refresh</span></div></div>`
@@ -2294,12 +2301,31 @@ $("#acc-table").addEventListener("click", guard(async (e) => {
   if (view || (row && !e.target.closest(".row-actions"))) location.hash = `#account/${(view || row).dataset.view || row.dataset.acc}`;
 }));
 
+// Accounts that were set up and are not working / blocked can continue swiping.
+function canSwipe(a) {
+  return !a.working && a.has_token !== false && ["active", "legacy", "stopped"].includes(a.status);
+}
+
+async function startSwiping(ids) {
+  const res = await api("/api/accounts/swipe", { method: "POST", body: { account_ids: ids } });
+  if (res.run_ids.length) toast(t("swipe.started", { n: res.run_ids.length }));
+  if (res.skipped.length) {
+    const why = [...new Set(res.skipped.map((x) => x.reason))].join(", ");
+    toast(t("swipe.skipped", { n: res.skipped.length, r: why }), !res.run_ids.length);
+  }
+  guard(loadStats)();
+  if (state.tab === "accounts") reloadAccountsSoon();
+  if (state.tab === "account") refreshAccountSoon();
+}
+
 function openAccountMenu(btn, id) {
   $$(".menu").forEach((m) => m.remove());
   const a = state.acc.items.find((x) => x.id === id);
   const menu = document.createElement("div");
   menu.className = "menu";
   menu.innerHTML = `
+    <button data-act="swipe" ${canSwipe(a) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
+    <button data-act="sync" ${a.has_token === false ? "disabled" : ""}>${icon("refresh")}${esc(t("sync.refresh"))}</button>
     <button data-act="message" ${a.pending_messages ? "" : "disabled"}>${icon("send")}${esc(t("acc.menuMessage"))}${a.pending_messages ? ` <span class="seg-count">${a.pending_messages}</span>` : ""}</button>
     <button data-act="log" ${a.run_id ? "" : "disabled"}>${icon("terminal")}${esc(t("acc.menuLog"))}</button>
     <button data-act="copy" ${a.jaumo_id ? "" : "disabled"}>${icon("copy")}${esc(t("acc.menuCopy"))}</button>
@@ -2312,6 +2338,12 @@ function openAccountMenu(btn, id) {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (!act) return;
     menu.remove();
+    if (act === "swipe") return startSwiping([id]);
+    if (act === "sync") {
+      await api(`/api/accounts/${id}/sync`, { method: "POST" });
+      toast(t("sync.started", { n: 1 }));
+      return reloadAccountsSoon();
+    }
     if (act === "message") return openMessageDialog([id]);
     if (act === "log") return openRunModal(a.run_id);
     if (act === "copy") { await navigator.clipboard.writeText(a.jaumo_id); return toast(t("acc.copied")); }
@@ -2364,6 +2396,7 @@ function openMessageDialog(ids) {
 }
 
 $("#bulk-message").onclick = () => openMessageDialog([...state.accSelected]);
+$("#bulk-swipe").onclick = guard(() => startSwiping([...state.accSelected]));
 $("#bulk-export").onclick = () => { window.location = "/api/accounts/export?" + accQuery(); };
 $("#bulk-clear").onclick = () => { state.accSelected.clear(); renderAccTable(); };
 
@@ -2635,11 +2668,13 @@ function renderAccountSections() {
       </div>
     </div>
     <div class="acc-actions">
+      <button class="btn" id="acc-swipe" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
       ${msgOff ? `<a class="field-hint" href="#configs">${esc(t("msg.off"))}</a>` : ""}
       <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
     </div>
   </div>`;
   $("#acc-hero [data-full]")?.addEventListener("click", () => openPhotoViewer(a.photo));
+  $("#acc-swipe").onclick = guard(() => startSwiping([a.id]));
   $("#acc-msg").onclick = guard(async () => {
     const res = await api("/api/messages", { method: "POST", body: { account_ids: [a.id] } });
     toast(res.run_ids.length ? "Messaging session queued" : "Nothing to send (no pending matches or a session is already running)", !res.run_ids.length);
@@ -2701,7 +2736,7 @@ function renderAccountSections() {
       <th class="num">Liked</th><th class="num">Disliked</th><th class="num">Matches</th><th class="num">Msgs</th>
       <th>Started</th><th>Duration</th><th>Result</th><th></th></tr></thead>
     <tbody>${acct.runs.map((r) => `<tr>
-      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : "Signup + swiping"}</td><td>${badge(r.status)}</td>
+      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : r.kind === "swipe" ? esc(t("swipe.kind")) : "Signup + swiping"}</td><td>${badge(r.status)}</td>
       <td>${esc(STEP_LABELS[r.step] || r.step || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
       <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(r.reason || "—")}</td>
@@ -2755,7 +2790,7 @@ function renderLiveSession(run) {
     box.querySelector("[data-log]").onclick = () => openRunModal(run.id);
     streamRunLog(run.id);
   }
-  $("#acc-live-sub").textContent = `Session #${run.id} · ${run.kind === "message" ? "messaging" : "signup + swiping"} · ${duration(run) || "starting"} · proxy ${run.proxy_label || "—"}`;
+  $("#acc-live-sub").textContent = `Session #${run.id} · ${run.kind === "message" ? "messaging" : run.kind === "swipe" ? esc(t("swipe.kind")) : "signup + swiping"} · ${duration(run) || "starting"} · proxy ${run.proxy_label || "—"}`;
   $("#acc-live-steps").innerHTML = stepBar(run);
 }
 

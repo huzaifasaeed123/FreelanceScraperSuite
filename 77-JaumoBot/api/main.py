@@ -29,7 +29,7 @@ from .photolib import THUMBS_DIR, delete_photo_files, import_uploads, photo_usag
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog, engine,
                      get_session, init_db, iso, utcnow)
 from .proxies import parse_proxy_line, save_test_result, split_lines, test_proxy
-from .schemas import (StatsSyncIn, SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigPatch, ConfigSettings,
+from .schemas import (StatsSyncIn, SwipeIn, SettingsIn, PhotoBulkDelete, AccountPatch, ApkMoveConfigs, ApkPatch, ApkProfileIn, CleanupIn, ConfigIn, ConfigPatch, ConfigSettings,
                       LoginIn, MessageLaunch, ProxyBulkAction, ProxyBulkIn, ProxyIn,
                       ProxyUpdate, RunLaunch)
 
@@ -1065,6 +1065,29 @@ def sync_account(id_: int, s: Session = Depends(get_session)):
     res = manager.launch_sync([id_])
     if not res["run_ids"]:
         raise HTTPException(409, res["skipped"][0]["reason"] if res["skipped"] else "could not start refresh")
+    return res
+
+
+@app.post("/api/accounts/swipe", dependencies=auth)
+def swipe_accounts(body: SwipeIn):
+    """Continue swiping with existing accounts (after a stop). Returns started runs and skipped accounts."""
+    try:
+        return manager.launch_swipe(body.account_ids)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/accounts/{id_}/swipe", dependencies=auth)
+def swipe_account(id_: int, s: Session = Depends(get_session)):
+    _get_or_404(s, Account, id_)
+    try:
+        res = manager.launch_swipe([id_])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if not res["run_ids"]:
+        raise HTTPException(409, res["skipped"][0]["reason"] if res["skipped"] else "could not start")
     return res
 
 

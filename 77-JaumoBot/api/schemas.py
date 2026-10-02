@@ -184,6 +184,10 @@ class BotSettings(BaseModel):
     sync_delay_seconds: float = Field(10, ge=2, le=600)   # pause between accounts in "refresh all"
 
 
+class SwipeIn(BaseModel):
+    account_ids: list[int] = Field(min_length=1, max_length=500)
+
+
 class StatsSyncIn(BaseModel):
     account_ids: list[int] = Field(default_factory=list)
     all: bool = False
