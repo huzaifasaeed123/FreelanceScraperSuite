@@ -580,13 +580,22 @@ class JaumoClient:
         return True, access_token, refresh_token
 
     def get_zapping_cards(self, zapping_url, access_token, include_status=False):
+        self.zapping_note = ""   # why a batch came back empty (swipe limit / no more profiles)
         resp = self._get(zapping_url, access_token=access_token)
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, list):
                 cards = data
             else:
-                cards = data.get("items", data.get("cards", []))
+                # ZappingApiResponse: "items" is null when Jaumo answers with an unlock / noResult dialog
+                cards = data.get("items") or data.get("cards") or []
+                if not cards and (data.get("unlock") or data.get("unlockTimeout")):
+                    wait = data.get("unlockExpiresIn")
+                    self.zapping_note = "swipe limit reached" + (f" (unlock expires in {wait} s)" if wait else "")
+                elif not cards and data.get("noResult"):
+                    self.zapping_note = "no more profiles (noResult)"
+            if self.zapping_note:
+                self.log(f"[ZAPPING] {self.zapping_note} — {json.dumps(data, ensure_ascii=False)[:1500]}", "warning")
             self.log(f"[ZAPPING] Got {len(cards)} cards")
             return (cards, resp.status_code) if include_status else cards
         self.log(f"[ZAPPING] FAIL {resp.status_code}: {resp.text}", "warning")
@@ -951,10 +960,15 @@ class BotRunner(_RunnerBase):
                 continue
 
             if not cards:
+                note = getattr(c, "zapping_note", "")
+                if note.startswith("swipe limit"):
+                    # Asking again only repeats the limit dialog; the account is fine.
+                    self.emit("account_update", status="active")
+                    return {"status": "done", "reason": note}
                 empty_batches += 1
                 if empty_batches >= max_empty:
                     self.emit("account_update", status="active")
-                    return {"status": "done", "reason": "no more cards"}
+                    return {"status": "done", "reason": note or "no more cards"}
                 self.delay("between_batches")
                 continue
             empty_batches = 0

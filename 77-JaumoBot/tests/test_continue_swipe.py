@@ -32,6 +32,27 @@ def test_runner_swipes_with_the_stored_identity_only(jaumo, photo):
     assert st["bad_signatures"] == [] and st["bad_headers"] == []
 
 
+def test_swipe_limit_answer_ends_the_session_cleanly(jaumo, photo):
+    """Live crash 2026-10-02: Jaumo answered the zapping call with "items": null (unlock dialog)
+    -> TypeError: object of type 'NoneType' has no len()."""
+    acc = _account_from_signup(jaumo, photo)
+    jaumo.control(batches=0, empty_deck={"items": None, "unlock": {"title": "Unlock more profiles"},
+                                         "unlockExpiresIn": 3600, "noResult": None})
+    calls = jaumo.state()["requests"]
+    res, rec = _swipe(jaumo, acc, max_swipes=0)
+    assert res == {"status": "done", "reason": "swipe limit reached (unlock expires in 3600 s)"}, res
+    assert {"status": "active"} in rec.kinds("account_update"), "the account stays active"
+    zapping = [r for r in jaumo.state()["requests"][len(calls):] if "zapping/pop" in r["path"]]
+    assert len(zapping) == 1, "the limit dialog is not requested again and again"
+
+
+def test_no_more_profiles_answer_ends_the_session_cleanly(jaumo, photo):
+    acc = _account_from_signup(jaumo, photo)
+    jaumo.control(batches=0, empty_deck={"items": None, "noResult": {"title": "No more people nearby"}})
+    res, rec = _swipe(jaumo, acc, max_swipes=0, max_empty_batches=2)
+    assert res == {"status": "done", "reason": "no more profiles (noResult)"}, res
+
+
 def test_runner_reports_an_unusable_login(jaumo, photo):
     acc = _account_from_signup(jaumo, photo)
     acc["access_token"], acc["refresh_token"] = "", ""
