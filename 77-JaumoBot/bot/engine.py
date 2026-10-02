@@ -95,6 +95,9 @@ DEFAULT_SETTINGS = {
         "Clara", "Elena", "Nina", "Rosa", "Lena", "Sara", "Julia",
     ],
     "photo_pool": [],           # photo filenames; empty = all uploaded photos
+    "about_enabled": False,     # set a profile text ("Über mich") after the photo is verified
+    "about_pool": [],           # profile texts, one is picked per account
+    "about_unique": True,       # never give the same text to two accounts
     "location_radius_km": 0,    # 0 = exact city centre; >0 = random point within this radius
     "locations": [
         {"lat": "52.5200", "lon": "13.4050", "label": "Berlin"},
@@ -601,6 +604,32 @@ class JaumoClient:
         self.log(f"[ZAPPING] FAIL {resp.status_code}: {resp.text}", "warning")
         return ([], resp.status_code) if include_status else []
 
+    def set_about_me(self, me, text, access_token):
+        """
+        Profile text exactly like the app's "Über mich" screen (EditAboutMeViewModel -> UserManager.C):
+            GET me.links.data (MeData) -> PUT its "aboutme" link with the form field data=<text>.
+        Returns (ok, status).
+        """
+        data_url = ((me or {}).get("links") or {}).get("data")
+        if not data_url:
+            self.log("[ABOUT] FAIL — profile has no links.data", "warning")
+            return False, None
+        resp = self._get(data_url, access_token=access_token)
+        if resp.status_code != 200:
+            self.log(f"[ABOUT] FAIL loading profile data {resp.status_code}: {resp.text[:300]}", "warning")
+            return False, resp.status_code
+        try:
+            about_url = (resp.json() or {}).get("aboutme")
+        except ValueError:
+            about_url = None
+        if not about_url:
+            self.log("[ABOUT] FAIL — profile data has no aboutme link", "warning")
+            return False, resp.status_code
+        resp = self._put(about_url, {"data": text}, access_token=access_token)
+        ok = resp.status_code in (200, 201, 204)
+        self.print_response_details("ABOUT ME SET" if ok else "ABOUT ME FAILED", resp)
+        return ok, resp.status_code
+
     def like_user(self, like_url, access_token):
         resp = self._put(like_url, access_token=access_token)
         try:
@@ -701,12 +730,13 @@ class BotRunner(_RunnerBase):
     """
 
     def __init__(self, settings, apk, photo_path, proxy_url=None, name=None,
-                 emit=None, stop_event=None):
+                 emit=None, stop_event=None, about=None):
         super().__init__(settings, emit, stop_event)
         self.apk = apk
         self.photo_path = photo_path
         self.proxy_url = proxy_url
         self.name = name
+        self.about = (about or "").strip()   # profile text reserved by the panel (empty = none)
         self.client = JaumoClient(
             apk, proxy_url=proxy_url, timeout=self.settings["request_timeout"],
             devices=self.settings["devices"], log=self._client_log,
@@ -892,6 +922,20 @@ class BotRunner(_RunnerBase):
             return {"status": "failed", "reason": "photo not registered by server"}
         self.ready = True
         self.emit("account_update", status="active", photo_uploaded=True, gallery_count=gallery_count)
+
+        # Profile text ("Über mich"). A rejected text does not stop the account.
+        if self.about:
+            self.step("about")
+            ok, status = c.set_about_me(me, self.about, self.access_token)
+            if status == 401 and self._refresh():
+                ok, status = c.set_about_me(me, self.about, self.access_token)
+            if ok:
+                self.log(f"[ABOUT] Profile text set: {self.about[:120]}")
+                self.emit("account_update", about_me=self.about, about_me_error="")
+            else:
+                self.log(f"[ABOUT] Profile text not set (HTTP {status}) — the account continues without it", "warning")
+                self.emit("account_update", about_me_error=f"not set (HTTP {status})")
+            self.delay("after_profile")
 
         zapping_url = None
         links = me.get("links", {})

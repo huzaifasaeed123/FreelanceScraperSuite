@@ -67,8 +67,11 @@ class ConfigSettings(BaseModel):
     devices: list[Device] = Field(default_factory=lambda: [Device(**d) for d in _D["devices"]])
     message_templates: list[str] = Field(default_factory=lambda: list(_D["message_templates"]))
     require_proxy: bool = True
+    about_enabled: bool = _D["about_enabled"]
+    about_pool: list[str] = Field(default_factory=list)
+    about_unique: bool = _D["about_unique"]
 
-    @field_validator("name_pool", "photo_pool", "message_templates")
+    @field_validator("name_pool", "photo_pool", "message_templates", "about_pool")
     @classmethod
     def _strip(cls, v):
         return [s.strip() for s in v if s and s.strip()]
@@ -79,6 +82,8 @@ class ConfigSettings(BaseModel):
             raise ValueError("age_max must be >= age_min")
         if self.name_source == "custom" and not self.name_pool:
             raise ValueError("custom name list cannot be empty (or switch names to auto)")
+        if self.about_enabled and not self.about_pool:
+            raise ValueError("profile text list cannot be empty (or turn profile texts off)")
         if not self.locations:
             raise ValueError("locations cannot be empty")
         if not self.devices:

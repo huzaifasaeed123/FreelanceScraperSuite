@@ -94,6 +94,7 @@ class BotRun(SQLModel, table=True):
     config_snapshot: dict = Field(default_factory=dict, sa_column=Column(JSON))
     requested_name: Optional[str] = None
     photo: Optional[str] = None                             # photo filename reserved at launch
+    about_text: Optional[str] = None                        # profile text reserved at launch
     worker: Optional[int] = None                            # worker slot (1..parallel) that ran it
     proxy_id: Optional[int] = None
     proxy_label: str = ""
@@ -128,6 +129,8 @@ class Account(SQLModel, table=True):
     longitude: Optional[str] = None
     photo: Optional[str] = None
     photo_url: Optional[str] = None
+    about_me: Optional[str] = None                          # profile text accepted by Jaumo
+    about_me_error: str = ""
     status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
     photo_uploaded: bool = False
     gallery_count: int = 0

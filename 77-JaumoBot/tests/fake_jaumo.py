@@ -35,6 +35,7 @@ DEFAULT_CONTROL = {
     "unseen": {"likes": 4, "visits": 7, "conversations": 2, "matches": 3, "requests": 1, "communities": 0},
     "mutual_ids": ["9001", "9002", "9003"],   # matches list (likes.mutual), 2 per page
     "unseen_status": 200,
+    "about_status": 200,           # answer to PUT me/data/aboutme
 }
 
 app = FastAPI()
@@ -45,7 +46,7 @@ _ids = itertools.count(1)
 def reset():
     state.clear()
     state.update(control=dict(DEFAULT_CONTROL), requests=[], bad_signatures=[], bad_headers=[],
-                 tokens={}, users={}, registrations=[], messages=[], uploads=[], likes=[], dislikes=[])
+                 tokens={}, users={}, registrations=[], messages=[], uploads=[], likes=[], dislikes=[], about=[])
     state["next_user"] = itertools.count(DEFAULT_CONTROL["user_id_start"])
 
 
@@ -238,11 +239,33 @@ def me(request: Request):
     if not u:
         return _unauth()
     b = _base(request)
-    links = {"gallery": f"{b}/gallery/confirm", "zapping": {"pop": "zapping/pop/"}}
+    links = {"gallery": f"{b}/gallery/confirm", "zapping": {"pop": "zapping/pop/"}, "data": f"{b}/me/data"}
     if not state["control"]["no_compliance_link"]:
         links["compliance"] = {"gallery": f"{b}/gallery/upload"}
     return {"id": u["id"], "name": u["name"], "galleryCount": u["gallery"],
             "missingField": None if u["gallery"] else "photo", "links": links}
+
+
+@app.get("/v2/me/data")
+def me_data(request: Request):
+    """MeData: edit links of the own profile (the app reads "aboutme" from here)."""
+    u = _user(request)
+    if not u:
+        return _unauth()
+    return {"aboutme": f"{_base(request)}/me/data/aboutme", "aboutMe": u.get("about")}
+
+
+@app.put("/v2/me/data/aboutme")
+def set_about(request: Request):
+    u = _user(request)
+    if not u:
+        return _unauth()
+    f = _form(request)
+    state["about"].append({"user": u["id"], "form": f, "content_type": request.headers.get("content-type")})
+    if state["control"]["about_status"] != 200:
+        return JSONResponse({"error": "text rejected"}, state["control"]["about_status"])
+    u["about"] = f.get("data")
+    return {"ok": True}
 
 
 @app.post("/v2/gallery/upload")

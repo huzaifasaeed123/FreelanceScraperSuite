@@ -253,6 +253,17 @@ saw in DevTools. Each call is small (12 rows), but it adds up with several open 
 
 ---
 
+## 8d. Profile text / Über mich — ✅ done
+
+- APK flow (EditAboutMeViewModel -> UserManager.C): `GET me.links.data` (MeData) -> `PUT` its `aboutme` link with the
+  form field `data=<text>` (same family as the existing `me/data/location` call).
+- Engine: `JaumoClient.set_about_me`; BotRunner sets the reserved text after the photo is verified, before swiping.
+  A rejected text is logged and the account continues.
+- Panel: "Profiltexte / Über mich" page (one text per line, usage, "never reuse a text"), off by default; texts are
+  reserved per signup like names; start check + setup checklist; the text is shown on the account page.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

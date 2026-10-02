@@ -82,6 +82,15 @@ const I18N = {
     "nav.dashboard": "Armaturenbrett", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs / Protokolle", "nav.configs": "Konfigurationen",
     "nav.proxies": "Proxies", "nav.photos": "Fotos", "nav.settings": "Einstellungen",
     "nav.jaumo": "Jaumo", "nav.config": "Konfiguration", "nav.names": "Nicknamen", "nav.cities": "Städte",
+    "nav.about": "Profiltexte / Über mich", "about.pageSub": "Texte für das Profil neuer Accounts",
+    "about.title": "Profiltexte", "about.sub": "Nach dem Profilfoto bekommt jeder neue Account einen dieser Texte als „Über mich“.",
+    "about.on": "Profiltext bei neuen Accounts setzen", "about.onSub": "Aus = Accounts bleiben ohne Text (wie bisher).",
+    "about.list": "Texte (einer pro Zeile)", "about.rules": "Regel", "about.unique": "Text nie wiederverwenden",
+    "about.uniqueSub": "Ein Text, den schon ein Account hat, wird nie wieder vergeben.",
+    "about.stats": "{u} frei · {d} bereits vergeben von {n}", "about.dropUsed": "Vergebene Texte entfernen",
+    "about.empty": "Noch keine Texte — einen pro Zeile oben einfügen.", "about.loadFail": "Textnutzung konnte nicht geladen werden",
+    "about.chip": "Profiltexte · {n} frei", "about.label": "Über mich", "about.notSet": "Profiltext nicht gesetzt",
+    "setup.about": "Profiltexte", "new.p.about": "Nicht genug freie Profiltexte.",
     "swipe.btn": "Weiter swipen", "swipe.started": "{n} Account(s) swipen weiter",
     "swipe.skipped": "{n} übersprungen — {r}", "swipe.kind": "Weiter swipen",
     "swipe.tip": "Mit dem gespeicherten Login und Gerät weiter swipen (keine neue Registrierung)",
@@ -202,6 +211,15 @@ const I18N = {
     "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs", "nav.configs": "Configurations",
     "nav.proxies": "Proxies", "nav.photos": "Photos", "nav.settings": "Settings",
     "nav.jaumo": "Jaumo", "nav.config": "Configuration", "nav.names": "Nicknames", "nav.cities": "Cities",
+    "nav.about": "Profile texts / About me", "about.pageSub": "Texts for the profile of new accounts",
+    "about.title": "Profile texts", "about.sub": "After the profile photo every new account gets one of these texts as “About me”.",
+    "about.on": "Set a profile text on new accounts", "about.onSub": "Off = accounts stay without text (as before).",
+    "about.list": "Texts (one per line)", "about.rules": "Rule", "about.unique": "Never reuse a text",
+    "about.uniqueSub": "A text that an account already has is never given out again.",
+    "about.stats": "{u} free · {d} already used of {n}", "about.dropUsed": "Remove used texts",
+    "about.empty": "No texts yet — paste one per line above.", "about.loadFail": "Could not load text usage",
+    "about.chip": "Profile texts · {n} free", "about.label": "About me", "about.notSet": "Profile text not set",
+    "setup.about": "Profile texts", "new.p.about": "Not enough free profile texts.",
     "swipe.btn": "Continue swiping", "swipe.started": "{n} account(s) continue swiping",
     "swipe.skipped": "{n} skipped — {r}", "swipe.kind": "Continue swiping",
     "swipe.tip": "Continue swiping with the stored login and device (no new signup)",
@@ -552,6 +570,7 @@ const TAB_LOADERS = {
   runs: () => loadRuns(),
   configs: () => loadConfigPage(),
   names: () => loadNamesPage(),
+  about: () => loadAboutPage(),
   cities: () => loadCitiesPage(),
   proxies: () => loadProxies(),
   photos: () => loadPhotos(),
@@ -767,7 +786,7 @@ const reloadApksSoon = throttle(() => guard(loadConfig)(), 1500);
 // ---------------------------------------------------------------------------
 
 const STEP_FLOW = {
-  signup: ["client_token", "signup", "location", "profile", "photo", "verify", "swiping"],
+  signup: ["client_token", "signup", "location", "profile", "photo", "verify", "about", "swiping"],
   message: ["login", "matches", "messaging"],
   sync: ["login", "links", "counters"],
   swipe: ["login", "profile", "swiping"],
@@ -775,6 +794,7 @@ const STEP_FLOW = {
 const STEP_LABELS = {
   starting: "Starting", waiting_proxy: "Waiting for proxy", client_token: "Client token", signup: "Signing up",
   location: "Setting location", profile: "Loading profile", photo: "Uploading photo", verify: "Verifying photo",
+  about: "Profile text",
   swiping: "Swiping", finished: "Finished", login: "Logging in", matches: "Loading matches", messaging: "Messaging",
   links: "Loading links", counters: "Reading counters",
 };
@@ -798,7 +818,8 @@ async function renderSetupCheck() {
   if (res.ok) { box.innerHTML = ""; return; }
   const byCode = Object.fromEntries(res.problems.map((p) => [p.code, p]));
   const proxyRequired = (c.settings || {}).require_proxy !== false;
-  const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "names"]].map(([code, page]) => {
+  const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "names"],
+    ...(c.settings.about_enabled ? [["about", "about"]] : [])].map(([code, page]) => {
     const p = byCode[code];
     const note = p ? t("new.p." + code) : code === "proxy" && !proxyRequired ? t("setup.proxyOff") : t("setup.ok");
     return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? p.message : "")}">
@@ -1151,6 +1172,7 @@ function renderLaunchInfo() {
     chip(`${st.photo_pool.length || "all"} photos`),
     chip(`${st.name_source === "auto" ? "auto" : "custom"} names${c.names_unused !== undefined
       ? ` · ${fmtNum(c.names_unused)} unused` : ""}`, c.names_unused === 0),
+    ...(st.about_enabled ? [chip(t("about.chip", { n: fmtNum(c.about_unused ?? 0) }), !c.about_unused)] : []),
     chip(`${fmtNum((state.photos || []).filter((p) => p.status === "available").length)} unused photos`,
       !(state.photos || []).some((p) => p.status === "available")),
   ].join("");
@@ -1649,6 +1671,53 @@ async function loadNamesPage() {
     await saveConfig({ name_source: f.name_source.value, name_pool: lines(f.name_pool.value) });
     await api("/api/settings", { method: "PUT", body: {
       identity: { unique_names: f.unique_names.checked, unique_photos: settings.identity.unique_photos } } });
+  });
+}
+
+// --- Profiltexte / Über mich ----------------------------------------------------
+
+async function loadAboutPage() {
+  const c = await loadConfig();
+  if (state.tab !== "about") return;
+  const s = c.settings;
+  $("#about-body").innerHTML = `<form id="about-form">
+    ${cfgCard("fileText", "about.title", "about.sub", `
+      <label class="setting-row"><div><b>${esc(t("about.on"))}</b><span>${esc(t("about.onSub"))}</span></div>
+        <input type="checkbox" class="switch" name="about_enabled" ${s.about_enabled ? "checked" : ""}></label>
+      <label>${esc(t("about.list"))}<textarea name="about_pool" rows="12">${esc(s.about_pool.join("\n"))}</textarea></label>
+      <div class="name-usage" id="about-usage"><span class="muted">…</span></div>`)}
+    ${cfgCard("shieldCheck", "about.rules", "", `
+      <label class="setting-row"><div><b>${esc(t("about.unique"))}</b><span>${esc(t("about.uniqueSub"))}</span></div>
+        <input type="checkbox" class="switch" name="about_unique" ${s.about_unique ? "checked" : ""}></label>`)}
+    ${saveBar("about")}
+  </form>`;
+
+  const form = $("#about-form");
+  let usage = {};
+  const render = () => {
+    const seen = new Set();
+    const pool = lines(form.elements.about_pool.value).filter((x) => !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()));
+    const isUsed = (x) => (usage[x.trim().toLocaleLowerCase()] || 0) > 0;
+    const used = pool.filter(isUsed);
+    $("#about-usage").innerHTML = `<div class="name-usage-head">
+        <span>${esc(t("about.stats", { u: fmtNum(pool.length - used.length), d: fmtNum(used.length), n: fmtNum(pool.length) }))}</span>
+        ${used.length ? `<button type="button" class="btn small" id="about-drop-used">${esc(t("about.dropUsed"))}</button>` : ""}
+      </div>
+      ${pool.length ? `<div class="about-list">${pool.map((x) =>
+        `<span class="name-chip${isUsed(x) ? " used" : ""}" title="${esc(t(isUsed(x) ? "names.usedTip" : "names.freeTip"))}">${esc(x)}</span>`).join("")}</div>`
+        : `<span class="muted">${esc(t("about.empty"))}</span>`}`;
+    const drop = $("#about-drop-used");
+    if (drop) drop.onclick = () => {
+      form.elements.about_pool.value = lines(form.elements.about_pool.value).filter((x) => !isUsed(x)).join("\n");
+      render();
+    };
+  };
+  form.elements.about_pool.addEventListener("input", debounce(render, 250));
+  api("/api/about/usage").then((u) => { usage = u; if (document.body.contains(form)) render(); })
+    .catch(() => { $("#about-usage").textContent = t("about.loadFail"); });
+  onSave(form, "about", async (f) => {
+    await saveConfig({ about_enabled: f.about_enabled.checked, about_pool: lines(f.about_pool.value),
+                       about_unique: f.about_unique.checked });
   });
 }
 
@@ -2660,6 +2729,8 @@ function renderAccountSections() {
       <div class="acc-title"><h1>${esc(a.name)}</h1>${badge(a.status)}
         ${run ? `<span class="live-chip on"><span class="pulse"></span>${esc(workerName(run.worker))} ${esc(t("state.working").toLowerCase())}</span>` : ""}</div>
       <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? ` · ${age} years` : ""} · ${esc(a.location || "—")} · joined ${fmtDate(a.created_at)}</div>
+      ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span>${esc(a.about_me)}</span></p>`
+        : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(a.about_me_error)}</span></p>` : ""}
       <div class="acc-chips">
         <span class="chip">${icon("smartphone")}${esc(dev)}</span>
         ${a.config_id ? "" : `<span class="chip">${icon("archive")}legacy import</span>`}

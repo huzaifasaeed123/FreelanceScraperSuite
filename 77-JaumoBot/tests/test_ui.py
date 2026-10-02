@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.ui, pytest.mark.skipif(not CHROME.exists(), reason="Ch
 pw_sync = pytest.importorskip("playwright.sync_api")
 
 RAW_KEY = re.compile(r"\b(acc|kpi|st|state|nav|sec|top|filter|sort|new|edit|msg|bulk|pager|col|common|del|sys|brand|outdated)\.[a-zA-Z]+\b")
-TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "cities", "runs"]
+TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "about", "cities", "runs"]
 SLOWISH = {k: [0.2, 0.3] for k in FAST_DELAYS}
 
 
@@ -307,7 +307,7 @@ def test_jaumo_menu_group(browser, app):
     pg = Page(browser, app).login("dashboard")
     try:
         subs = pg.p.locator("#nav-jaumo .sb-sub button").evaluate_all("els => els.map(e => e.dataset.tab)")
-        assert subs == ["configs", "photos", "proxies", "names", "cities", "runs"], "order as in the client's mockup"
+        assert subs == ["configs", "photos", "proxies", "names", "about", "cities", "runs"], "order as in the client's mockup"
         assert pg.p.locator("#tabs button[data-tab=settings]").count() == 0, "no separate settings page"
         pg.p.click("#nav-jaumo-toggle")
         assert not pg.p.is_visible("#nav-jaumo .sb-sub"), "arrow folds the sub-menu"

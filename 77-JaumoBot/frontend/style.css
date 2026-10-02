@@ -1075,3 +1075,10 @@ details.form-section.adv>:last-child{margin-bottom:14px}
 .city-preview .name-chip { display: inline-flex; align-items: center; gap: 4px; }
 .city-preview .name-chip svg.ic { width: 13px; height: 13px; }
 @media (max-width: 600px) { .kv { grid-template-columns: 1fr; gap: 2px; } .kv dt { margin-top: 6px; } }
+
+/* Profiltexte page + account page text */
+.about-list { display: flex; flex-direction: column; gap: 6px; }
+.about-list .name-chip { display: block; white-space: normal; border-radius: 8px; padding: 6px 10px; }
+.acc-about { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 4px; max-width: 760px; color: var(--text-2); font-style: italic; }
+.acc-about svg.ic { flex: none; margin-top: 2px; width: 15px; height: 15px; }
+.acc-about.bad { color: var(--warn); font-style: normal; }

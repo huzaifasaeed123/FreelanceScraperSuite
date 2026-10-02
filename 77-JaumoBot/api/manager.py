@@ -69,6 +69,44 @@ def name_usage(s: Session) -> Counter:
     return usage
 
 
+def about_usage(s: Session) -> Counter:
+    """How often each profile text is taken: accounts that have it, plus texts reserved by active signups."""
+    usage = Counter(_key(t) for t in s.exec(select(Account.about_me)).all() if t)
+    reserved = s.exec(select(BotRun.about_text).where(
+        BotRun.kind == "signup", BotRun.status.in_(ACTIVE_STATUSES), BotRun.about_text.is_not(None))).all()
+    usage.update(_key(t) for t in reserved)
+    return usage
+
+
+def about_pool_for(settings: dict) -> list[str]:
+    seen, out = set(), []
+    for t in settings.get("about_pool") or []:
+        if t.strip() and _key(t) not in seen:
+            seen.add(_key(t))
+            out.append(t.strip())
+    return out
+
+
+def pick_about(usage: Counter, settings: dict, count: int) -> list:
+    """Least-used profile texts; [None] * count when profile texts are off."""
+    if not settings.get("about_enabled"):
+        return [None] * count
+    pool = about_pool_for(settings)
+    if not pool:
+        raise ValueError("The profile text list is empty — add texts or turn profile texts off")
+    unique = settings.get("about_unique", True)
+    picked = []
+    for _ in range(count):
+        low = min(usage[_key(t)] for t in pool)
+        if unique and low > 0:
+            raise ValueError(f"Not enough unused profile texts: only {len(picked)} of {count} could be assigned. "
+                             "Add texts or allow text reuse (Profiltexte page).")
+        text = random.choice([t for t in pool if usage[_key(t)] == low])
+        picked.append(text)
+        usage[_key(text)] += 1
+    return picked
+
+
 def name_pool_for(settings: dict) -> list[str]:
     if settings.get("name_source", "auto") == "auto":
         pool = AUTO_FEMALE_NAMES
@@ -291,7 +329,8 @@ class RunManager:
             checks = (("apk", "configs", lambda: self._snapshot(s, config)),
                       ("photos", "photos", lambda: pick_photos(s, settings, count, rules["unique_photos"])),
                       ("names", "names", lambda: pick_names(name_usage(s), settings, count, names,
-                                                                rules["unique_names"])))
+                                                                rules["unique_names"])),
+                      ("about", "about", lambda: pick_about(about_usage(s), settings, count)))
             for code, page, fn in checks:
                 try:
                     fn()
@@ -311,10 +350,11 @@ class RunManager:
             rules = get_identity(s)
             assigned = pick_names(name_usage(s), snap["settings"], count, names, rules["unique_names"])
             photos = pick_photos(s, snap["settings"], count, rules["unique_photos"])
+            abouts = pick_about(about_usage(s), snap["settings"], count)
             runs = []
-            for name, photo in zip(assigned, photos):
+            for name, photo, about in zip(assigned, photos, abouts):
                 run = BotRun(kind="signup", config_id=config.id, config_name=config.name,
-                             config_snapshot=snap, requested_name=name, photo=photo)
+                             config_snapshot=snap, requested_name=name, photo=photo, about_text=about)
                 s.add(run)
                 runs.append(run)
             s.commit()
@@ -537,6 +577,7 @@ class RunManager:
             config_id = run.config_id
             name = run.requested_name
             photo_name = run.photo
+            about = run.about_text
             worker = run.worker
         settings = snap["settings"]
 
@@ -560,7 +601,7 @@ class RunManager:
                 settings, snap["apk"], str(photo),
                 proxy_url=proxy_url(proxy) if proxy else None, name=name,
                 emit=lambda kind, data: self._on_signup_event(run_id, ctx, kind, data),
-                stop_event=ev,
+                stop_event=ev, about=about,
             )
             result = runner.run()
         finally:
