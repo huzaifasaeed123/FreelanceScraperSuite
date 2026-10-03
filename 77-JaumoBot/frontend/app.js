@@ -118,8 +118,9 @@ const I18N = {
     "cfg.msgOn": "Matches anschreiben erlaubt", "cfg.msgOnSub": "Erlaubt den Job „Matches anschreiben“ auf der Accounts-Seite. Beim Erstellen werden nie Nachrichten gesendet.",
     "cfg.templates": "Nachrichtenvorlagen (eine pro Zeile, zufällige Auswahl)",
     "cfg.sync": "Stats aktualisieren", "cfg.syncSub": "Erhaltene Likes, Besucher, Nachrichten und Matches werden von Jaumo gelesen (nur lesen). Arbeitende Accounts werden nie gleichzeitig gelesen.",
-    "cfg.syncAfter": "Direkt nach jeder Sitzung", "cfg.syncAfterSub": "Wenn eine Erstellung, „Weiter swipen“ oder das Anschreiben endet, werden die Stats dieses Accounts sofort gelesen.",
-    "cfg.syncEvery": "Automatisch alle X Minuten (0 = aus)", "cfg.syncEverySub": "Liest alle Accounts nacheinander (mit der Pause unten). Übersprungen werden arbeitende Accounts und solche, die kurz vorher gelesen wurden.",
+    "cfg.syncAfter": "Am Ende jeder Sitzung", "cfg.syncAfterSub": "Die Sitzung liest die Stats zum Schluss selbst (auch beim Stoppen) — mit ihrem eigenen Login, ohne neue Anmeldung.",
+    "cfg.syncDuring": "Während der Sitzung alle N Swipes (0 = aus)", "cfg.syncDuringSub": "Die laufende Sitzung liest die Stats selbst mit ihrem Login. Beispiel 200: bei 2.000 Aktionen 10× gelesen (je 2 Anfragen).",
+    "cfg.syncEvery": "Ruhende Accounts alle X Minuten (0 = aus)", "cfg.syncEverySub": "Liest alle Accounts, die gerade nicht arbeiten, nacheinander (mit der Pause unten). Kurz vorher gelesene werden übersprungen.",
     "cfg.syncDelay": "Pause zwischen Accounts bei „alle aktualisieren“ (Sekunden)",
     "cfg.syncDelaySub": "Die Accounts werden nacheinander mit dieser Pause gelesen, damit Jaumo keine Anfragespitze sieht.",
     "cfg.advanced": "Erweitert — die Standardwerte funktionieren; nur bei Bedarf ändern",
@@ -253,8 +254,9 @@ const I18N = {
     "cfg.msgOn": "Messaging matches allowed", "cfg.msgOnSub": "Allows the “Message matches” job on the Accounts page. Creating accounts never sends messages.",
     "cfg.templates": "Message templates (one per line, random pick)",
     "cfg.sync": "Stats refresh", "cfg.syncSub": "Received likes, visitors, messages and matches are read from Jaumo (read-only). Working accounts are never read at the same time.",
-    "cfg.syncAfter": "Right after every session", "cfg.syncAfterSub": "When account creation, “Continue swiping” or messaging ends, that account's stats are read at once.",
-    "cfg.syncEvery": "Automatically every X minutes (0 = off)", "cfg.syncEverySub": "Reads all accounts one after another (with the pause below). Working accounts and accounts read shortly before are skipped.",
+    "cfg.syncAfter": "At the end of every session", "cfg.syncAfterSub": "The session reads its stats itself at the end (also when stopped) — with its own login, no new login.",
+    "cfg.syncDuring": "During the session every N swipes (0 = off)", "cfg.syncDuringSub": "The running session reads its stats itself with its login. Example 200: 10 reads for 2,000 actions (2 requests each).",
+    "cfg.syncEvery": "Idle accounts every X minutes (0 = off)", "cfg.syncEverySub": "Reads all accounts that are not working, one after another (with the pause below). Accounts read shortly before are skipped.",
     "cfg.syncDelay": "Pause between accounts for “refresh all” (seconds)",
     "cfg.syncDelaySub": "Accounts are read one after another with this pause, so Jaumo sees no burst of requests.",
     "cfg.advanced": "Advanced — the defaults work; change only if needed",
@@ -1556,6 +1558,8 @@ async function loadConfigPage() {
     ${cfgCard("refresh", "cfg.sync", "cfg.syncSub", `
       <label class="setting-row"><div><b>${esc(t("cfg.syncAfter"))}</b><span>${esc(t("cfg.syncAfterSub"))}</span></div>
         <input type="checkbox" class="switch" name="sync_after_session" ${b.sync_after_session !== false ? "checked" : ""}></label>
+      <div class="setting-row"><div><b>${esc(t("cfg.syncDuring"))}</b><span>${esc(t("cfg.syncDuringSub"))}</span></div>
+        <input type="number" name="stats_every_swipes" min="0" max="10000" step="10" value="${b.stats_every_swipes ?? 200}" required style="width:110px"></div>
       <div class="setting-row"><div><b>${esc(t("cfg.syncEvery"))}</b><span>${esc(t("cfg.syncEverySub"))}</span></div>
         <input type="number" name="auto_sync_minutes" min="0" max="1440" step="1" value="${b.auto_sync_minutes ?? 30}" required style="width:110px"></div>
       <div class="setting-row"><div><b>${esc(t("cfg.syncDelay"))}</b><span>${esc(t("cfg.syncDelaySub"))}</span></div>
@@ -1624,6 +1628,7 @@ async function loadConfigPage() {
       bot: { parallel_accounts: Math.min(20, Math.max(1, +f.parallel_accounts.value || 1)),
              sync_delay_seconds: Math.min(600, Math.max(2, +f.sync_delay_seconds.value || 10)),
              sync_after_session: f.sync_after_session.checked,
+             stats_every_swipes: Math.max(0, Math.round(+f.stats_every_swipes.value || 0)),
              auto_sync_minutes: Math.max(0, Math.round(+f.auto_sync_minutes.value || 0)) },
       identity: { unique_names: settings.identity.unique_names, unique_photos: f.unique_photos.checked },
     } });

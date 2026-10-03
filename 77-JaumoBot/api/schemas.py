@@ -187,13 +187,16 @@ class IdentitySettings(BaseModel):
 class BotSettings(BaseModel):
     parallel_accounts: int = Field(1, ge=1, le=20)
     sync_delay_seconds: float = Field(10, ge=2, le=600)   # pause between accounts in "refresh all"
-    sync_after_session: bool = True                       # refresh an account's stats when its session ends
-    auto_sync_minutes: int = Field(30, ge=0, le=1440)     # refresh all accounts every N minutes (0 = off)
+    sync_after_session: bool = True                       # the session reads its stats when it ends
+    stats_every_swipes: int = Field(200, ge=0, le=10000)  # the session reads its stats every N swipes (0 = off)
+    auto_sync_minutes: int = Field(30, ge=0, le=1440)     # refresh idle accounts every N minutes (0 = off)
 
     @model_validator(mode="after")
     def _check(self):
         if 0 < self.auto_sync_minutes < 5:
             raise ValueError("auto_sync_minutes must be 0 (off) or at least 5")
+        if 0 < self.stats_every_swipes < 20:
+            raise ValueError("stats_every_swipes must be 0 (off) or at least 20")
         return self
 
 

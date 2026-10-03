@@ -21,6 +21,7 @@ import math
 import os
 import random
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
@@ -417,6 +418,7 @@ class JaumoClient:
                 )
                 return None, None
             expires_in = token_data.get("expires_in")
+            self.last_expires_in = int(expires_in) if isinstance(expires_in, (int, float)) else None
             self.log(f"[REFRESH] OK — access token present; expires_in={expires_in}")
             return new_access, new_refresh
         self.log(f"[REFRESH] FAIL {resp.status_code}: {resp.text}", "error")
@@ -688,6 +690,17 @@ class JaumoClient:
 # Runner base: logging, events, stop handling, delays
 # ---------------------------------------------------------------------------
 
+TOKEN_MIN_LEFT = 300   # reuse a stored access token only while it is valid for at least 5 more minutes
+
+
+def token_seconds_left(account):
+    """Seconds the stored access token is still valid (None = unknown -> renew the login)."""
+    exp = (account or {}).get("token_expires_at")
+    if not (account or {}).get("access_token") or not isinstance(exp, (int, float)):
+        return None
+    return exp - time.time()
+
+
 class _RunnerBase:
     def __init__(self, settings, emit=None, stop_event=None):
         self.settings = {**DEFAULT_SETTINGS, **(settings or {})}
@@ -713,6 +726,104 @@ class _RunnerBase:
     def check_stop(self):
         if self.stop_event.is_set():
             raise StopRequested()
+
+    def _token_fields(self, access, refresh):
+        """account_update fields for new tokens, incl. when the access token expires (from expires_in)."""
+        exp = getattr(self.client, "last_expires_in", None)
+        return {"access_token": access, "refresh_token": refresh,
+                "token_expires_at": round(time.time() + exp, 1) if exp else None}
+
+    def _login_if_needed(self):
+        """Like the app: keep a stored access token while it is valid, renew it only when it (almost) expired."""
+        left = token_seconds_left(getattr(self, "account", None))
+        if left is not None and left > TOKEN_MIN_LEFT:
+            self.log(f"[LOGIN] Stored login still valid ({int(left // 60)} min left) — no new login")
+            return True
+        self.step("login")
+        if self._refresh():
+            return True
+        self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
+        return bool(self.access_token)
+
+    # --- stats (read-only, same requests as the app's unseen counters) ----------
+
+    STATS_COUNTERS = ("likes", "visits", "conversations", "matches", "requests")
+    MAX_MATCH_PAGES = 5
+
+    def _get_json(self, url, label, honour_stop=True):
+        """GET with one refresh-and-retry on 401. Returns (data, status)."""
+        if honour_stop:
+            self.check_stop()
+        resp = self.client._get(url, access_token=self.access_token)
+        if resp.status_code == 401 and self._refresh():
+            resp = self.client._get(url, access_token=self.access_token)
+        if resp.status_code != 200:
+            self.log(f"[{label}] FAIL {resp.status_code}: {resp.text[:300]}", "warning")
+            return None, resp.status_code
+        try:
+            return resp.json(), 200
+        except ValueError:
+            self.log(f"[{label}] FAIL — response was not JSON", "warning")
+            return None, resp.status_code
+
+    def read_stats(self, known_matches, honour_stop=True):
+        """
+        API root -> links.unseen (UnseenResponse counters) -> only when there are matches we don't know yet:
+        page links.likes.mutual. Returns {counters, match_ids, raw}; raises ValueError with the reason.
+        """
+        root, status = self._get_json("", "API ROOT", honour_stop)          # GET https://api.jaumo.com/v2/
+        links = (root or {}).get("links") or {}
+        unseen_url = links.get("unseen")
+        if not unseen_url:
+            raise ValueError(f"API root did not provide links.unseen (HTTP {status})")
+        data, status = self._get_json(unseen_url, "UNSEEN", honour_stop)
+        if not isinstance(data, dict):
+            raise ValueError(f"could not read counters (HTTP {status})")
+        self.log(f"[UNSEEN] {json.dumps(_redact(data), ensure_ascii=False)[:2000]}")
+        counters = {k: int(data.get(k) or 0) for k in self.STATS_COUNTERS}
+        match_ids = None
+        known = {str(m) for m in known_matches or []}
+        mutual_url = (links.get("likes") or {}).get("mutual") if isinstance(links.get("likes"), dict) else None
+        if counters["matches"] > len(known) and mutual_url:
+            match_ids, url, pages = [], mutual_url, 0
+            while url and pages < self.MAX_MATCH_PAGES:
+                page, status = self._get_json(url, "MATCHES", honour_stop)
+                if not isinstance(page, dict):
+                    break
+                for item in page.get("items") or []:
+                    uid = (item.get("user") or {}).get("id") if isinstance(item, dict) else None
+                    if uid:
+                        match_ids.append(str(uid))
+                url = (page.get("links") or {}).get("next")
+                pages += 1
+            self.log(f"[MATCHES] {len(match_ids)} match ids read from {pages} page(s)")
+        return {"counters": counters, "match_ids": match_ids, "raw": _redact(data)}
+
+    def session_stats(self, note, final=False):
+        """Stats read by a running session with its own login (never a second login). Never fails the session."""
+        if not self.access_token:
+            return
+        try:
+            res = self.read_stats(self.known_matches(), honour_stop=not final)
+        except StopRequested:
+            raise
+        except Exception as e:  # stats are a bonus; the session goes on
+            self.log(f"[STATS] {note}: not read — {type(e).__name__}: {e}", "warning")
+            return
+        c = res["counters"]
+        self.log(f"[STATS] {note}: likes {c['likes']} · visitors {c['visits']} · messages {c['conversations']} · "
+                 f"matches {c['matches']}")
+        self.emit("stats", **res)
+
+    def known_matches(self):
+        return list((getattr(self, "account", None) or {}).get("matches") or []) + list(getattr(self, "session_matches", []))
+
+    def finish_with_stats(self, result):
+        """End-of-session read (also after a stop or a block), when the session had a working login."""
+        if getattr(self, "ready", False) and self.settings.get("stats_at_end") and \
+                result.get("status") in ("done", "stopped", "blocked"):
+            self.session_stats("end of session", final=True)
+        return result
 
     def delay(self, key):
         lo, hi = self.settings["delays"].get(key) or (0, 0)
@@ -753,6 +864,7 @@ class BotRunner(_RunnerBase):
         self.access_token = None
         self.refresh_token = None
         self.counters = {"swipes": 0, "liked": 0, "disliked": 0, "matches": 0}
+        self.session_matches = []   # matches made in this session (for the stats reads)
         self.ready = False  # signup + photo verified
 
     # --- identity ----------------------------------------------------------
@@ -782,7 +894,7 @@ class BotRunner(_RunnerBase):
     def _set_tokens(self, access, refresh):
         self.access_token = access
         self.refresh_token = refresh
-        self.emit("account_update", access_token=access, refresh_token=refresh)
+        self.emit("account_update", **self._token_fields(access, refresh))
 
     def _refresh(self):
         if not self.refresh_token:
@@ -796,6 +908,9 @@ class BotRunner(_RunnerBase):
     # --- main flow ---------------------------------------------------------
 
     def run(self):
+        return self.finish_with_stats(self._run_safe())
+
+    def _run_safe(self):
         try:
             return self._run()
         except StopRequested:
@@ -965,6 +1080,7 @@ class BotRunner(_RunnerBase):
                  f"matches={self.counters['matches']} ---")
         return result
 
+    REFRESH_AFTER_FIRST_BATCH = True
     MAX_JAUMO_PAUSE = 900      # wait out Jaumo card locks up to 15 min; longer ones end the session
     MAX_PAUSES_IN_ROW = 3      # ... unless they repeat without a single swipe in between
 
@@ -1003,8 +1119,10 @@ class BotRunner(_RunnerBase):
                 self.log(f"[ZAPPING] {last_fail_reason}", "warning")
 
             if first_batch and status == 200:
-                # Original flow refreshes the token right after the first batch.
-                self._refresh()
+                # Original signup flow refreshes the token right after the first batch
+                # (continue-swiping keeps a still valid login instead).
+                if self.REFRESH_AFTER_FIRST_BATCH:
+                    self._refresh()
                 first_batch = False
 
             if status != 200:
@@ -1077,6 +1195,7 @@ class BotRunner(_RunnerBase):
                         self.counters["liked"] += 1
                         if matched:
                             self.counters["matches"] += 1
+                            self.session_matches.append(user_id)
                             self.log(f"  [MATCH] User {user_id}")
                         else:
                             self.log(f"  [LIKED] User {user_id}  (likes={self.counters['liked']})")
@@ -1084,6 +1203,9 @@ class BotRunner(_RunnerBase):
                         self.counters["disliked"] += 1
                         self.log(f"  [DISLIKED] User {user_id}  (dislikes={self.counters['disliked']})")
                     self.emit("swipe", user_id=user_id, action=action, matched=matched)
+                    every = int(s.get("stats_every_swipes") or 0)
+                    if every and self.counters["swipes"] % every == 0:
+                        self.session_stats(f"after {self.counters['swipes']} swipes")
                 else:
                     consecutive_fail += 1
                     last_fail_reason = f"{action} HTTP {status}" if status else f"{action} network error"
@@ -1136,14 +1258,13 @@ class SwipeRunner(BotRunner):
         self.refresh_token = account.get("refresh_token") or None
         self.ready = True  # set up before; a stop keeps the account active
 
+    REFRESH_AFTER_FIRST_BATCH = False
+
     def _run(self):
         acc = self.account
         self.log(f"--- Continue swiping: {acc.get('name')} (account #{acc.get('id')}) ---")
 
-        self.step("login")
-        if not self._refresh():
-            self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
-        if not self.access_token:
+        if not self._login_if_needed() or not self.access_token:
             return {"status": "failed", "reason": "no usable login token"}
 
         self.step("profile")
@@ -1196,6 +1317,17 @@ class MessageRunner(_RunnerBase):
             self.emit("account_update", device_info=self.client.device_info)
         self.access_token = account.get("access_token")
         self.refresh_token = account.get("refresh_token")
+        self.ready = False
+
+    def _refresh(self):
+        if not self.refresh_token:
+            return False
+        new_tok, new_ref = self.client.refresh_access_token(self.refresh_token)
+        if new_tok:
+            self.access_token, self.refresh_token = new_tok, new_ref
+            self.emit("account_update", **self._token_fields(new_tok, new_ref))
+            return True
+        return False
 
     def fetch_new_matches(self):
         """
@@ -1206,6 +1338,9 @@ class MessageRunner(_RunnerBase):
         return []
 
     def run(self):
+        return self.finish_with_stats(self._run_safe())
+
+    def _run_safe(self):
         try:
             return self._run()
         except StopRequested:
@@ -1223,16 +1358,9 @@ class MessageRunner(_RunnerBase):
         acc = self.account
         self.log(f"--- Messaging for {acc.get('name')} (account #{acc.get('id')}) ---")
 
-        self.step("login")
-        if self.refresh_token:
-            new_tok, new_ref = c.refresh_access_token(self.refresh_token)
-            if new_tok:
-                self.access_token, self.refresh_token = new_tok, new_ref
-                self.emit("account_update", access_token=new_tok, refresh_token=new_ref)
-            else:
-                self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
-        if not self.access_token:
+        if not self._login_if_needed() or not self.access_token:
             return {"status": "failed", "reason": "no usable token"}
+        self.ready = True
         self.delay("after_refresh")
 
         self.step("matches")
@@ -1266,15 +1394,13 @@ class MessageRunner(_RunnerBase):
 class StatsSyncRunner(_RunnerBase):
     """
     Reads the received numbers of an existing account exactly like the app does:
-        refresh login -> GET /v2/ (API root: links) -> GET links.unseen (UnseenResponse counters)
+        keep the stored login while valid (renew only when expired) -> GET /v2/ (API root: links)
+        -> GET links.unseen (UnseenResponse counters)
         -> only when there are matches we don't know yet: page links.likes.mutual (match user ids).
     Sends nothing to other users and changes nothing on the account.
 
     Emits: log, step, account_update (new tokens), stats {counters, match_ids, raw}
     """
-
-    MAX_MATCH_PAGES = 5
-    COUNTERS = ("likes", "visits", "conversations", "matches", "requests")
 
     def __init__(self, settings, apk, account, proxy_url=None, emit=None, stop_event=None):
         super().__init__(settings, emit, stop_event)
@@ -1307,71 +1433,25 @@ class StatsSyncRunner(_RunnerBase):
         new_tok, new_ref = self.client.refresh_access_token(self.refresh_token)
         if new_tok:
             self.access_token, self.refresh_token = new_tok, new_ref
-            self.emit("account_update", access_token=new_tok, refresh_token=new_ref)
+            self.emit("account_update", **self._token_fields(new_tok, new_ref))
             return True
         return False
-
-    def _get_json(self, url, label):
-        """GET with one refresh-and-retry on 401. Returns (data, status)."""
-        self.check_stop()
-        resp = self.client._get(url, access_token=self.access_token)
-        if resp.status_code == 401 and self._refresh():
-            resp = self.client._get(url, access_token=self.access_token)
-        if resp.status_code != 200:
-            self.log(f"[{label}] FAIL {resp.status_code}: {resp.text[:300]}", "warning")
-            return None, resp.status_code
-        try:
-            return resp.json(), 200
-        except ValueError:
-            self.log(f"[{label}] FAIL — response was not JSON", "warning")
-            return None, resp.status_code
 
     def _run(self):
         acc = self.account
         self.log(f"--- Stats sync for {acc.get('name')} (account #{acc.get('id')}) ---")
-
-        self.step("login")
-        if not self._refresh():
-            self.log("[LOGIN] Refresh failed — trying stored access token", "warning")
-        if not self.access_token:
+        if not self._login_if_needed() or not self.access_token:
             return {"status": "failed", "reason": "no usable token"}
-
-        self.step("links")
-        root, status = self._get_json("", "API ROOT")          # GET https://api.jaumo.com/v2/
-        links = (root or {}).get("links") or {}
-        unseen_url = links.get("unseen")
-        if not unseen_url:
-            return {"status": "failed", "reason": f"API root did not provide links.unseen (HTTP {status})"}
-
         self.step("counters")
-        data, status = self._get_json(unseen_url, "UNSEEN")
-        if not isinstance(data, dict):
-            return {"status": "failed", "reason": f"could not read counters (HTTP {status})"}
-        self.log(f"[UNSEEN] {json.dumps(_redact(data), ensure_ascii=False)[:2000]}")
-        counters = {k: int(data.get(k) or 0) for k in self.COUNTERS}
-
-        match_ids = None
-        known = {str(m) for m in (acc.get("matches") or [])}
-        mutual_url = (links.get("likes") or {}).get("mutual") if isinstance(links.get("likes"), dict) else None
-        if counters["matches"] > len(known) and mutual_url:
-            self.step("matches")
-            match_ids, url, pages = [], mutual_url, 0
-            while url and pages < self.MAX_MATCH_PAGES:
-                page, status = self._get_json(url, "MATCHES")
-                if not isinstance(page, dict):
-                    break
-                for item in page.get("items") or []:
-                    uid = (item.get("user") or {}).get("id") if isinstance(item, dict) else None
-                    if uid:
-                        match_ids.append(str(uid))
-                url = (page.get("links") or {}).get("next")
-                pages += 1
-            self.log(f"[MATCHES] {len(match_ids)} match ids read from {pages} page(s)")
-
-        self.emit("stats", counters=counters, match_ids=match_ids, raw=_redact(data))
+        try:
+            res = self.read_stats(acc.get("matches") or [])
+        except ValueError as e:
+            return {"status": "failed", "reason": str(e)}
+        self.emit("stats", **res)
         self.step("finished")
-        return {"status": "done", "reason": (f"likes {counters['likes']} · visitors {counters['visits']} · "
-                                             f"messages {counters['conversations']} · matches {counters['matches']}")}
+        c = res["counters"]
+        return {"status": "done", "reason": (f"likes {c['likes']} · visitors {c['visits']} · "
+                                             f"messages {c['conversations']} · matches {c['matches']}")}
 
 
 # ---------------------------------------------------------------------------

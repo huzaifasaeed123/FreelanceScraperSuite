@@ -195,7 +195,7 @@ def setup_ready(api, *, photos=6, require_proxy=False, max_swipes=6, **settings)
     conf = ok(api.get("/api/configs"))[0]
     s = {**conf["settings"], "require_proxy": require_proxy, "max_swipes": max_swipes, "delays": FAST_DELAYS, **settings}
     ok(api.put(f"/api/configs/{conf['id']}", json={"name": conf["name"], "apk_profile_id": apk["id"], "settings": s}))
-    ok(api.put("/api/settings", json={"bot": {"sync_after_session": False}}))
+    ok(api.put("/api/settings", json={"bot": {"sync_after_session": False, "stats_every_swipes": 0}}))
     if photos:
         files = [("files", (f"p{i}.jpg", jpeg_bytes(i), "image/jpeg")) for i in range(photos)]
         res = ok(api.post("/api/photos", files=files))

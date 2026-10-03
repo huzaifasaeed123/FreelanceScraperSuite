@@ -31,7 +31,8 @@ ACTIVE_STATUSES = ("queued", "running")
 
 
 IDENTITY_DEFAULTS = {"unique_names": True, "unique_photos": True}
-BOT_DEFAULTS = {"parallel_accounts": 1, "sync_delay_seconds": 10, "sync_after_session": True, "auto_sync_minutes": 30}
+BOT_DEFAULTS = {"parallel_accounts": 1, "sync_delay_seconds": 10, "sync_after_session": True,
+                "stats_every_swipes": 200, "auto_sync_minutes": 30}
 AUTO_SYNC_TICK = float(os.environ.get("AUTO_SYNC_TICK_SECONDS", "30"))          # how often the timer checks
 AUTO_SYNC_INTERVAL = float(os.environ.get("AUTO_SYNC_INTERVAL_SECONDS", "0"))   # tests only: overrides the minutes
 SYNC_COOLDOWN_SECONDS = 15   # one refresh per account at a time, then wait at least this long
@@ -453,7 +454,7 @@ class RunManager:
             if not acc:
                 return self._finish(run_id, {"status": "failed", "reason": "account not found"})
             account = acc.model_dump()
-        settings = snap["settings"]
+        settings = self._session_settings(snap["settings"])
 
         try:
             proxy = self._acquire_proxy(run_id, ev, settings)
@@ -472,6 +473,8 @@ class RunManager:
                 self._update_account(account["id"], data, run_id)
             elif kind == "swipe":
                 self._on_swipe(run_id, account["id"], data)
+            elif kind == "stats":
+                self._on_stats(run_id, account["id"], data)
 
         try:
             runner = SwipeRunner(settings, snap["apk"], account,
@@ -583,10 +586,6 @@ class RunManager:
             print(f"[{self.labels.get(run_id, f'session {run_id}')}] RESULT  {result['status']}: {result.get('reason', '')}",
                   file=sys.stdout, flush=True)
         self.labels.pop(run_id, None)
-        try:
-            self._sync_after_session(run_id)
-        except Exception as e:  # a refresh problem must never change the session result
-            self._log(run_id, "warning", f"[STATS] Could not queue the stats refresh: {type(e).__name__}: {e}")
 
     # --- signup worker -----------------------------------------------------
 
@@ -599,7 +598,7 @@ class RunManager:
             photo_name = run.photo
             about = run.about_text
             worker = run.worker
-        settings = snap["settings"]
+        settings = self._session_settings(snap["settings"])
 
         photo = PHOTOS_DIR / photo_name if photo_name else None
         if not photo or not photo.is_file():
@@ -659,6 +658,8 @@ class RunManager:
             self._update_account(ctx.get("account_id"), data, run_id)
         elif kind == "swipe":
             self._on_swipe(run_id, ctx.get("account_id"), data)
+        elif kind == "stats":
+            self._on_stats(run_id, ctx.get("account_id"), data)
         elif kind == "signup_defaults":
             self._save_signup_defaults(data.get("data"))
         elif kind == "apk_check":
@@ -791,7 +792,7 @@ class RunManager:
             if not acc:
                 return self._finish(run_id, {"status": "failed", "reason": "account not found"})
             account = acc.model_dump()
-        settings = snap["settings"]
+        settings = self._session_settings(snap["settings"])
 
         try:
             proxy = self._acquire_proxy(run_id, ev, settings)
@@ -810,6 +811,8 @@ class RunManager:
                 self._update_account(account["id"], data, run_id)
             elif kind == "message":
                 self._on_message(run_id, account["id"], data)
+            elif kind == "stats":
+                self._on_stats(run_id, account["id"], data)
 
         try:
             runner = MessageRunner(settings, snap["apk"], account,
@@ -892,20 +895,13 @@ class RunManager:
             if ev.wait(0.5):
                 raise StopRequested()
 
-    def _sync_after_session(self, run_id):
-        """Queue a stats refresh for the account of a session that just ended (signup / swipe / message)."""
-        if self.closing:
-            return
+    @staticmethod
+    def _session_settings(settings: dict) -> dict:
+        """Config settings + the stats options of the panel: the session reads its own stats with its login."""
         with Session(engine) as s:
-            run = s.get(BotRun, run_id)
-            if not run or run.kind == "sync" or not run.account_id or not run.started_at:
-                return
-            if not get_bot_settings(s).get("sync_after_session", True):
-                return
-            account_id = run.account_id
-        res = self.launch_sync([account_id])
-        if res["run_ids"]:
-            self._log(run_id, "info", "[STATS] Stats refresh queued for this account (after the session)")
+            bot = get_bot_settings(s)
+        return {**settings, "stats_every_swipes": int(bot.get("stats_every_swipes") or 0),
+                "stats_at_end": bool(bot.get("sync_after_session", True))}
 
     def launch_sync(self, account_ids: list[int], all_accounts: bool = False, min_age_seconds: float = 0) -> dict:
         """

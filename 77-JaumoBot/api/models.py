@@ -130,6 +130,7 @@ class Account(SQLModel, table=True):
     photo: Optional[str] = None
     photo_url: Optional[str] = None
     about_me: Optional[str] = None                          # profile text accepted by Jaumo
+    token_expires_at: Optional[float] = None                # epoch seconds; login is reused until then
     about_me_error: str = ""
     status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
     photo_uploaded: bool = False

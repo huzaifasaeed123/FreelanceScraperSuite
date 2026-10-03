@@ -296,6 +296,14 @@ queued accounts are never refreshed (a refresh logs in again and would swap the 
 priority — starting one removes a queued refresh / stops a running one and waits up to 60 s for it. Refresh
 sessions are hidden from the dashboard cards (still in Logs).
 
+Done 2026-10-03 (step 2b, stats + login handling, agreed plan A–F): the app itself polls the unseen counters every
+3 min (UnseenManager timer) — reading them is normal app behaviour. (A) `token_expires_at` stored from `expires_in`;
+continue-swiping, messaging and refreshes reuse a login with > 5 min left and renew only when needed (signup flow
+unchanged). A refresh is 2 requests. (B) the running session reads its stats every N swipes (default 200, 0 = off)
+with its own login. (C) and once at the end, also after stop/block — no separate refresh job anymore. (D) timer for
+idle accounts every X min (default 30). (E) all four options in Konfiguration → Stats aktualisieren. (F) Refresh
+button unchanged, reuses a valid login, blocked while the account works.
+
 Still open from the client confirmation (2026-10-03): nickname change (after signup or later, separate list),
 automatic stats refresh (after every session + every 30 min), "Über mich Text:" label, photo-rejected display,
 panel fully in German. "Emails" only if the client asks for it.
