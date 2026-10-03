@@ -136,7 +136,9 @@ class Account(SQLModel, table=True):
     name_history: list = Field(default_factory=list, sa_column=Column(JSON))   # earlier nicknames, oldest first
     rename_error: str = ""
     photo_error: str = ""                                   # why the photo step failed (shown on the account)
-    status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
+    verify_info: str = ""                                   # what Jaumo said when it required verification
+    # signing_up|active|blocked|verification_required|photo_failed|failed|stopped|legacy
+    status: str = Field(default="signing_up", index=True)
     photo_uploaded: bool = False
     gallery_count: int = 0
     android_id: str = ""

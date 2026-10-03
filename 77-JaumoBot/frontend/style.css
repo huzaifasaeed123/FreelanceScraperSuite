@@ -1104,3 +1104,7 @@ details.form-section.adv>:last-child{margin-bottom:14px}
 /* Photos page: five tiles in one row on wide screens */
 #photo-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) { #photo-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* account status: verification required (not a block) */
+.state-badge.verify { background: rgba(124, 131, 255, .16); color: #a5a9ff; border: 1px solid rgba(124, 131, 255, .4); }
+:root:not([data-theme="dark"]) .state-badge.verify { color: #4f46e5; }

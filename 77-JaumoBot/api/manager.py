@@ -519,6 +519,8 @@ class RunManager:
                 self._on_swipe(run_id, account["id"], data)
             elif kind == "stats":
                 self._on_stats(run_id, account["id"], data)
+            elif kind == "verification":
+                self._on_verification(run_id, account["id"], data)
 
         try:
             runner = SwipeRunner(settings, snap["apk"], account,
@@ -709,6 +711,8 @@ class RunManager:
             self._on_renamed(run_id, ctx.get("account_id"), data)
         elif kind == "photo_problem":
             self._on_photo_problem(run_id, ctx.get("account_id"), data)
+        elif kind == "verification":
+            self._on_verification(run_id, ctx.get("account_id"), data)
         elif kind == "signup_defaults":
             self._save_signup_defaults(data.get("data"))
         elif kind == "apk_check":
@@ -1157,6 +1161,20 @@ class RunManager:
         finally:
             self.pool.release(proxy.id if proxy else None)
         self._finish(run_id, result)
+
+    def _on_verification(self, run_id, account_id, data):
+        """Jaumo requires profile verification before liking — store the message and note it in the history."""
+        msg = (data.get("message") or "").strip()
+        if not account_id:
+            return
+        with Session(engine) as s:
+            acc = s.get(Account, account_id)
+            if acc:
+                acc.verify_info = msg
+                s.add(acc)
+                s.commit()
+        self._account_event(account_id, run_id, "verification", detail=msg)
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})
 
     def _on_photo_problem(self, run_id, account_id, data):
         """Store why the photo failed; a photo Jaumo refused is marked so no other account gets it."""

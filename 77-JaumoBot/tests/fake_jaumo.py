@@ -20,6 +20,7 @@ SECRETS = {"good-client": "good-secret", "other-client": "other-secret", "banned
 DEFAULT_CONTROL = {
     "banned_clients": ["banned-client"],
     "block_after_likes": 0,        # 0 = never; else like N+1 returns 403
+    "verification_required": False,  # every like returns Jaumo's "Verification required" 403 (code 4031)
     "match_every": 3,              # every k-th like matches (0 = never)
     "cards_per_batch": 5,
     "batches": 1000,               # zapping batches with cards before the deck is empty
@@ -336,6 +337,12 @@ def like(other: int, request: Request):
     u = _user(request)
     if not u:
         return _unauth()
+    if state["control"]["verification_required"]:
+        return JSONResponse({"missingField": "verification",
+                             "primaryAction": {"type": "verification", "caption": "Verify your profile"},
+                             "title": "Verification required",
+                             "subtitle": "Please verify your profile to contact this user",
+                             "error": {"message": "Verification required Please verify your profile", "code": 4031}}, 403)
     c = state["control"]
     if c["block_after_likes"] and u["likes"] >= c["block_after_likes"]:
         return JSONResponse({"error": "restricted"}, 403)

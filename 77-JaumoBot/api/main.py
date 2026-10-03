@@ -963,6 +963,7 @@ ACCOUNT_SORTS = {"id", "created_at", "name", "location", "status", "liked_count"
 STATE_STATUSES = {
     "active": ("active", "legacy"),
     "blocked": ("blocked",),
+    "verification": ("verification_required",),
     "error": ("failed", "photo_failed"),
     "stopped": ("stopped",),
 }

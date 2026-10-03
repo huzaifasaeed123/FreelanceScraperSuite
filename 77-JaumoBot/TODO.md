@@ -324,6 +324,22 @@ panel fully in German. "Emails" only if the client asks for it.
 
 ---
 
+## 8f. Jaumo "Verification required" (2026-10-04) — ✅ done
+
+Live log 2026-10-04: every like returned HTTP 403 with missingField="verification" / primaryAction.type="verification"
+/ error.code 4031 ("Verification required — Please verify your profile"). The old loop counted these as failures and
+marked the account "blocked". That is wrong: it is a new Jaumo requirement (profile/selfie verification before liking),
+not a ban, and it cannot be automated (liveness check in the app).
+
+- Engine: JaumoClient.verification_block() detects the 4031/verification 403 from the like response (no extra
+  request); the session ends as status "verification_required" with Jaumo's message; account marked the same.
+- Panel: new account status "Verifizierung nötig" (own badge, own list filter, not "Gesperrt"); the account page
+  shows what Jaumo said plus a note that a person must verify in the app; "verification" timeline event.
+- Tests: 144 passing.
+- NOTE for the client: this affects any tool; the bot cannot pass Jaumo's verification.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

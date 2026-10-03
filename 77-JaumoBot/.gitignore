@@ -5,4 +5,5 @@ __pycache__/
 
 # Decompiled APK (reference only, huge, may contain tokens)
 decoded apk/
+decoded_*/
 *.apk

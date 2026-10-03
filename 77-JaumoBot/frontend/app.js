@@ -189,11 +189,13 @@ const I18N = {
     "st.actionsTip": "Likes + Dislikes + gesendete Nachrichten",
     "st.likesSub": "vergebene Likes", "st.dislikesSub": "vergebene Dislikes", "st.rate": "{r}% der Likes",
     "st.sent": "Gesendete Nachrichten", "st.sentSub": "{n} Kontakte angeschrieben", "st.pending": "Offene Matches", "st.pendingSub": "noch nicht angeschrieben",
-    "res.done": "Fertig", "res.blocked": "Gesperrt", "res.failed": "Fehler", "res.stopped": "Gestoppt",
+    "res.done": "Fertig", "res.blocked": "Gesperrt", "res.failed": "Fehler", "res.stopped": "Gestoppt", "res.verification_required": "Verifizierung nötig",
     "res.interrupted": "Unterbrochen", "res.last": "Letzte Sitzung", "about.textLabel": "Über mich Text:",
     "state.queued": "In Warteschlange", "acc.stop": "Stoppen", "acc.dequeue": "Aus Warteschlange entfernen",
     "acc.stopped": "{n} Sitzung(en) gestoppt", "acc.stopConfirm": "{n} Account(s) stoppen? Laufende Sitzungen enden, wartende werden entfernt.",
     "state.active": "Aktiv", "state.working": "Arbeitet", "state.blocked": "Gesperrt", "state.error": "Fehler", "state.stopped": "Gestoppt",
+    "state.verification": "Verifizierung nötig", "verify.title": "Jaumo verlangt eine Verifizierung",
+    "verify.sub": "Jaumo hat beim Liken eine Profil-Verifizierung verlangt. Das muss ein Mensch in der Jaumo-App machen (Selfie) — der Bot kann es nicht.",
     "acc.created": "erstellt {d}", "acc.lastLabel": "Letzte Aktivität", "acc.never": "noch keine",
     "acc.view": "Account ansehen", "acc.edit": "Bearbeiten", "acc.more": "Weitere Aktionen",
     "acc.menuMessage": "Matches anschreiben", "acc.menuLog": "Letztes Log öffnen", "acc.menuCopy": "Jaumo-ID kopieren",
@@ -337,11 +339,13 @@ const I18N = {
     "st.actionsTip": "Likes + dislikes + messages sent",
     "st.likesSub": "likes given", "st.dislikesSub": "dislikes given", "st.rate": "{r}% of likes",
     "st.sent": "Messages sent", "st.sentSub": "{n} people messaged", "st.pending": "Pending matches", "st.pendingSub": "not messaged yet",
-    "res.done": "Finished", "res.blocked": "Blocked", "res.failed": "Error", "res.stopped": "Stopped",
+    "res.done": "Finished", "res.blocked": "Blocked", "res.failed": "Error", "res.stopped": "Stopped", "res.verification_required": "Verification required",
     "res.interrupted": "Interrupted", "res.last": "Last session", "about.textLabel": "About me text:",
     "state.queued": "Queued", "acc.stop": "Stop", "acc.dequeue": "Remove from queue",
     "acc.stopped": "{n} session(s) stopped", "acc.stopConfirm": "Stop {n} account(s)? Running sessions end, queued ones are removed.",
     "state.active": "Active", "state.working": "Working", "state.blocked": "Blocked", "state.error": "Error", "state.stopped": "Stopped",
+    "state.verification": "Verification required", "verify.title": "Jaumo requires verification",
+    "verify.sub": "Jaumo asked for a profile verification when liking. A person must do it in the Jaumo app (a selfie) — the bot cannot.",
     "acc.created": "created {d}", "acc.lastLabel": "Last activity", "acc.never": "none yet",
     "acc.view": "View account", "acc.edit": "Edit", "acc.more": "More actions",
     "acc.menuMessage": "Message matches", "acc.menuLog": "Open latest log", "acc.menuCopy": "Copy Jaumo ID",
@@ -390,6 +394,7 @@ const STATUS_TEXT = {
   blocked: ["Gesperrt", "Blocked"], failed: ["Fehler", "Failed"], stopped: ["Gestoppt", "Stopped"],
   interrupted: ["Unterbrochen", "Interrupted"], active: ["Aktiv", "Active"], legacy: ["Importiert", "Imported"],
   photo_failed: ["Foto-Fehler", "Photo failed"], signing_up: ["Registrierung", "Signing up"],
+  verification_required: ["Verifizierung nötig", "Verification required"],
 };
 function statusText(status) {
   const p = STATUS_TEXT[status];
@@ -2327,7 +2332,7 @@ for (const id of ["#photo-files", "#photo-folder", "#photo-zip"]) {
 // Jaumo Accounts (main overview — live)
 // ---------------------------------------------------------------------------
 
-const ACC_STATUSES = ["active", "blocked", "photo_failed", "failed", "stopped", "signing_up", "legacy"];
+const ACC_STATUSES = ["active", "blocked", "verification_required", "photo_failed", "failed", "stopped", "signing_up", "legacy"];
 const SORTS = {
   newest: ["id", "desc"], activity: ["last_activity_at", "desc"], likes: ["liked_count", "desc"],
   matches: ["matches_count", "desc"], oldest: ["id", "asc"],
@@ -2336,6 +2341,7 @@ const STATE_STYLE = {
   active: { cls: "ok", icon: "checkCircle" }, working: { cls: "working", icon: "refresh" },
   queued: { cls: "queued", icon: "clock" },
   blocked: { cls: "bad", icon: "ban" }, error: { cls: "warn", icon: "alert" }, stopped: { cls: "", icon: "pause" },
+  verification: { cls: "verify", icon: "shieldCheck" },
 };
 state.acc = { page: 0, per: +prefs.get("accPer", "12") || 12, q: "", state: "", worker: "", location: "",
   from: "", to: "", sort: "newest", total: 0, items: [], summary: null };
@@ -2423,6 +2429,7 @@ const REASON_DE = [
   [/^swipe limit reached(.*)$/, (m) => `Jaumo-Sperre${m[1].replace("unlock expires in", "endet in")}`],
   [/^renamed to (.+)$/, (m) => `Umbenannt in ${m[1]}`],
   [/^name not accepted \(HTTP (\d+)\)$/, (m) => `Name von Jaumo nicht akzeptiert (HTTP ${m[1]})`],
+  [/^Verification required ?(— )?/i, (m) => m.input.replace(/^Verification required ?(— )?/i, "").trim() || "Verifizierung nötig"],
   [/^stopped by admin$/, () => "Vom Admin gestoppt"],
   [/^stopped before start$/, () => "Aus der Warteschlange entfernt"],
   [/^stopped while waiting for proxy$/, () => "Beim Warten auf einen Proxy gestoppt"],
@@ -2505,7 +2512,7 @@ function serverText(msg) {
   for (const [re, fmt] of SERVER_DE) { const m = re.exec(msg); if (m) return fmt(m); }
   return photoReasonText(msg);
 }
-const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn" };
+const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn", verification_required: "warn" };
 
 // "Fertig: Max. Swipes erreicht (100)" under the status badge (nothing while the account works).
 function resultLine(a, cls = "state-reason") {
@@ -2903,6 +2910,7 @@ const EVENT_STYLE = {
   renamed: { icon: "pencil", tone: "accent", text: () => L("Nickname geändert", "Nickname changed") },
   photo_rejected: { icon: "ban", tone: "danger", text: () => L("Foto von Jaumo abgelehnt", "Photo rejected by Jaumo") },
   photo_failed: { icon: "alert", tone: "warn", text: () => L("Foto-Schritt fehlgeschlagen", "Photo step failed") },
+  verification: { icon: "shieldCheck", tone: "warn", text: () => L("Jaumo verlangt Verifizierung", "Jaumo requires verification") },
 };
 
 const acct = { id: null, data: null, runs: [], events: [], ws: null, logWs: null, logRunId: null, listTab: "matches" };
@@ -3044,6 +3052,7 @@ function renderAccountSections() {
       ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span><b>${esc(t("about.textLabel"))}</b> ${esc(a.about_me)}</span></p>`
         : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(serverText(a.about_me_error))}</span></p>` : ""}
       ${a.rename_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("rename.notSet"))} — ${esc(serverText(a.rename_error))}</span></p>` : ""}
+      ${a.verify_info ? `<p class="acc-about bad" title="${esc(t("verify.sub"))}"><span>${icon("shieldCheck")}</span><span><b>${esc(t("verify.title"))}:</b> ${esc(a.verify_info)}<br><small>${esc(t("verify.sub"))}</small></span></p>` : ""}
       ${a.photo_error ? `<p class="acc-about bad">${icon(photoRejected ? "ban" : "image")}<span><b>${photoRejected ? L("Foto abgelehnt:", "Photo rejected:") : L("Foto-Problem:", "Photo problem:")}</b>
         ${esc(a.photo || "")} — ${esc(photoReasonText(a.photo_error))}</span></p>` : ""}
       <div class="acc-chips">

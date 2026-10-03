@@ -703,6 +703,32 @@ class JaumoClient:
         self.print_response_details("USERNAME SET" if ok else "USERNAME FAILED", resp)
         return ok, resp.status_code
 
+    @staticmethod
+    def verification_block(status, data):
+        """
+        Jaumo refuses the action until the profile is verified (not a ban):
+            403 with missingField=="verification" / primaryAction.type=="verification" / error.code 4031.
+        Returns the message Jaumo showed, or None when it is a normal failure.
+        """
+        if status != 403 or not isinstance(data, dict):
+            return None
+        err = data.get("error") if isinstance(data.get("error"), dict) else {}
+        primary = data.get("primaryAction") if isinstance(data.get("primaryAction"), dict) else {}
+        is_verify = (data.get("missingField") == "verification"
+                     or primary.get("type") == "verification"
+                     or err.get("code") == 4031)
+        if not is_verify:
+            return None
+        parts, seen = [], []
+        for s in (data.get("title"), data.get("subtitle"), err.get("message")):
+            s = s.strip() if isinstance(s, str) else ""
+            # skip empties and parts already contained in (or containing) a kept part
+            if not s or any(s in k or k in s for k in seen):
+                continue
+            seen.append(s)
+            parts.append(s)
+        return " — ".join(parts) or "Verification required"
+
     def like_user(self, like_url, access_token):
         resp = self._put(like_url, access_token=access_token)
         try:
@@ -1268,7 +1294,13 @@ class BotRunner(_RunnerBase):
                 elif action == "dislike" and not dislike_url:
                     action = "like"
 
-                ok, matched, status = self._do_action(action, like_url, dislike_url)
+                ok, matched, status, resp = self._do_action(action, like_url, dislike_url)
+                verify_msg = self.client.verification_block(status, resp)
+                if verify_msg:
+                    self.log(f"[VERIFICATION] Jaumo requires profile verification before liking: {verify_msg}", "error")
+                    self.emit("account_update", status="verification_required", verify_info=verify_msg)
+                    self.emit("verification", message=verify_msg)
+                    return {"status": "verification_required", "reason": verify_msg}
                 if ok:
                     consecutive_fail = 0
                     pauses = 0
@@ -1299,21 +1331,21 @@ class BotRunner(_RunnerBase):
             self.delay("between_batches")
 
     def _do_action(self, action, like_url, dislike_url):
-        """Returns (ok, matched, status). Retries once after a 401 refresh."""
+        """Returns (ok, matched, status, data). Retries once after a 401 refresh."""
         c = self.client
         try:
             if action == "like":
-                status, ok, matched, _ = c.like_user(like_url, self.access_token)
+                status, ok, matched, data = c.like_user(like_url, self.access_token)
                 if status == 401 and self._refresh():
-                    status, ok, matched, _ = c.like_user(like_url, self.access_token)
-                return ok, matched, status
+                    status, ok, matched, data = c.like_user(like_url, self.access_token)
+                return ok, matched, status, data
             status, ok = c.dislike_user(dislike_url, self.access_token)
             if status == 401 and self._refresh():
                 status, ok = c.dislike_user(dislike_url, self.access_token)
-            return ok, False, status
+            return ok, False, status, {}
         except requests.RequestException as e:
             self.log(f"  [{action.upper()}] network error: {type(e).__name__}: {e}", "warning")
-            return False, False, None
+            return False, False, None, {}
 
 
 class SwipeRunner(BotRunner):
