@@ -46,6 +46,7 @@
           <button data-tab="photos"><i data-icon="image"></i><span data-i18n="nav.photos">Fotos</span></button>
           <button data-tab="proxies"><i data-icon="database"></i><span data-i18n="nav.proxies">Proxies</span></button>
           <button data-tab="names"><i data-icon="user"></i><span data-i18n="nav.names">Nicknamen</span></button>
+          <button data-tab="rename"><i data-icon="pencil"></i><span data-i18n="nav.rename">Nicknamen ändern</span></button>
           <button data-tab="about"><i data-icon="fileText"></i><span data-i18n="nav.about">Profiltexte / Über mich</span></button>
           <button data-tab="cities"><i data-icon="mapPin"></i><span data-i18n="nav.cities">Städte</span></button>
           <button data-tab="runs"><i data-icon="fileText"></i><span data-i18n="nav.logs">Logs / Protokolle</span></button>
@@ -200,7 +201,7 @@
               <option value="">All</option><option>queued</option><option>running</option><option>done</option>
               <option>blocked</option><option>failed</option><option>stopped</option><option>interrupted</option>
             </select></label>
-            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option><option value="swipe">Continue swiping</option><option value="sync">Stats refresh</option></select></label>
+            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option><option value="swipe">Continue swiping</option><option value="rename">Nickname change</option><option value="sync">Stats refresh</option></select></label>
           </div>
         </div>
         <div class="card table-card">
@@ -223,6 +224,14 @@
           <div><h1 data-i18n="nav.names">Nicknamen</h1><p data-i18n="names.pageSub">Namen für neue Accounts</p></div>
         </div>
         <div id="names-body" class="cfg-page"></div>
+      </section>
+
+      <!-- Nicknamen ändern -->
+      <section id="tab-rename" class="tab hidden">
+        <div class="page-head">
+          <div><h1 data-i18n="nav.rename">Nicknamen ändern</h1><p data-i18n="rename.pageSub">Neue Nicknamen für bestehende und neue Accounts</p></div>
+        </div>
+        <div id="rename-body" class="cfg-page"></div>
       </section>
 
       <!-- Profiltexte / Über mich -->
@@ -376,6 +385,7 @@
             <b id="acc-bulk-count"></b>
             <button class="btn small" id="bulk-message"><i data-icon="send"></i><span data-i18n="bulk.message">Matches anschreiben</span></button>
             <button class="btn small danger" id="bulk-stop"><i data-icon="stop"></i><span data-i18n="acc.stop">Stoppen</span></button>
+            <button class="btn small" id="bulk-rename"><i data-icon="pencil"></i><span data-i18n="rename.btn">Nickname ändern</span></button>
             <button class="btn small" id="bulk-swipe"><i data-icon="play"></i><span data-i18n="swipe.btn">Weiter swipen</span></button>
             <button class="btn small" id="bulk-sync"><i data-icon="refresh"></i><span data-i18n="sync.refresh">Stats aktualisieren</span></button>
             <button class="btn small" id="bulk-export"><i data-icon="download"></i><span data-i18n="bulk.export">Exportieren</span></button>

@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.ui, pytest.mark.skipif(not CHROME.exists(), reason="Ch
 pw_sync = pytest.importorskip("playwright.sync_api")
 
 RAW_KEY = re.compile(r"\b(acc|kpi|st|state|nav|sec|top|filter|sort|new|edit|msg|bulk|pager|col|common|del|sys|brand|outdated)\.[a-zA-Z]+\b")
-TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "about", "cities", "runs"]
+TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"]
 SLOWISH = {k: [0.2, 0.3] for k in FAST_DELAYS}
 
 
@@ -178,7 +178,7 @@ def test_account_page_shows_live_session(browser, populated, jaumo):
     app, api, cid = populated
     conf = ok(api.get("/api/configs"))[0]
     ok(api.put(f"/api/configs/{cid}", json={"name": conf["name"], "apk_profile_id": conf["apk_profile_id"],
-                                            "settings": {**conf["settings"], "delays": SLOWISH, "max_swipes": 10}}))
+                                            "settings": {**conf["settings"], "delays": SLOWISH, "max_swipes": 30}}))
     rid = ok(api.post("/api/runs", json={"config_id": cid, "count": 1}))["run_ids"][0]
     acc = wait_until(lambda: ok(api.get(f"/api/runs/{rid}"))["account_id"], msg="account")
     pg = Page(browser, app).login(f"account/{acc}")
@@ -307,7 +307,7 @@ def test_jaumo_menu_group(browser, app):
     pg = Page(browser, app).login("dashboard")
     try:
         subs = pg.p.locator("#nav-jaumo .sb-sub button").evaluate_all("els => els.map(e => e.dataset.tab)")
-        assert subs == ["configs", "photos", "proxies", "names", "about", "cities", "runs"], "order as in the client's mockup"
+        assert subs == ["configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"], "order as in the client's mockup"
         assert pg.p.locator("#tabs button[data-tab=settings]").count() == 0, "no separate settings page"
         pg.p.click("#nav-jaumo-toggle")
         assert not pg.p.is_visible("#nav-jaumo .sb-sub"), "arrow folds the sub-menu"

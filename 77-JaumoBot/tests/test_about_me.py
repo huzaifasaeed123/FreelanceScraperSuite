@@ -83,7 +83,7 @@ def test_profile_texts_page(browser, app, jaumo):
     try:
         pg.p.wait_for_selector("#about-form")
         nav = pg.p.locator("#nav-jaumo .sb-sub button").evaluate_all("els => els.map(e => e.dataset.tab)")
-        assert nav.index("names") + 1 == nav.index("about") < nav.index("cities"), "placed as in the client's mockup"
+        assert nav.index("names") < nav.index("rename") < nav.index("about") < nav.index("cities"), "as in the mockup"
         pg.p.check("#about-form input[name=about_enabled]")
         pg.p.fill("#about-form textarea[name=about_pool]", "Erster Text\nZweiter Text")
         pg.p.wait_for_function("document.querySelector('#about-usage').textContent.includes('2')")

@@ -82,6 +82,18 @@ const I18N = {
     "nav.dashboard": "Armaturenbrett", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs / Protokolle", "nav.configs": "Konfigurationen",
     "nav.proxies": "Proxies", "nav.photos": "Fotos", "nav.settings": "Einstellungen",
     "nav.jaumo": "Jaumo", "nav.config": "Konfiguration", "nav.names": "Nicknamen", "nav.cities": "Städte",
+    "nav.rename": "Nicknamen ändern", "rename.pageSub": "Neue Nicknamen für bestehende und neue Accounts",
+    "rename.title": "Neue Nicknamen", "rename.sub": "Aus dieser Liste bekommt ein Account seinen neuen Nicknamen — direkt nach der Registrierung oder später.",
+    "rename.after": "Direkt nach der Registrierung ändern", "rename.afterSub": "Neue Accounts registrieren sich mit einem Namen aus „Nicknamen“ und bekommen nach Foto und Profiltext sofort einen Namen aus dieser Liste.",
+    "rename.list": "Neue Nicknamen (einer pro Zeile)", "rename.rules": "Regel", "rename.unique": "Nickname nie wiederverwenden",
+    "rename.uniqueSub": "Ein Name, den ein Account hat oder früher hatte, wird nie wieder vergeben.",
+    "rename.later": "Später ändern", "rename.laterSub": "In der Accountliste Accounts auswählen → „Nickname ändern“ (oder ⋯-Menü bzw. Accountseite). Jeder Account bekommt den nächsten freien Namen aus der Liste.",
+    "rename.stats": "{u} frei · {d} bereits vergeben von {n}", "rename.dropUsed": "Vergebene Namen entfernen",
+    "rename.empty": "Noch keine Namen — einen pro Zeile oben einfügen.", "rename.loadFail": "Namensnutzung konnte nicht geladen werden",
+    "rename.btn": "Nickname ändern", "rename.started": "{n} Nickname-Änderung(en) gestartet", "rename.skipped": "{n} übersprungen — {r}",
+    "rename.kind": "Nickname ändern", "rename.formerly": "früher: {n}", "rename.notSet": "Nickname nicht geändert",
+    "rename.chip": "Neue Nicknamen · {n} frei", "setup.rename": "Neue Nicknamen", "new.p.rename": "Nicht genug freie neue Nicknamen.",
+    "rename.confirm": "{n} Account(s) bekommen einen neuen Nicknamen aus der Liste. Fortfahren?",
     "nav.about": "Profiltexte / Über mich", "about.pageSub": "Texte für das Profil neuer Accounts",
     "about.title": "Profiltexte", "about.sub": "Nach dem Profilfoto bekommt jeder neue Account einen dieser Texte als „Über mich“.",
     "about.on": "Profiltext bei neuen Accounts setzen", "about.onSub": "Aus = Accounts bleiben ohne Text (wie bisher).",
@@ -218,6 +230,18 @@ const I18N = {
     "nav.dashboard": "Dashboard", "nav.accounts": "Jaumo Accounts", "nav.logs": "Logs", "nav.configs": "Configurations",
     "nav.proxies": "Proxies", "nav.photos": "Photos", "nav.settings": "Settings",
     "nav.jaumo": "Jaumo", "nav.config": "Configuration", "nav.names": "Nicknames", "nav.cities": "Cities",
+    "nav.rename": "Change nicknames", "rename.pageSub": "New nicknames for existing and new accounts",
+    "rename.title": "New nicknames", "rename.sub": "An account gets its new nickname from this list — right after registration or later.",
+    "rename.after": "Change right after registration", "rename.afterSub": "New accounts register with a name from “Nicknames” and get a name from this list right after photo and profile text.",
+    "rename.list": "New nicknames (one per line)", "rename.rules": "Rule", "rename.unique": "Never reuse a nickname",
+    "rename.uniqueSub": "A name that an account has or had before is never given out again.",
+    "rename.later": "Change later", "rename.laterSub": "In the accounts list select accounts → “Change nickname” (or the ⋯ menu / account page). Each account gets the next free name from the list.",
+    "rename.stats": "{u} free · {d} already used of {n}", "rename.dropUsed": "Remove used names",
+    "rename.empty": "No names yet — paste one per line above.", "rename.loadFail": "Could not load name usage",
+    "rename.btn": "Change nickname", "rename.started": "{n} nickname change(s) started", "rename.skipped": "{n} skipped — {r}",
+    "rename.kind": "Nickname change", "rename.formerly": "formerly: {n}", "rename.notSet": "Nickname not changed",
+    "rename.chip": "New nicknames · {n} free", "setup.rename": "New nicknames", "new.p.rename": "Not enough free new nicknames.",
+    "rename.confirm": "{n} account(s) get a new nickname from the list. Continue?",
     "nav.about": "Profile texts / About me", "about.pageSub": "Texts for the profile of new accounts",
     "about.title": "Profile texts", "about.sub": "After the profile photo every new account gets one of these texts as “About me”.",
     "about.on": "Set a profile text on new accounts", "about.onSub": "Off = accounts stay without text (as before).",
@@ -585,6 +609,7 @@ const TAB_LOADERS = {
   configs: () => loadConfigPage(),
   names: () => loadNamesPage(),
   about: () => loadAboutPage(),
+  rename: () => loadRenamePage(),
   cities: () => loadCitiesPage(),
   proxies: () => loadProxies(),
   photos: () => loadPhotos(),
@@ -800,15 +825,16 @@ const reloadApksSoon = throttle(() => guard(loadConfig)(), 1500);
 // ---------------------------------------------------------------------------
 
 const STEP_FLOW = {
-  signup: ["client_token", "signup", "location", "profile", "photo", "verify", "about", "swiping"],
+  signup: ["client_token", "signup", "location", "profile", "photo", "verify", "about", "rename", "swiping"],
   message: ["login", "matches", "messaging"],
   sync: ["login", "links", "counters"],
   swipe: ["login", "profile", "swiping"],
+  rename: ["login", "rename"],
 };
 const STEP_LABELS = {
   starting: "Starting", waiting_proxy: "Waiting for proxy", client_token: "Client token", signup: "Signing up",
   location: "Setting location", profile: "Loading profile", photo: "Uploading photo", verify: "Verifying photo",
-  about: "Profile text",
+  about: "Profile text", rename: "Changing nickname",
   swiping: "Swiping", finished: "Finished", login: "Logging in", matches: "Loading matches", messaging: "Messaging",
   links: "Loading links", counters: "Reading counters",
 };
@@ -833,7 +859,8 @@ async function renderSetupCheck() {
   const byCode = Object.fromEntries(res.problems.map((p) => [p.code, p]));
   const proxyRequired = (c.settings || {}).require_proxy !== false;
   const rows = [["apk", "configs"], ["proxy", "proxies"], ["photos", "photos"], ["names", "names"],
-    ...(c.settings.about_enabled ? [["about", "about"]] : [])].map(([code, page]) => {
+    ...(c.settings.about_enabled ? [["about", "about"]] : []),
+    ...(c.settings.rename_after_signup ? [["rename", "rename"]] : [])].map(([code, page]) => {
     const p = byCode[code];
     const note = p ? t("new.p." + code) : code === "proxy" && !proxyRequired ? t("setup.proxyOff") : t("setup.ok");
     return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? p.message : "")}">
@@ -1187,6 +1214,7 @@ function renderLaunchInfo() {
     chip(`${st.name_source === "auto" ? "auto" : "custom"} names${c.names_unused !== undefined
       ? ` · ${fmtNum(c.names_unused)} unused` : ""}`, c.names_unused === 0),
     ...(st.about_enabled ? [chip(t("about.chip", { n: fmtNum(c.about_unused ?? 0) }), !c.about_unused)] : []),
+    ...(st.rename_after_signup ? [chip(t("rename.chip", { n: fmtNum(c.rename_unused ?? 0) }), !c.rename_unused)] : []),
     chip(`${fmtNum((state.photos || []).filter((p) => p.status === "available").length)} unused photos`,
       !(state.photos || []).some((p) => p.status === "available")),
   ].join("");
@@ -1694,6 +1722,55 @@ async function loadNamesPage() {
     await saveConfig({ name_source: f.name_source.value, name_pool: lines(f.name_pool.value) });
     await api("/api/settings", { method: "PUT", body: {
       identity: { unique_names: f.unique_names.checked, unique_photos: settings.identity.unique_photos } } });
+  });
+}
+
+// --- Nicknamen ändern ------------------------------------------------------------
+
+async function loadRenamePage() {
+  const c = await loadConfig();
+  if (state.tab !== "rename") return;
+  const s = c.settings;
+  $("#rename-body").innerHTML = `<form id="rename-form">
+    ${cfgCard("pencil", "rename.title", "rename.sub", `
+      <label class="setting-row"><div><b>${esc(t("rename.after"))}</b><span>${esc(t("rename.afterSub"))}</span></div>
+        <input type="checkbox" class="switch" name="rename_after_signup" ${s.rename_after_signup ? "checked" : ""}></label>
+      <div class="setting-row"><div><b>${esc(t("rename.later"))}</b><span>${esc(t("rename.laterSub"))}</span></div>
+        <a class="btn ghost sm" href="#accounts">${esc(t("nav.jaumo"))}</a></div>
+      <label>${esc(t("rename.list"))}<textarea name="rename_pool" rows="10">${esc(s.rename_pool.join("\n"))}</textarea></label>
+      <div class="name-usage" id="rename-usage"><span class="muted">…</span></div>`)}
+    ${cfgCard("shieldCheck", "rename.rules", "", `
+      <label class="setting-row"><div><b>${esc(t("rename.unique"))}</b><span>${esc(t("rename.uniqueSub"))}</span></div>
+        <input type="checkbox" class="switch" name="rename_unique" ${s.rename_unique ? "checked" : ""}></label>`)}
+    ${saveBar("rename")}
+  </form>`;
+
+  const form = $("#rename-form");
+  let usage = {};
+  const render = () => {
+    const seen = new Set();
+    const pool = lines(form.elements.rename_pool.value).filter((x) => !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()));
+    const isUsed = (x) => (usage[x.trim().toLocaleLowerCase()] || 0) > 0;
+    const used = pool.filter(isUsed);
+    $("#rename-usage").innerHTML = `<div class="name-usage-head">
+        <span>${esc(t("rename.stats", { u: fmtNum(pool.length - used.length), d: fmtNum(used.length), n: fmtNum(pool.length) }))}</span>
+        ${used.length ? `<button type="button" class="btn small" id="rename-drop-used">${esc(t("rename.dropUsed"))}</button>` : ""}
+      </div>
+      ${pool.length ? `<div class="name-chips">${pool.map((x) =>
+        `<span class="name-chip${isUsed(x) ? " used" : ""}" title="${esc(t(isUsed(x) ? "names.usedTip" : "names.freeTip"))}">${esc(x)}</span>`).join("")}</div>`
+        : `<span class="muted">${esc(t("rename.empty"))}</span>`}`;
+    const drop = $("#rename-drop-used");
+    if (drop) drop.onclick = () => {
+      form.elements.rename_pool.value = lines(form.elements.rename_pool.value).filter((x) => !isUsed(x)).join("\n");
+      render();
+    };
+  };
+  form.elements.rename_pool.addEventListener("input", debounce(render, 250));
+  api("/api/rename/usage").then((u) => { usage = u; if (document.body.contains(form)) render(); })
+    .catch(() => { $("#rename-usage").textContent = t("rename.loadFail"); });
+  onSave(form, "rename", async (f) => {
+    await saveConfig({ rename_after_signup: f.rename_after_signup.checked, rename_pool: lines(f.rename_pool.value),
+                       rename_unique: f.rename_unique.checked });
   });
 }
 
@@ -2272,6 +2349,8 @@ const REASON_DE = [
   [/^Jaumo pause repeated (\d+) times without new cards \((.+)\)$/,
     (m) => `Jaumo-Pause ${m[1]}× hintereinander ohne neue Karten (${DIALOG_DE[m[2]] || m[2]})`],
   [/^swipe limit reached(.*)$/, (m) => `Jaumo-Sperre${m[1].replace("unlock expires in", "endet in")}`],
+  [/^renamed to (.+)$/, (m) => `Umbenannt in ${m[1]}`],
+  [/^name not accepted \(HTTP (\d+)\)$/, (m) => `Name von Jaumo nicht akzeptiert (HTTP ${m[1]})`],
   [/^stopped by admin$/, () => "Vom Admin gestoppt"],
   [/^stopped before start$/, () => "Aus der Warteschlange entfernt"],
   [/^stopped while waiting for proxy$/, () => "Beim Warten auf einen Proxy gestoppt"],
@@ -2446,6 +2525,18 @@ async function stopAccounts(ids) {
   if (state.tab === "account") refreshAccountSoon();
 }
 
+async function startRename(ids) {
+  if (ids.length > 1 && !confirm(t("rename.confirm", { n: ids.length }))) return;
+  const res = await api("/api/accounts/rename", { method: "POST", body: { account_ids: ids } });
+  if (res.run_ids.length) toast(t("rename.started", { n: res.run_ids.length }));
+  if (res.skipped.length) {
+    const why = [...new Set(res.skipped.map((x) => x.reason))].join(", ");
+    toast(t("rename.skipped", { n: res.skipped.length, r: why }), !res.run_ids.length);
+  }
+  if (state.tab === "accounts") reloadAccountsSoon();
+  if (state.tab === "account") refreshAccountSoon();
+}
+
 async function startSwiping(ids) {
   const res = await api("/api/accounts/swipe", { method: "POST", body: { account_ids: ids } });
   if (res.run_ids.length) toast(t("swipe.started", { n: res.run_ids.length }));
@@ -2465,6 +2556,7 @@ function openAccountMenu(btn, id) {
   menu.className = "menu";
   menu.innerHTML = `
     ${a.active_run ? `<button data-act="stop" class="danger">${icon("stop")}${esc(t(a.active_run.status === "queued" ? "acc.dequeue" : "acc.stop"))}</button><hr>` : ""}
+    <button data-act="rename" ${canSwipe(a) ? "" : "disabled"}>${icon("pencil")}${esc(t("rename.btn"))}</button>
     <button data-act="swipe" ${canSwipe(a) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
     <button data-act="sync" ${a.has_token === false ? "disabled" : ""}>${icon("refresh")}${esc(t("sync.refresh"))}</button>
     <button data-act="message" ${a.pending_messages ? "" : "disabled"}>${icon("send")}${esc(t("acc.menuMessage"))}${a.pending_messages ? ` <span class="seg-count">${a.pending_messages}</span>` : ""}</button>
@@ -2481,6 +2573,7 @@ function openAccountMenu(btn, id) {
     menu.remove();
     if (act === "stop") return stopAccounts([id]);
     if (act === "swipe") return startSwiping([id]);
+    if (act === "rename") return startRename([id]);
     if (act === "sync") {
       await api(`/api/accounts/${id}/sync`, { method: "POST" });
       toast(t("sync.started", { n: 1 }));
@@ -2539,6 +2632,7 @@ function openMessageDialog(ids) {
 
 $("#bulk-message").onclick = () => openMessageDialog([...state.accSelected]);
 $("#bulk-swipe").onclick = guard(() => startSwiping([...state.accSelected]));
+$("#bulk-rename").onclick = guard(() => startRename([...state.accSelected]));
 $("#bulk-stop").onclick = guard(() => stopAccounts([...state.accSelected]));
 $("#bulk-export").onclick = () => { window.location = "/api/accounts/export?" + accQuery(); };
 $("#bulk-clear").onclick = () => { state.accSelected.clear(); renderAccTable(); };
@@ -2801,11 +2895,13 @@ function renderAccountSections() {
     <div class="acc-photo">${a.photo ? `<img src="${thumbUrl(a.photo)}" alt="" data-full="${esc(a.photo)}">` : icon("user")}</div>
     <div class="acc-main">
       <div class="acc-title"><h1>${esc(a.name)}</h1>${badge(a.status)}
+        ${(a.name_history || []).length ? `<span class="acc-formerly" title="${esc(a.name_history.join(" → "))}">${esc(t("rename.formerly", { n: a.name_history.join(", ") }))}</span>` : ""}
         ${run ? `<span class="live-chip on"><span class="pulse"></span>${esc(workerName(run.worker))} ${esc(t("state.working").toLowerCase())}</span>` : ""}</div>
       <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? ` · ${age} years` : ""} · ${esc(a.location || "—")} · joined ${fmtDate(a.created_at)}</div>
       ${!run && a.last_result ? `<div class="acc-result">${esc(t("res.last"))} · ${fmtDate(a.last_result.finished_at)}${resultLine(a, "acc-result-text")}</div>` : ""}
       ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span><b>${esc(t("about.textLabel"))}</b> ${esc(a.about_me)}</span></p>`
         : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(a.about_me_error)}</span></p>` : ""}
+      ${a.rename_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("rename.notSet"))} — ${esc(a.rename_error)}</span></p>` : ""}
       <div class="acc-chips">
         <span class="chip">${icon("smartphone")}${esc(dev)}</span>
         ${a.config_id ? "" : `<span class="chip">${icon("archive")}legacy import</span>`}
@@ -2815,6 +2911,7 @@ function renderAccountSections() {
     </div>
     <div class="acc-actions">
       ${run ? `<button class="btn danger-soft" id="acc-stop">${icon("stop")}${esc(t(run.status === "queued" ? "acc.dequeue" : "acc.stop"))}</button>` : ""}
+      <button class="btn" id="acc-rename" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"}>${icon("pencil")}${esc(t("rename.btn"))}</button>
       <button class="btn" id="acc-swipe" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
       ${msgOff ? `<a class="field-hint" href="#configs">${esc(t("msg.off"))}</a>` : ""}
       <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
@@ -2822,6 +2919,7 @@ function renderAccountSections() {
   </div>`;
   $("#acc-hero [data-full]")?.addEventListener("click", () => openPhotoViewer(a.photo));
   $("#acc-swipe").onclick = guard(() => startSwiping([a.id]));
+  $("#acc-rename").onclick = guard(() => startRename([a.id]));
   if ($("#acc-stop")) $("#acc-stop").onclick = guard(() => stopAccounts([a.id]));
   $("#acc-msg").onclick = guard(async () => {
     const res = await api("/api/messages", { method: "POST", body: { account_ids: [a.id] } });
@@ -2884,7 +2982,7 @@ function renderAccountSections() {
       <th class="num">Liked</th><th class="num">Disliked</th><th class="num">Matches</th><th class="num">Msgs</th>
       <th>Started</th><th>Duration</th><th>Result</th><th></th></tr></thead>
     <tbody>${acct.runs.map((r) => `<tr>
-      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : r.kind === "swipe" ? esc(t("swipe.kind")) : "Signup + swiping"}</td><td>${badge(r.status)}</td>
+      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : r.kind === "swipe" ? esc(t("swipe.kind")) : r.kind === "rename" ? esc(t("rename.kind")) : "Signup + swiping"}</td><td>${badge(r.status)}</td>
       <td>${esc(STEP_LABELS[r.step] || r.step || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
       <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(reasonText(r.reason) || "—")}</td>

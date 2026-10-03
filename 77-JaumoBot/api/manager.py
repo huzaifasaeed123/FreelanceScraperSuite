@@ -19,7 +19,8 @@ from sqlalchemy import update as sa_update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import Session, select
 
-from bot.engine import AUTO_FEMALE_NAMES, BotRunner, MessageRunner, StatsSyncRunner, StopRequested, SwipeRunner
+from bot.engine import (AUTO_FEMALE_NAMES, BotRunner, MessageRunner, RenameRunner, StatsSyncRunner, StopRequested,
+                        SwipeRunner)
 
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Proxy, RunLog,
                      engine, iso, utcnow)
@@ -65,12 +66,52 @@ def name_usage(s: Session) -> Counter:
     How often each name is taken: every account's name, plus names reserved by
     queued/running signup runs that have not created their account yet.
     """
-    usage = Counter(_key(n) for n in s.exec(select(Account.name)).all() if n)
+    usage = Counter()
+    for name, history in s.exec(select(Account.name, Account.name_history)).all():
+        usage.update(_key(n) for n in [name, *(history or [])] if n)   # current + every earlier nickname
     reserved = s.exec(select(BotRun.requested_name).where(
         BotRun.kind == "signup", BotRun.status.in_(ACTIVE_STATUSES),
         BotRun.account_id.is_(None), BotRun.requested_name.is_not(None))).all()
     usage.update(_key(n) for n in reserved)
     return usage
+
+
+def rename_usage(s: Session, base: Counter = None) -> Counter:
+    """Names taken for a nickname change: every name an account has or had + names reserved by queued changes."""
+    usage = Counter(base) if base is not None else name_usage(s)
+    reserved = s.exec(select(BotRun.rename_to).where(BotRun.status.in_(ACTIVE_STATUSES),
+                                                     BotRun.rename_to.is_not(None))).all()
+    usage.update(_key(n) for n in reserved)
+    return usage
+
+
+def rename_pool_for(settings: dict) -> list[str]:
+    seen, out = set(), []
+    for n in settings.get("rename_pool") or []:
+        if n.strip() and _key(n) not in seen:
+            seen.add(_key(n))
+            out.append(n.strip())
+    return out
+
+
+def pick_rename(usage: Counter, settings: dict, count: int, force: bool = False) -> list:
+    """New nicknames from the "Nicknamen ändern" list (least used first); [None] * count when switched off."""
+    if not force and not settings.get("rename_after_signup"):
+        return [None] * count
+    pool = rename_pool_for(settings)
+    if not pool:
+        raise ValueError("The list of new nicknames is empty — add names on the Nicknamen ändern page")
+    unique = settings.get("rename_unique", True)
+    picked = []
+    for _ in range(count):
+        low = min(usage[_key(n)] for n in pool)
+        if unique and low > 0:
+            raise ValueError(f"Not enough unused new nicknames: only {len(picked)} of {count} could be assigned. "
+                             "Add names on the Nicknamen ändern page or allow reuse there.")
+        name = random.choice([n for n in pool if usage[_key(n)] == low])
+        picked.append(name)
+        usage[_key(name)] += 1
+    return picked
 
 
 def about_usage(s: Session) -> Counter:
@@ -338,7 +379,8 @@ class RunManager:
                       ("photos", "photos", lambda: pick_photos(s, settings, count, rules["unique_photos"])),
                       ("names", "names", lambda: pick_names(name_usage(s), settings, count, names,
                                                                 rules["unique_names"])),
-                      ("about", "about", lambda: pick_about(about_usage(s), settings, count)))
+                      ("about", "about", lambda: pick_about(about_usage(s), settings, count)),
+                      ("rename", "rename", lambda: pick_rename(rename_usage(s), settings, count)))
             for code, page, fn in checks:
                 try:
                     fn()
@@ -356,13 +398,15 @@ class RunManager:
             config = _resolve_config(s, config_id)
             snap = self._snapshot(s, config)
             rules = get_identity(s)
-            assigned = pick_names(name_usage(s), snap["settings"], count, names, rules["unique_names"])
+            usage = name_usage(s)
+            assigned = pick_names(usage, snap["settings"], count, names, rules["unique_names"])
+            renames = pick_rename(rename_usage(s, usage), snap["settings"], count)
             photos = pick_photos(s, snap["settings"], count, rules["unique_photos"])
             abouts = pick_about(about_usage(s), snap["settings"], count)
             runs = []
-            for name, photo, about in zip(assigned, photos, abouts):
-                run = BotRun(kind="signup", config_id=config.id, config_name=config.name,
-                             config_snapshot=snap, requested_name=name, photo=photo, about_text=about)
+            for name, photo, about, rename in zip(assigned, photos, abouts, renames):
+                run = BotRun(kind="signup", config_id=config.id, config_name=config.name, config_snapshot=snap,
+                             requested_name=name, photo=photo, about_text=about, rename_to=rename)
                 s.add(run)
                 runs.append(run)
             s.commit()
@@ -597,6 +641,7 @@ class RunManager:
             name = run.requested_name
             photo_name = run.photo
             about = run.about_text
+            rename_to = run.rename_to
             worker = run.worker
         settings = self._session_settings(snap["settings"])
 
@@ -620,7 +665,7 @@ class RunManager:
                 settings, snap["apk"], str(photo),
                 proxy_url=proxy_url(proxy) if proxy else None, name=name,
                 emit=lambda kind, data: self._on_signup_event(run_id, ctx, kind, data),
-                stop_event=ev, about=about,
+                stop_event=ev, about=about, rename_to=rename_to,
             )
             result = runner.run()
         finally:
@@ -660,6 +705,8 @@ class RunManager:
             self._on_swipe(run_id, ctx.get("account_id"), data)
         elif kind == "stats":
             self._on_stats(run_id, ctx.get("account_id"), data)
+        elif kind == "renamed":
+            self._on_renamed(run_id, ctx.get("account_id"), data)
         elif kind == "signup_defaults":
             self._save_signup_defaults(data.get("data"))
         elif kind == "apk_check":
@@ -976,12 +1023,13 @@ class RunManager:
                 run = s.get(BotRun, run_id)
                 if not run or run.status != "queued":
                     return
+                kind = run.kind
                 delay = float(run.config_snapshot.get("sync_delay") or 0)
             if ev.is_set():
                 self._update_run(run_id, status="stopped", reason="stopped before start", finished_at=utcnow())
                 return
             self._update_run(run_id, status="running", started_at=utcnow(), step="starting")
-            self._sync_worker(run_id, ev)
+            (self._rename_worker if kind == "rename" else self._sync_worker)(run_id, ev)
         except Exception as e:  # never leave a run "running"
             self._log(run_id, "error", f"[MANAGER] {type(e).__name__}: {e}")
             self._update_run(run_id, status="failed", reason=f"{type(e).__name__}: {e}", finished_at=utcnow())
@@ -1029,6 +1077,104 @@ class RunManager:
         if result["status"] != "done":
             self._store_sync_error(account["id"], result.get("reason", "failed"))
         self._finish(run_id, result)
+
+    # --- nickname change (later, for existing accounts) ----------------------------
+
+    RENAME_STATUSES = ("active", "legacy", "stopped")
+
+    def launch_rename(self, account_ids: list[int]) -> dict:
+        """Give the selected accounts the next free names of the "Nicknamen ändern" list (one short job each)."""
+        with Session(engine) as s:
+            config = get_main_config(s)
+            if not config:
+                raise LookupError("config not found")
+            snap = self._snapshot(s, config)
+            accounts = s.exec(select(Account).where(Account.id.in_(account_ids)).order_by(Account.id)).all()
+            busy = set(s.exec(select(BotRun.account_id).where(BotRun.status.in_(ACTIVE_STATUSES),
+                                                              BotRun.kind != "sync")).all())
+            eligible, skipped = [], []
+            for acc in accounts:
+                reason = ("already working" if acc.id in busy
+                          else "blocked by Jaumo" if acc.status == "blocked"
+                          else "account was never fully set up" if acc.status not in self.RENAME_STATUSES
+                          else "no login token stored" if not (acc.refresh_token or acc.access_token) else "")
+                if reason:
+                    skipped.append({"id": acc.id, "name": acc.name, "reason": reason})
+                else:
+                    eligible.append(acc)
+            names = pick_rename(rename_usage(s), snap["settings"], len(eligible), force=True) if eligible else []
+            runs = []
+            for acc, new in zip(eligible, names):
+                run = BotRun(kind="rename", config_id=config.id, config_name=config.name, config_snapshot=snap,
+                             account_id=acc.id, requested_name=acc.name, rename_to=new)
+                s.add(run)
+                runs.append(run)
+            s.commit()
+            ids = [r.id for r in runs]
+            payloads = [run_public(r) for r in runs]
+        self._cancel_syncs([p["account_id"] for p in payloads])
+        for rid, payload in zip(ids, payloads):
+            self.hub.publish("events", {"type": "run", "run": payload})
+            ev = threading.Event()
+            with self.lock:
+                self.stop_events[rid] = ev
+            self.sync_executor.submit(self._sync_guard, rid, ev)
+        return {"run_ids": ids, "skipped": skipped}
+
+    def _rename_worker(self, run_id: int, ev: threading.Event):
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            snap, new_name = run.config_snapshot, run.rename_to
+            acc = s.get(Account, run.account_id)
+            if not acc:
+                return self._finish(run_id, {"status": "failed", "reason": "account not found"})
+            account = acc.model_dump()
+        settings = snap["settings"]
+        try:
+            proxy = self._acquire_proxy(run_id, ev, settings)
+        except StopRequested:
+            return self._finish(run_id, {"status": "stopped", "reason": "stopped while waiting for proxy"})
+        except NoProxyAvailable as e:
+            self._log(run_id, "error", f"[PROXY] {e}")
+            return self._finish(run_id, {"status": "failed", "reason": str(e)})
+
+        def emit(kind, data):
+            if kind == "log":
+                self._log(run_id, data.get("level", "info"), data.get("msg", ""))
+            elif kind == "step":
+                self._update_run(run_id, step=data["step"])
+            elif kind == "account_update":
+                self._update_account(account["id"], data, run_id)
+            elif kind == "renamed":
+                self._on_renamed(run_id, account["id"], data)
+
+        try:
+            runner = RenameRunner(settings, snap["apk"], account, new_name,
+                                  proxy_url=proxy_url(proxy) if proxy else None, emit=emit, stop_event=ev)
+            result = runner.run()
+        finally:
+            self.pool.release(proxy.id if proxy else None)
+        self._finish(run_id, result)
+
+    def _on_renamed(self, run_id, account_id, data):
+        old, new = (data.get("old") or "").strip(), (data.get("new") or "").strip()
+        if not account_id or not new:
+            return
+        with Session(engine) as s:
+            acc = s.get(Account, account_id)
+            if not acc:
+                return
+            old = old or acc.name
+            if old and _key(old) != _key(new):
+                acc.name_history = [*(acc.name_history or []), old]
+            acc.name = new
+            acc.rename_error = ""
+            acc.updated_at = utcnow()
+            s.add(acc)
+            s.commit()
+        self._account_event(account_id, run_id, "renamed", detail=f"{old} → {new}")
+        self.hub.publish("events", {"type": "account", "account_id": account_id})
+        self.hub.publish(f"account:{account_id}", {"type": "changed"})
 
     def _store_sync_error(self, account_id, reason):
         with Session(engine) as s:

@@ -95,6 +95,7 @@ class BotRun(SQLModel, table=True):
     requested_name: Optional[str] = None
     photo: Optional[str] = None                             # photo filename reserved at launch
     about_text: Optional[str] = None                        # profile text reserved at launch
+    rename_to: Optional[str] = None                         # new nickname reserved at launch / for a rename job
     worker: Optional[int] = None                            # worker slot (1..parallel) that ran it
     proxy_id: Optional[int] = None
     proxy_label: str = ""
@@ -132,6 +133,8 @@ class Account(SQLModel, table=True):
     about_me: Optional[str] = None                          # profile text accepted by Jaumo
     token_expires_at: Optional[float] = None                # epoch seconds; login is reused until then
     about_me_error: str = ""
+    name_history: list = Field(default_factory=list, sa_column=Column(JSON))   # earlier nicknames, oldest first
+    rename_error: str = ""
     status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
     photo_uploaded: bool = False
     gallery_count: int = 0

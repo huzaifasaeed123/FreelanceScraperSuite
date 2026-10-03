@@ -100,6 +100,9 @@ DEFAULT_SETTINGS = {
     "about_enabled": False,     # set a profile text ("Über mich") after the photo is verified
     "about_pool": [],           # profile texts, one is picked per account
     "about_unique": True,       # never give the same text to two accounts
+    "rename_after_signup": False,   # change the nickname right after signup (to a name from rename_pool)
+    "rename_pool": [],              # new nicknames ("Nicknamen ändern")
+    "rename_unique": True,          # a name any account ever had is never given out again
     "location_radius_km": 0,    # 0 = exact city centre; >0 = random point within this radius
     "locations": [
         {"lat": "52.5200", "lon": "13.4050", "label": "Berlin"},
@@ -641,6 +644,28 @@ class JaumoClient:
         self.print_response_details("ABOUT ME SET" if ok else "ABOUT ME FAILED", resp)
         return ok, resp.status_code
 
+    def set_username(self, access_token, name):
+        """
+        Nickname exactly like the app's name screen (EditUsernameViewModel -> UserManager.F):
+            GET the API root (V2) -> PUT its links.username with the form field username=<name>.
+        Returns (ok, status).
+        """
+        resp = self._get("", access_token=access_token)
+        if resp.status_code != 200:
+            self.log(f"[RENAME] FAIL loading the API root {resp.status_code}: {resp.text[:300]}", "warning")
+            return False, resp.status_code
+        try:
+            url = ((resp.json() or {}).get("links") or {}).get("username")
+        except ValueError:
+            url = None
+        if not url:
+            self.log("[RENAME] FAIL — API root has no links.username", "warning")
+            return False, resp.status_code
+        resp = self._put(url, {"username": name}, access_token=access_token)
+        ok = resp.status_code in (200, 201, 204)
+        self.print_response_details("USERNAME SET" if ok else "USERNAME FAILED", resp)
+        return ok, resp.status_code
+
     def like_user(self, like_url, access_token):
         resp = self._put(like_url, access_token=access_token)
         try:
@@ -850,13 +875,14 @@ class BotRunner(_RunnerBase):
     """
 
     def __init__(self, settings, apk, photo_path, proxy_url=None, name=None,
-                 emit=None, stop_event=None, about=None):
+                 emit=None, stop_event=None, about=None, rename_to=None):
         super().__init__(settings, emit, stop_event)
         self.apk = apk
         self.photo_path = photo_path
         self.proxy_url = proxy_url
         self.name = name
         self.about = (about or "").strip()   # profile text reserved by the panel (empty = none)
+        self.rename_to = (rename_to or "").strip()   # new nickname right after signup (empty = keep)
         self.client = JaumoClient(
             apk, proxy_url=proxy_url, timeout=self.settings["request_timeout"],
             devices=self.settings["devices"], log=self._client_log,
@@ -1059,6 +1085,20 @@ class BotRunner(_RunnerBase):
             else:
                 self.log(f"[ABOUT] Profile text not set (HTTP {status}) — the account continues without it", "warning")
                 self.emit("account_update", about_me_error=f"not set (HTTP {status})")
+            self.delay("after_profile")
+
+        # Nickname change right after signup ("Nicknamen ändern"). A rejected name does not stop the account.
+        if self.rename_to:
+            self.step("rename")
+            ok, status = c.set_username(self.access_token, self.rename_to)
+            if status == 401 and self._refresh():
+                ok, status = c.set_username(self.access_token, self.rename_to)
+            if ok:
+                self.log(f"[RENAME] Nickname changed: {profile['name']} → {self.rename_to}")
+                self.emit("renamed", old=profile["name"], new=self.rename_to)
+            else:
+                self.log(f"[RENAME] Nickname not changed (HTTP {status}) — the account keeps {profile['name']}", "warning")
+                self.emit("account_update", rename_error=f"{self.rename_to}: not accepted (HTTP {status})")
             self.delay("after_profile")
 
         zapping_url = None
@@ -1390,6 +1430,70 @@ class MessageRunner(_RunnerBase):
 # ---------------------------------------------------------------------------
 # Stats sync (read-only, started by the admin)
 # ---------------------------------------------------------------------------
+
+class RenameRunner(_RunnerBase):
+    """
+    Change the nickname of an existing account (the "later" option of Nicknamen ändern):
+        keep the stored login while valid -> GET API root -> PUT links.username (username=<name>).
+    Emits: log, step, account_update (tokens / rename_error), renamed {old, new}
+    """
+
+    def __init__(self, settings, apk, account, new_name, proxy_url=None, emit=None, stop_event=None):
+        super().__init__(settings, emit, stop_event)
+        self.account = account
+        self.new_name = (new_name or "").strip()
+        self.client = JaumoClient(
+            apk, proxy_url=proxy_url, timeout=self.settings["request_timeout"],
+            device_id=account.get("device_id"), android_id=account.get("android_id"),
+            device_info=account.get("device_info"), devices=self.settings["devices"],
+            log=self._client_log,
+        )
+        self.access_token = account.get("access_token")
+        self.refresh_token = account.get("refresh_token")
+
+    def run(self):
+        try:
+            return self._run()
+        except StopRequested:
+            self.log("[STOP] Stopped by admin", "warning")
+            return {"status": "stopped", "reason": "stopped by admin"}
+        except requests.RequestException as e:
+            self.log(f"[NETWORK] {type(e).__name__}: {e}", "error")
+            return {"status": "failed", "reason": f"network error: {type(e).__name__}"}
+        except Exception as e:
+            self.log(f"[CRASH] {type(e).__name__}: {e}", "error")
+            return {"status": "failed", "reason": f"{type(e).__name__}: {e}"}
+
+    def _refresh(self):
+        if not self.refresh_token:
+            return False
+        new_tok, new_ref = self.client.refresh_access_token(self.refresh_token)
+        if new_tok:
+            self.access_token, self.refresh_token = new_tok, new_ref
+            self.emit("account_update", **self._token_fields(new_tok, new_ref))
+            return True
+        return False
+
+    def _run(self):
+        acc = self.account
+        self.log(f"--- Nickname change: {acc.get('name')} → {self.new_name} (account #{acc.get('id')}) ---")
+        if not self.new_name:
+            return {"status": "failed", "reason": "no new name"}
+        if not self._login_if_needed() or not self.access_token:
+            return {"status": "failed", "reason": "no usable token"}
+        self.step("rename")
+        self.check_stop()
+        ok, status = self.client.set_username(self.access_token, self.new_name)
+        if status == 401 and self._refresh():
+            ok, status = self.client.set_username(self.access_token, self.new_name)
+        if not ok:
+            self.emit("account_update", rename_error=f"{self.new_name}: not accepted (HTTP {status})")
+            return {"status": "failed", "reason": f"name not accepted (HTTP {status})"}
+        self.log(f"[RENAME] Nickname changed: {acc.get('name')} → {self.new_name}")
+        self.emit("renamed", old=acc.get("name"), new=self.new_name)
+        self.step("finished")
+        return {"status": "done", "reason": f"renamed to {self.new_name}"}
+
 
 class StatsSyncRunner(_RunnerBase):
     """

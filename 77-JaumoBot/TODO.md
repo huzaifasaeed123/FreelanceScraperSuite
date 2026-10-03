@@ -304,6 +304,12 @@ with its own login. (C) and once at the end, also after stop/block — no separa
 idle accounts every X min (default 30). (E) all four options in Konfiguration → Stats aktualisieren. (F) Refresh
 button unchanged, reuses a valid login, blocked while the account works.
 
+Done 2026-10-03 (step 3): **nickname change** — APK EditUsernameViewModel -> UserManager.F: `GET /v2/` (API root)
+-> `PUT links.username` with `username=<name>`. Config "Direkt nach der Registrierung ändern" (after photo + profile
+text, before swiping) and "later" for selected accounts (row menu / bulk / account page; short `rename` job on the
+light queue, reuses a valid login, never while the account works). "Nicknamen ändern" page (one name per line,
+"never reuse"). Earlier names kept in `name_history` and never given out again (signup names included).
+
 Still open from the client confirmation (2026-10-03): nickname change (after signup or later, separate list),
 automatic stats refresh (after every session + every 30 min), "Über mich Text:" label, photo-rejected display,
 panel fully in German. "Emails" only if the client asks for it.

@@ -37,6 +37,7 @@ DEFAULT_CONTROL = {
     "mutual_ids": ["9001", "9002", "9003"],   # matches list (likes.mutual), 2 per page
     "unseen_status": 200,
     "about_status": 200,           # answer to PUT me/data/aboutme
+    "username_status": 200,        # answer to PUT me/username
 }
 
 app = FastAPI()
@@ -47,7 +48,8 @@ _ids = itertools.count(1)
 def reset():
     state.clear()
     state.update(control=dict(DEFAULT_CONTROL), requests=[], bad_signatures=[], bad_headers=[],
-                 tokens={}, users={}, registrations=[], messages=[], uploads=[], likes=[], dislikes=[], about=[])
+                 tokens={}, users={}, registrations=[], messages=[], uploads=[], likes=[], dislikes=[], about=[],
+                 usernames=[])
     state["next_user"] = itertools.count(DEFAULT_CONTROL["user_id_start"])
 
 
@@ -383,10 +385,23 @@ def api_root(request: Request):
         return _unauth()
     _count("root_calls")
     b = _base(request)
-    return {"links": {"unseen": f"{b}/me/unseen/",
+    return {"links": {"unseen": f"{b}/me/unseen/", "username": f"{b}/me/username",
                       "likes": {"in": f"{b}/me/likes/in/", "mutual": f"{b}/me/likes/mutual/", "out": f"{b}/me/likes/out/"},
                       "visits": {"in": f"{b}/me/visits/in/"},
                       "conversations": {"in": f"{b}/conversation/inbox/"}}}
+
+
+@app.put("/v2/me/username")
+def set_username(request: Request):
+    u = _user(request)
+    if not u:
+        return _unauth()
+    f = _form(request)
+    state["usernames"].append({"user": u["id"], "form": f, "content_type": request.headers.get("content-type")})
+    if state["control"]["username_status"] != 200:
+        return JSONResponse({"error": "username rejected"}, state["control"]["username_status"])
+    u["name"] = f.get("username")
+    return {"ok": True}
 
 
 @app.get("/v2/me/unseen/")

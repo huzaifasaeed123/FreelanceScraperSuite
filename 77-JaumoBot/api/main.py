@@ -25,7 +25,7 @@ from .auth import (COOKIE_NAME, check_credentials, is_https, make_token, require
                    verify_token, ws_authenticated)
 from .manager import (ACTIVE_STATUSES, BOT_DEFAULTS, IDENTITY_DEFAULTS, Hub, RunManager, event_public,
                       about_pool_for, about_usage, get_bot_settings, get_identity, get_main_config, name_pool_for,
-                      name_usage, run_public)
+                      name_usage, rename_pool_for, rename_usage, run_public)
 from .photolib import THUMBS_DIR, delete_photo_files, import_uploads, photo_usage, sync_library
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog, engine,
                      get_session, init_db, iso, utcnow)
@@ -446,6 +446,9 @@ def _main_config_public(s: Session) -> dict:
     texts, used = about_pool_for(d["settings"]), about_usage(s)
     d["about_total"] = len(texts)
     d["about_unused"] = sum(1 for x in texts if not used[x.strip().casefold()])
+    names, taken = rename_pool_for(d["settings"]), rename_usage(s)
+    d["rename_total"] = len(names)
+    d["rename_unused"] = sum(1 for x in names if not taken[x.strip().casefold()])
     from_env = bool(apk and cfg.SEED_CLIENT_ID and cfg.SEED_SIGN_SECRET and apk.client_id == cfg.SEED_CLIENT_ID)
     d["apk_source"] = "env" if from_env else "stored" if apk else "none"
     return d
@@ -474,6 +477,23 @@ def put_config(body: ConfigPatch, s: Session = Depends(get_session)):
     s.commit()
     hub.publish("events", {"type": "settings"})
     return _main_config_public(s)
+
+
+@app.get("/api/rename/usage", dependencies=auth)
+def rename_names_usage(s: Session = Depends(get_session)):
+    """Names an account has or had (case-insensitive key -> count), for the Nicknamen ändern page."""
+    return dict(rename_usage(s))
+
+
+@app.post("/api/accounts/rename", dependencies=auth)
+def rename_accounts(body: SwipeIn):
+    """Change the nickname of existing accounts to the next free names of the list."""
+    try:
+        return manager.launch_rename(body.account_ids)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get("/api/about/usage", dependencies=auth)
