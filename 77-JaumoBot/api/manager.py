@@ -451,7 +451,7 @@ class RunManager:
         return ids
 
     # set up accounts; blocked / verification_required may be retried (limit clears, verification done in-app)
-    SWIPE_STATUSES = ("active", "legacy", "stopped", "blocked", "verification_required")
+    SWIPE_STATUSES = ("active", "legacy", "stopped", "blocked", "verification_required", "limit_reached")
 
     def launch_swipe(self, account_ids: list[int]) -> dict:
         """Continue swiping with existing accounts (same worker queue as account creation)."""

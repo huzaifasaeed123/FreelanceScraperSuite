@@ -358,6 +358,24 @@ account and of SophieTG ("violation of terms"). Then add distinct statuses limit
 
 ---
 
+## 8h. Three distinct Jaumo outcomes, confirmed from the live DB (2026-10-04) — ✅ done
+
+Read the production database over SSH. The four "blocked" accounts were NOT all the same:
+  - like 403 error.code 4031 / missingField=verification  -> verification required (Johanna, SophieTG early)
+  - like 403 error.code 4032 / referrer "like_capped" + "Upgrade to Plus"  -> like limit reached (Sandra/Elisabeth, ~1500)
+  - refresh 400 invalid_grant "locked ... violation of our terms" (#locked)  -> PERMANENT lock (SophieTG later)
+
+- Engine: JaumoClient.like_limit() (4032) -> status limit_reached; refresh_access_token() records a #locked lock
+  and every runner then ends as blocked with "Account locked by Jaumo: ...". No extra requests.
+- Statuses now separate: verification_required (retry/verify in app), limit_reached (retry later), blocked
+  (permanent). None of these is auto-refreshed (sweep reads only active/legacy), so dead accounts stop hitting
+  the proxy; a manual refresh on a blocked account is refused.
+- Startup relabel now reads the last session's error log body and splits the old "blocked" rows into the three.
+- Panel: "Limit erreicht" status + badge + filter; permanent lock shows the terms message.
+- Tests: 148 passing.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

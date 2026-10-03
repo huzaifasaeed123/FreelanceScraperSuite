@@ -137,7 +137,7 @@ class Account(SQLModel, table=True):
     rename_error: str = ""
     photo_error: str = ""                                   # why the photo step failed (shown on the account)
     verify_info: str = ""                                   # what Jaumo said when it required verification
-    # signing_up|active|blocked|verification_required|photo_failed|failed|stopped|legacy
+    # signing_up|active|blocked|verification_required|limit_reached|photo_failed|failed|stopped|legacy
     status: str = Field(default="signing_up", index=True)
     photo_uploaded: bool = False
     gallery_count: int = 0

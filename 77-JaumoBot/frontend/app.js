@@ -189,12 +189,12 @@ const I18N = {
     "st.actionsTip": "Likes + Dislikes + gesendete Nachrichten",
     "st.likesSub": "vergebene Likes", "st.dislikesSub": "vergebene Dislikes", "st.rate": "{r}% der Likes",
     "st.sent": "Gesendete Nachrichten", "st.sentSub": "{n} Kontakte angeschrieben", "st.pending": "Offene Matches", "st.pendingSub": "noch nicht angeschrieben",
-    "res.done": "Fertig", "res.blocked": "Gesperrt", "res.failed": "Fehler", "res.stopped": "Gestoppt", "res.verification_required": "Verifizierung nötig",
+    "res.done": "Fertig", "res.blocked": "Gesperrt", "res.failed": "Fehler", "res.stopped": "Gestoppt", "res.verification_required": "Verifizierung nötig", "res.limit_reached": "Limit erreicht",
     "res.interrupted": "Unterbrochen", "res.last": "Letzte Sitzung", "about.textLabel": "Über mich Text:",
     "state.queued": "In Warteschlange", "acc.stop": "Stoppen", "acc.dequeue": "Aus Warteschlange entfernen",
     "acc.stopped": "{n} Sitzung(en) gestoppt", "acc.stopConfirm": "{n} Account(s) stoppen? Laufende Sitzungen enden, wartende werden entfernt.",
     "state.active": "Aktiv", "state.working": "Arbeitet", "state.blocked": "Gesperrt", "state.error": "Fehler", "state.stopped": "Gestoppt",
-    "state.verification": "Verifizierung nötig", "verify.title": "Jaumo verlangt eine Verifizierung",
+    "state.verification": "Verifizierung nötig", "state.limit": "Limit erreicht", "verify.title": "Jaumo verlangt eine Verifizierung",
     "verify.sub": "Jaumo hat beim Liken eine Profil-Verifizierung verlangt. Das muss ein Mensch in der Jaumo-App machen (Selfie) — der Bot kann es nicht.",
     "acc.created": "erstellt {d}", "acc.lastLabel": "Letzte Aktivität", "acc.never": "noch keine",
     "acc.view": "Account ansehen", "acc.edit": "Bearbeiten", "acc.more": "Weitere Aktionen",
@@ -339,12 +339,12 @@ const I18N = {
     "st.actionsTip": "Likes + dislikes + messages sent",
     "st.likesSub": "likes given", "st.dislikesSub": "dislikes given", "st.rate": "{r}% of likes",
     "st.sent": "Messages sent", "st.sentSub": "{n} people messaged", "st.pending": "Pending matches", "st.pendingSub": "not messaged yet",
-    "res.done": "Finished", "res.blocked": "Blocked", "res.failed": "Error", "res.stopped": "Stopped", "res.verification_required": "Verification required",
+    "res.done": "Finished", "res.blocked": "Blocked", "res.failed": "Error", "res.stopped": "Stopped", "res.verification_required": "Verification required", "res.limit_reached": "Limit reached",
     "res.interrupted": "Interrupted", "res.last": "Last session", "about.textLabel": "About me text:",
     "state.queued": "Queued", "acc.stop": "Stop", "acc.dequeue": "Remove from queue",
     "acc.stopped": "{n} session(s) stopped", "acc.stopConfirm": "Stop {n} account(s)? Running sessions end, queued ones are removed.",
     "state.active": "Active", "state.working": "Working", "state.blocked": "Blocked", "state.error": "Error", "state.stopped": "Stopped",
-    "state.verification": "Verification required", "verify.title": "Jaumo requires verification",
+    "state.verification": "Verification required", "state.limit": "Limit reached", "verify.title": "Jaumo requires verification",
     "verify.sub": "Jaumo asked for a profile verification when liking. A person must do it in the Jaumo app (a selfie) — the bot cannot.",
     "acc.created": "created {d}", "acc.lastLabel": "Last activity", "acc.never": "none yet",
     "acc.view": "View account", "acc.edit": "Edit", "acc.more": "More actions",
@@ -395,6 +395,7 @@ const STATUS_TEXT = {
   interrupted: ["Unterbrochen", "Interrupted"], active: ["Aktiv", "Active"], legacy: ["Importiert", "Imported"],
   photo_failed: ["Foto-Fehler", "Photo failed"], signing_up: ["Registrierung", "Signing up"],
   verification_required: ["Verifizierung nötig", "Verification required"],
+  limit_reached: ["Limit erreicht", "Limit reached"],
 };
 function statusText(status) {
   const p = STATUS_TEXT[status];
@@ -2332,7 +2333,7 @@ for (const id of ["#photo-files", "#photo-folder", "#photo-zip"]) {
 // Jaumo Accounts (main overview — live)
 // ---------------------------------------------------------------------------
 
-const ACC_STATUSES = ["active", "blocked", "verification_required", "photo_failed", "failed", "stopped", "signing_up", "legacy"];
+const ACC_STATUSES = ["active", "blocked", "verification_required", "limit_reached", "photo_failed", "failed", "stopped", "signing_up", "legacy"];
 const SORTS = {
   newest: ["id", "desc"], activity: ["last_activity_at", "desc"], likes: ["liked_count", "desc"],
   matches: ["matches_count", "desc"], oldest: ["id", "asc"],
@@ -2342,6 +2343,7 @@ const STATE_STYLE = {
   queued: { cls: "queued", icon: "clock" },
   blocked: { cls: "bad", icon: "ban" }, error: { cls: "warn", icon: "alert" }, stopped: { cls: "", icon: "pause" },
   verification: { cls: "verify", icon: "shieldCheck" },
+  limit: { cls: "limit", icon: "clock" },
 };
 state.acc = { page: 0, per: +prefs.get("accPer", "12") || 12, q: "", state: "", worker: "", location: "",
   from: "", to: "", sort: "newest", total: 0, items: [], summary: null };
@@ -2512,7 +2514,8 @@ function serverText(msg) {
   for (const [re, fmt] of SERVER_DE) { const m = re.exec(msg); if (m) return fmt(m); }
   return photoReasonText(msg);
 }
-const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn", verification_required: "warn" };
+const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn",
+  verification_required: "warn", limit_reached: "" };
 
 // "Fertig: Max. Swipes erreicht (100)" under the status badge (nothing while the account works).
 function resultLine(a, cls = "state-reason") {
@@ -2658,7 +2661,7 @@ $("#acc-table").addEventListener("click", guard(async (e) => {
 // Accounts that were set up and are not working / blocked can continue swiping.
 // An account that is set up (has a login) can be retried — also after a block or a verification wall,
 // because a daily like-limit clears and a verification done in the app lets it swipe again.
-const RETRYABLE = ["active", "legacy", "stopped", "blocked", "verification_required"];
+const RETRYABLE = ["active", "legacy", "stopped", "blocked", "verification_required", "limit_reached"];
 function canSwipe(a) {
   return !a.working && a.has_token !== false && RETRYABLE.includes(a.status);
 }

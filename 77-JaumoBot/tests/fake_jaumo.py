@@ -21,6 +21,8 @@ DEFAULT_CONTROL = {
     "banned_clients": ["banned-client"],
     "block_after_likes": 0,        # 0 = never; else like N+1 returns 403
     "verification_required": False,  # every like returns Jaumo's "Verification required" 403 (code 4031)
+    "like_capped": False,            # every like returns the "like limit reached" 403 (code 4032, like_capped)
+    "account_locked": False,         # refresh returns Jaumo's permanent lock (400 invalid_grant, #locked)
     "match_every": 3,              # every k-th like matches (0 = never)
     "cards_per_batch": 5,
     "batches": 1000,               # zapping batches with cards before the deck is empty
@@ -180,6 +182,12 @@ async def auth_token(request: Request):
         state["tokens"][tok] = {"kind": "client", "uses": 0}
         return {"access_token": tok, "token_type": "bearer", "expires_in": 3600}
     if f.get("grant_type") == "refresh_token":
+        if state["control"]["account_locked"]:
+            return JSONResponse({"error": "invalid_grant",
+                                 "error_description": "Your account has been locked due to violation of our terms",
+                                 "error_uri": "http://api.jaumo.com/auth/error#locked",
+                                 "dialog": {"title": "Login Failed",
+                                            "message": "Your account has been locked due to violation of our terms"}}, 400)
         ref = state["tokens"].get(f.get("refresh_token"))
         if not ref or ref["kind"] != "refresh":
             return JSONResponse({"error": "invalid_grant"}, 400)
@@ -240,6 +248,9 @@ def validate(request: Request):
 
 @app.get("/v2/me")
 def me(request: Request):
+    if state["control"]["account_locked"]:
+        return JSONResponse({"error": "access_denied", "error_description": "Token expired",
+                             "error_uri": "http://api.jaumo.com/auth/error#token_expired"}, 401)
     u = _user(request)
     if not u:
         return _unauth()
@@ -343,6 +354,11 @@ def like(other: int, request: Request):
                              "title": "Verification required",
                              "subtitle": "Please verify your profile to contact this user",
                              "error": {"message": "Verification required Please verify your profile", "code": 4031}}, 403)
+    if state["control"]["like_capped"]:
+        return JSONResponse({"error": {"code": 4032},
+                             "dialog": {"title": "", "fullscreen": True,
+                                        "options": [{"caption": "Upgrade to Plus", "type": "vip",
+                                                     "referrer": "like_capped"}]}}, 403)
     c = state["control"]
     if c["block_after_likes"] and u["likes"] >= c["block_after_likes"]:
         return JSONResponse({"error": "restricted"}, 403)

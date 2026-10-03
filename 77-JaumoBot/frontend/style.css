@@ -1108,3 +1108,7 @@ details.form-section.adv>:last-child{margin-bottom:14px}
 /* account status: verification required (not a block) */
 .state-badge.verify { background: rgba(124, 131, 255, .16); color: #a5a9ff; border: 1px solid rgba(124, 131, 255, .4); }
 :root:not([data-theme="dark"]) .state-badge.verify { color: #4f46e5; }
+
+/* account status: like limit reached (capped, not a block) */
+.state-badge.limit { background: rgba(245, 176, 76, .14); color: #f5b04c; border: 1px solid rgba(245, 176, 76, .35); }
+:root:not([data-theme="dark"]) .state-badge.limit { color: #b45309; }

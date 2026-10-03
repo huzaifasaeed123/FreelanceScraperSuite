@@ -397,6 +397,7 @@ class JaumoClient:
         return None
 
     def refresh_access_token(self, refresh_token):
+        self.account_locked = None   # set to Jaumo's message when the account is permanently locked (#locked)
         resp = self._post("auth/token", {
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
@@ -424,7 +425,19 @@ class JaumoClient:
             self.last_expires_in = int(expires_in) if isinstance(expires_in, (int, float)) else None
             self.log(f"[REFRESH] OK — access token present; expires_in={expires_in}")
             return new_access, new_refresh
-        self.log(f"[REFRESH] FAIL {resp.status_code}: {resp.text}", "error")
+        # Permanent lock: 400 invalid_grant "...locked due to violation of our terms" (#locked).
+        # The account can no longer log in — never retry or refresh it again.
+        text = resp.text or ""
+        low = text.lower()
+        if resp.status_code == 400 and ("#locked" in low or "invalid_grant" in low) and "lock" in low:
+            try:
+                d = resp.json()
+            except ValueError:
+                d = {}
+            self.account_locked = (d.get("error_description") if isinstance(d, dict) else None) \
+                or "Account locked (violation of terms)"
+            self.log(f"[LOCKED] Jaumo permanently locked this account: {self.account_locked}", "error")
+        self.log(f"[REFRESH] FAIL {resp.status_code}: {text}", "error")
         return None, None
 
     def signup_account(self, client_bearer, profile):
@@ -729,6 +742,23 @@ class JaumoClient:
             parts.append(s)
         return " — ".join(parts) or "Verification required"
 
+    @staticmethod
+    def like_limit(status, data):
+        """
+        Jaumo capped the free likes for now (not a ban, clears over time):
+            403 with error.code 4032, or a dialog whose option referrer is "like_capped".
+        Returns a short message, or None.
+        """
+        if status != 403 or not isinstance(data, dict):
+            return None
+        err = data.get("error") if isinstance(data.get("error"), dict) else {}
+        dialog = data.get("dialog") if isinstance(data.get("dialog"), dict) else {}
+        refs = [o.get("referrer") for o in (dialog.get("options") or []) if isinstance(o, dict)]
+        if err.get("code") == 4032 or "like_capped" in refs:
+            title = dialog.get("title") or data.get("title") or ""
+            return (title.strip() or "Daily like limit reached (Jaumo asks to upgrade to Plus)")
+        return None
+
     def like_user(self, like_url, access_token):
         resp = self._put(like_url, access_token=access_token)
         try:
@@ -820,6 +850,10 @@ class _RunnerBase:
         exp = getattr(self.client, "last_expires_in", None)
         return {"access_token": access, "refresh_token": refresh,
                 "token_expires_at": round(time.time() + exp, 1) if exp else None}
+
+    def account_locked(self):
+        """Jaumo's lock message if the last refresh showed a permanent lock, else None."""
+        return getattr(self.client, "account_locked", None)
 
     def _login_if_needed(self):
         """Like the app: keep a stored access token while it is valid, renew it only when it (almost) expired."""
@@ -1301,6 +1335,12 @@ class BotRunner(_RunnerBase):
                     self.emit("account_update", status="verification_required", verify_info=verify_msg)
                     self.emit("verification", message=verify_msg)
                     return {"status": "verification_required", "reason": verify_msg}
+                limit_msg = self.client.like_limit(status, resp)
+                if limit_msg:
+                    self.log(f"[LIMIT] Jaumo capped the likes for now: {limit_msg} "
+                             f"(liked={self.counters['liked']} this session)", "warning")
+                    self.emit("account_update", status="limit_reached")
+                    return {"status": "limit_reached", "reason": limit_msg}
                 if ok:
                     consecutive_fail = 0
                     pauses = 0
@@ -1379,6 +1419,9 @@ class SwipeRunner(BotRunner):
         self.log(f"--- Continue swiping: {acc.get('name')} (account #{acc.get('id')}) ---")
 
         if not self._login_if_needed() or not self.access_token:
+            if self.account_locked():
+                self.emit("account_update", status="blocked")
+                return {"status": "blocked", "reason": f"Account locked by Jaumo: {self.account_locked()}"}
             return {"status": "failed", "reason": "no usable login token"}
 
         self.step("profile")
@@ -1386,6 +1429,9 @@ class SwipeRunner(BotRunner):
         if status == 401 and self._refresh():
             me, status = self.client.get_profile(self.access_token, include_status=True)
         if not me:
+            if self.account_locked():
+                self.emit("account_update", status="blocked")
+                return {"status": "blocked", "reason": f"Account locked by Jaumo: {self.account_locked()}"}
             return {"status": "failed", "reason": f"profile not available (HTTP {status}) — login expired?"}
 
         zapping_url = None
@@ -1473,6 +1519,9 @@ class MessageRunner(_RunnerBase):
         self.log(f"--- Messaging for {acc.get('name')} (account #{acc.get('id')}) ---")
 
         if not self._login_if_needed() or not self.access_token:
+            if self.account_locked():
+                self.emit("account_update", status="blocked")
+                return {"status": "blocked", "reason": f"Account locked by Jaumo: {self.account_locked()}"}
             return {"status": "failed", "reason": "no usable token"}
         self.ready = True
         self.delay("after_refresh")
@@ -1554,6 +1603,9 @@ class RenameRunner(_RunnerBase):
         if not self.new_name:
             return {"status": "failed", "reason": "no new name"}
         if not self._login_if_needed() or not self.access_token:
+            if self.account_locked():
+                self.emit("account_update", status="blocked")
+                return {"status": "blocked", "reason": f"Account locked by Jaumo: {self.account_locked()}"}
             return {"status": "failed", "reason": "no usable token"}
         self.step("rename")
         self.check_stop()
@@ -1619,6 +1671,9 @@ class StatsSyncRunner(_RunnerBase):
         acc = self.account
         self.log(f"--- Stats sync for {acc.get('name')} (account #{acc.get('id')}) ---")
         if not self._login_if_needed() or not self.access_token:
+            if self.account_locked():
+                self.emit("account_update", status="blocked")
+                return {"status": "blocked", "reason": f"Account locked by Jaumo: {self.account_locked()}"}
             return {"status": "failed", "reason": "no usable token"}
         self.step("counters")
         try:
