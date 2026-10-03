@@ -51,16 +51,16 @@ function toast(msg, isErr = false) {
 }
 
 const guard = (fn) => async (...args) => {
-  try { await fn(...args); } catch (e) { if (e.message !== "Not authenticated") toast(e.message, true); }
+  try { await fn(...args); } catch (e) { if (e.message !== "Not authenticated") toast(serverText(e.message), true); }
 };
 
 function fmtDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleString(undefined, { year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(LANG === "de" ? "de-DE" : "en-GB", { year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 function fmtTime(iso) {
-  return iso ? new Date(iso).toLocaleTimeString(undefined, { hour12: false }) : "";
+  return iso ? new Date(iso).toLocaleTimeString(LANG === "de" ? "de-DE" : "en-GB", { hour12: false }) : "";
 }
 function duration(run) {
   if (!run.started_at) return "";
@@ -69,7 +69,7 @@ function duration(run) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
 }
-const badge = (status) => `<span class="badge ${esc(status)}">${esc(status)}</span>`;
+const badge = (status) => `<span class="badge ${esc(status)}">${esc(statusText(status))}</span>`;
 
 // ---------------------------------------------------------------------------
 // Language (DE default) and theme (dark default)
@@ -380,6 +380,22 @@ const prefs = {
 };
 let LANG = prefs.get("lang", "de") === "en" ? "en" : "de";
 
+// Inline translation for page texts: L("Deutsch", "English") — switches with the language menu.
+function L(de, en) {
+  return LANG === "de" ? de : en;
+}
+
+const STATUS_TEXT = {
+  queued: ["Wartet", "Queued"], running: ["Läuft", "Running"], done: ["Fertig", "Done"],
+  blocked: ["Gesperrt", "Blocked"], failed: ["Fehler", "Failed"], stopped: ["Gestoppt", "Stopped"],
+  interrupted: ["Unterbrochen", "Interrupted"], active: ["Aktiv", "Active"], legacy: ["Importiert", "Imported"],
+  photo_failed: ["Foto-Fehler", "Photo failed"], signing_up: ["Registrierung", "Signing up"],
+};
+function statusText(status) {
+  const p = STATUS_TEXT[status];
+  return p ? L(p[0], p[1]) : status;
+}
+
 function t(key, vars) {
   let s = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
   if (vars) s = s.replace(/\{(\w+)\}/g, (_, v) => (vars[v] ?? ""));
@@ -388,6 +404,19 @@ function t(key, vars) {
 
 function applyI18n(root = document) {
   document.documentElement.lang = LANG;
+  // Static HTML: English is the default text, data-de holds the German one (data-de-ph / data-de-title alike).
+  root.querySelectorAll("[data-de]").forEach((el) => {
+    if (el.dataset.en === undefined) el.dataset.en = el.textContent;
+    el.textContent = LANG === "de" ? el.dataset.de : el.dataset.en;
+  });
+  root.querySelectorAll("[data-de-ph]").forEach((el) => {
+    if (el.dataset.enPh === undefined) el.dataset.enPh = el.placeholder;
+    el.placeholder = LANG === "de" ? el.dataset.dePh : el.dataset.enPh;
+  });
+  root.querySelectorAll("[data-de-title]").forEach((el) => {
+    if (el.dataset.enTitle === undefined) el.dataset.enTitle = el.title;
+    el.title = LANG === "de" ? el.dataset.deTitle : el.dataset.enTitle;
+  });
   root.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n)));
   root.querySelectorAll("[data-i18n-ph]").forEach((el) => (el.placeholder = t(el.dataset.i18nPh)));
   root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle)));
@@ -696,9 +725,9 @@ function renderNotifications() {
   if (state.config && apkBad) items.push({ icon: "alert", tone: "danger", text: `APK: ${apkBad}`, href: "#configs" });
   const blocked = (s.accounts_by_status || {}).blocked || 0;
   if (blocked) items.push({ icon: "ban", tone: "danger", text: `${blocked} × ${t("state.blocked")}`, href: "#accounts" });
-  if (!s.proxies_enabled) items.push({ icon: "globe", tone: "warn", text: "No proxy enabled", href: "#proxies" });
+  if (!s.proxies_enabled) items.push({ icon: "globe", tone: "warn", text: L("Kein Proxy aktiv", "No proxy enabled"), href: "#proxies" });
   const freePhotos = (state.photos || []).filter((p) => p.status === "available").length;
-  if (state.photos && freePhotos < 5) items.push({ icon: "image", tone: "warn", text: `${freePhotos} unused photos left`, href: "#photos" });
+  if (state.photos && freePhotos < 5) items.push({ icon: "image", tone: "warn", text: L(`Nur noch ${freePhotos} freie Fotos`, `${freePhotos} unused photos left`), href: "#photos" });
   $("#notif-count").textContent = items.length || "";
   $("#notif-list").innerHTML = items.length ? items.map((n) =>
     `<a class="notif" href="${n.href}"><span class="icon-bubble ${n.tone}">${icon(n.icon)}</span><span>${esc(n.text)}</span></a>`).join("")
@@ -712,7 +741,7 @@ function setLive(on) {
   $("#top-status").textContent = on ? t("top.online") : t("top.offline");
   $("#top-dot").classList.toggle("on", on);
   $("#live-chip").classList.toggle("on", on);
-  $("#live-chip").lastChild.textContent = on ? "Live" : "Offline";
+  $("#live-chip").lastChild.textContent = on ? "Live" : L("Getrennt", "Offline");
 }
 
 // ---------------------------------------------------------------------------
@@ -832,12 +861,22 @@ const STEP_FLOW = {
   rename: ["login", "rename"],
 };
 const STEP_LABELS = {
-  starting: "Starting", waiting_proxy: "Waiting for proxy", client_token: "Client token", signup: "Signing up",
-  location: "Setting location", profile: "Loading profile", photo: "Uploading photo", verify: "Verifying photo",
-  about: "Profile text", rename: "Changing nickname",
-  swiping: "Swiping", finished: "Finished", login: "Logging in", matches: "Loading matches", messaging: "Messaging",
-  links: "Loading links", counters: "Reading counters",
+  starting: ["Startet", "Starting"], waiting_proxy: ["Wartet auf Proxy", "Waiting for proxy"],
+  client_token: ["App-Anmeldung", "Client token"], signup: ["Registrierung", "Signing up"],
+  location: ["Standort setzen", "Setting location"], profile: ["Profil laden", "Loading profile"],
+  photo: ["Foto hochladen", "Uploading photo"], verify: ["Foto prüfen", "Verifying photo"],
+  about: ["Profiltext", "Profile text"], rename: ["Nickname ändern", "Changing nickname"],
+  swiping: ["Swipen", "Swiping"], finished: ["Beendet", "Finished"], login: ["Anmelden", "Logging in"],
+  matches: ["Matches laden", "Loading matches"], messaging: ["Nachrichten senden", "Messaging"],
+  links: ["Links laden", "Loading links"], counters: ["Zähler lesen", "Reading counters"],
 };
+const stepLabel = (step) => (STEP_LABELS[step] ? L(...STEP_LABELS[step]) : step);
+const KIND_TEXT = {
+  signup: ["Erstellung + Swipen", "Signup + swiping"], swipe: ["Weiter swipen", "Continue swiping"],
+  message: ["Matches anschreiben", "Messaging"], sync: ["Stats aktualisieren", "Stats refresh"],
+  rename: ["Nickname ändern", "Nickname change"],
+};
+const kindText = (kind) => (KIND_TEXT[kind] ? L(...KIND_TEXT[kind]) : kind);
 
 state.days = 14;
 state.daily = [];
@@ -863,7 +902,7 @@ async function renderSetupCheck() {
     ...(c.settings.rename_after_signup ? [["rename", "rename"]] : [])].map(([code, page]) => {
     const p = byCode[code];
     const note = p ? t("new.p." + code) : code === "proxy" && !proxyRequired ? t("setup.proxyOff") : t("setup.ok");
-    return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? p.message : "")}">
+    return `<li class="${p ? "todo" : "done"}" data-setup="${code}" title="${esc(p ? serverText(p.message) : "")}">
       <span class="icon-bubble ${p ? "warn" : "ok"}">${icon(p ? "alert" : "check")}</span>
       <span><b>${esc(t("setup." + code))}</b><small>${esc(note)}</small></span>
       ${p ? `<a class="btn ghost sm" href="#${page}">${esc(t("new.fix"))}</a>` : ""}</li>`;
@@ -922,23 +961,24 @@ function renderKpis() {
   let delta = "";
   if (yesterday !== null) {
     const d = today - yesterday;
-    delta = `<span class="delta ${d > 0 ? "up" : d < 0 ? "down" : "flat"}">${d > 0 ? "+" : ""}${d}</span> vs yesterday`;
+    delta = `<span class="delta ${d > 0 ? "up" : d < 0 ? "down" : "flat"}">${d > 0 ? "+" : ""}${d}</span> ${L("ggü. gestern", "vs yesterday")}`;
   }
   const active = (by.active || 0) + (by.legacy || 0);
   const blocked = by.blocked || 0;
   const matchRate = s.liked ? ((s.matches / s.liked) * 100).toFixed(1) : "0.0";
   $("#kpis").innerHTML = [
-    kpiTile({ label: "Account creation", iconName: "cpu", tone: s.running || s.queued ? "ok" : "",
-      value: s.running || s.queued ? `Running` : `Idle`,
+    kpiTile({ label: L("Account-Erstellung", "Account creation"), iconName: "cpu", tone: s.running || s.queued ? "ok" : "",
+      value: s.running || s.queued ? L("Läuft", "Running") : L("Bereit", "Idle"),
       foot: s.running || s.queued
         ? `${s.running} worker${s.running === 1 ? "" : "s"} busy · ${s.queued} waiting`
-        : s.parallel === 1 ? "one by one (1 worker)" : `parallel · ${s.parallel} workers` }),
-    kpiTile({ label: "Created today", iconName: "userPlus", tone: "info",
-      value: fmtNum(today), foot: delta || "accounts signed up today" }),
-    kpiTile({ label: "Active accounts", iconName: "userCheck", tone: "ok",
-      value: fmtNum(active), foot: `of ${fmtNum(s.accounts_total)} total · <span class="sr-danger">${fmtNum(blocked)} blocked</span>` }),
+        : s.parallel === 1 ? L("nacheinander (1 Worker)", "one by one (1 worker)") : L(`parallel · ${s.parallel} Worker`, `parallel · ${s.parallel} workers`) }),
+    kpiTile({ label: L("Heute erstellt", "Created today"), iconName: "userPlus", tone: "info",
+      value: fmtNum(today), foot: delta || L("heute registrierte Accounts", "accounts signed up today") }),
+    kpiTile({ label: L("Aktive Accounts", "Active accounts"), iconName: "userCheck", tone: "ok",
+      value: fmtNum(active), foot: L(`von ${fmtNum(s.accounts_total)} gesamt · <span class="sr-danger">${fmtNum(blocked)} gesperrt</span>`,
+                                     `of ${fmtNum(s.accounts_total)} total · <span class="sr-danger">${fmtNum(blocked)} blocked</span>`) }),
     kpiTile({ label: "Matches", iconName: "heart", tone: "danger",
-      value: fmtNum(s.matches), foot: `${matchRate}% of ${fmtNum(s.liked)} likes` }),
+      value: fmtNum(s.matches), foot: L(`${matchRate}% von ${fmtNum(s.liked)} Likes`, `${matchRate}% of ${fmtNum(s.liked)} likes`) }),
   ].join("");
 }
 
@@ -957,15 +997,15 @@ function renderStatusBreakdown() {
   const by = state.stats.accounts_by_status || {};
   const total = state.stats.accounts_total || 0;
   const groups = [
-    { label: "Active", iconName: "checkCircle", tone: "ok", n: (by.active || 0) + (by.legacy || 0) },
-    { label: "Blocked", iconName: "ban", tone: "danger", n: by.blocked || 0 },
-    { label: "Failed setup", iconName: "alert", tone: "warn", n: (by.failed || 0) + (by.photo_failed || 0) },
-    { label: "Stopped / in progress", iconName: "pause", tone: "neutral", n: (by.stopped || 0) + (by.signing_up || 0) },
+    { label: L("Aktiv", "Active"), iconName: "checkCircle", tone: "ok", n: (by.active || 0) + (by.legacy || 0) },
+    { label: L("Gesperrt", "Blocked"), iconName: "ban", tone: "danger", n: by.blocked || 0 },
+    { label: L("Einrichtung fehlgeschlagen", "Failed setup"), iconName: "alert", tone: "warn", n: (by.failed || 0) + (by.photo_failed || 0) },
+    { label: L("Gestoppt / in Arbeit", "Stopped / in progress"), iconName: "pause", tone: "neutral", n: (by.stopped || 0) + (by.signing_up || 0) },
   ];
-  $("#status-sub").textContent = `${fmtNum(total)} accounts in total`;
+  $("#status-sub").textContent = L(`${fmtNum(total)} Accounts insgesamt`, `${fmtNum(total)} accounts in total`);
   $("#status-breakdown").innerHTML = total
     ? `<div class="stat-rows">${groups.map((g) => statRow({ ...g, value: fmtNum(g.n), sub: `${pct(g.n, total)}%`, ratio: total ? g.n / total : 0 })).join("")}</div>`
-    : emptyState("users", "No accounts yet", "Create new accounts to get started.");
+    : emptyState("users", L("Noch keine Accounts", "No accounts yet"), L("Erstelle neue Accounts, um zu starten.", "Create new accounts to get started."));
 }
 
 function renderEngagement() {
@@ -977,8 +1017,8 @@ function renderEngagement() {
     ${mini("thumbsUp", "Likes", fmtNum(s.liked))}
     ${mini("thumbsDown", "Dislikes", fmtNum(s.disliked))}
     ${mini("heart", "Matches", fmtNum(s.matches))}
-    ${mini("percent", "Match rate", `${rate}<small>%</small>`)}
-    ${mini("message", "Messages sent", fmtNum(s.messages_sent), true)}
+    ${mini("percent", L("Match-Quote", "Match rate"), `${rate}<small>%</small>`)}
+    ${mini("message", L("Gesendete Nachrichten", "Messages sent"), fmtNum(s.messages_sent), true)}
   </div>`;
 }
 
@@ -987,9 +1027,9 @@ function renderInfra() {
   const onProxy = Object.values(s.proxies_in_use || {}).reduce((a, b) => a + b, 0);
   const apkBad = apkProblem(state.config);
   $("#infra").innerHTML = `<div class="stat-rows">
-    ${statRow({ iconName: "bot", tone: "accent", label: "Workers (parallel accounts)", value: fmtNum(s.parallel), sub: s.parallel === 1 ? "one by one" : "parallel" })}
-    ${statRow({ iconName: "image", tone: "info", label: "Unused photos", value: fmtNum((state.photos || []).filter((p) => p.status === "available").length) })}
-    ${statRow({ iconName: "globe", tone: s.proxies_enabled ? "info" : "warn", label: "Proxies enabled", value: fmtNum(s.proxies_enabled), sub: `${onProxy} bots connected` })}
+    ${statRow({ iconName: "bot", tone: "accent", label: L("Worker (Accounts gleichzeitig)", "Workers (parallel accounts)"), value: fmtNum(s.parallel), sub: s.parallel === 1 ? L("nacheinander", "one by one") : "parallel" })}
+    ${statRow({ iconName: "image", tone: "info", label: L("Freie Fotos", "Unused photos"), value: fmtNum((state.photos || []).filter((p) => p.status === "available").length) })}
+    ${statRow({ iconName: "globe", tone: s.proxies_enabled ? "info" : "warn", label: L("Aktive Proxies", "Proxies enabled"), value: fmtNum(s.proxies_enabled), sub: L(`${onProxy} Sitzungen verbunden`, `${onProxy} sessions connected`) })}
     ${statRow({ iconName: "key", tone: apkBad ? "danger" : "ok", label: t("infra.apk"), value: apkBad ? "!" : "OK", sub: apkBad })}
     ${statRow({ iconName: "mapPin", tone: "neutral", label: t("infra.cities"), value: fmtNum(state.config ? state.config.settings.locations.length : 0) })}
   </div>`;
@@ -1015,12 +1055,12 @@ function renderChart() {
   const total = data.reduce((a, d) => a + d.created, 0);
   const blocked = data.reduce((a, d) => a + d.blocked, 0);
   const best = data.reduce((b, d) => (d.created > (b?.created ?? -1) ? d : b), null);
-  const dayFmt = (iso, opts) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, opts);
+  const dayFmt = (iso, opts) => new Date(iso + "T00:00:00").toLocaleDateString(LANG === "de" ? "de-DE" : "en-GB", opts);
   $("#chart-summary").innerHTML = [
-    ["Total created", fmtNum(total)],
-    ["Avg per day", data.length ? (total / data.length).toFixed(1) : "0"],
-    ["Best day", best && best.created ? `${best.created} <span class="muted" style="font-size:13px;font-weight:500">· ${dayFmt(best.date, { day: "numeric", month: "short" })}</span>` : "—"],
-    ["Now blocked", `${fmtNum(blocked)} <span class="muted" style="font-size:13px;font-weight:500">· ${pct(blocked, total)}%</span>`],
+    [L("Erstellt gesamt", "Total created"), fmtNum(total)],
+    [L("Ø pro Tag", "Avg per day"), data.length ? (total / data.length).toFixed(1) : "0"],
+    [L("Bester Tag", "Best day"), best && best.created ? `${best.created} <span class="muted" style="font-size:13px;font-weight:500">· ${dayFmt(best.date, { day: "numeric", month: "short" })}</span>` : "—"],
+    [L("Jetzt gesperrt", "Now blocked"), `${fmtNum(blocked)} <span class="muted" style="font-size:13px;font-weight:500">· ${pct(blocked, total)}%</span>`],
   ].map(([l, v]) => `<div><div class="sum-label">${l}</div><div class="sum-value">${v}</div></div>`).join("");
 
   const W = el.clientWidth || 600, H = el.clientHeight || 240;
@@ -1055,9 +1095,9 @@ function renderChart() {
     cols += `<g class="col" data-i="${i}"><rect class="band" x="${x0 + 1}" y="${m.t}" width="${Math.max(1, band - 2)}" height="${ih}" rx="6"/>${bar}</g>`;
   });
 
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accounts created per day, last ${data.length} days">
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${L(`Erstellte Accounts pro Tag, letzte ${data.length} Tage`, `Accounts created per day, last ${data.length} days`)}">
       <g class="grid">${grid}</g><g>${cols}</g><g class="axis">${axis}</g></svg>
-    ${total ? "" : `<div class="chart-empty">No accounts created in this period</div>`}`;
+    ${total ? "" : `<div class="chart-empty">${L("In diesem Zeitraum wurden keine Accounts erstellt", "No accounts created in this period")}</div>`}`;
 
   const tip = $("#chart-tip");
   el.querySelectorAll(".col").forEach((g) => {
@@ -1065,8 +1105,8 @@ function renderChart() {
       const d = data[+g.dataset.i];
       const row = (l, v) => `<div class="tip-row"><span>${l}</span><b>${fmtNum(v)}</b></div>`;
       tip.innerHTML = `<div class="tip-title">${esc(dayFmt(d.date, { weekday: "short", day: "numeric", month: "short" }))}</div>
-        ${row("Accounts created", d.created)}<div class="tip-sep"></div>
-        ${row("Active", d.active)}${row("Blocked", d.blocked)}${row("Failed setup", d.failed)}${d.other ? row("Stopped / other", d.other) : ""}
+        ${row(L("Erstellte Accounts", "Accounts created"), d.created)}<div class="tip-sep"></div>
+        ${row(L("Aktiv", "Active"), d.active)}${row(L("Gesperrt", "Blocked"), d.blocked)}${row(L("Einrichtung fehlgeschlagen", "Failed setup"), d.failed)}${d.other ? row(L("Gestoppt / sonstige", "Stopped / other"), d.other) : ""}
         <div class="tip-sep"></div>${row("Likes", d.likes)}${row("Matches", d.matches)}`;
       tip.classList.remove("hidden");
       const tw = tip.offsetWidth, th = tip.offsetHeight;
@@ -1108,8 +1148,8 @@ function renderLiveCards() {
   const list = state.liveFilter === "active" ? active : state.liveFilter === "recent" ? recent : [...active, ...recent];
   $("#live-cards").innerHTML = list.length ? list.map(botCard).join("")
     : state.liveFilter === "active"
-      ? emptyState("cpu", "No accounts in progress", "Choose a configuration and how many accounts to create, then press Create accounts.")
-      : emptyState("activity", "Nothing here yet", "Finished runs will show up here.");
+      ? emptyState("cpu", L("Keine Accounts in Arbeit", "No accounts in progress"), L("Anzahl wählen und auf „Accounts erstellen“ klicken.", "Choose how many accounts to create, then press Create accounts."))
+      : emptyState("activity", L("Noch nichts hier", "Nothing here yet"), L("Beendete Sitzungen erscheinen hier.", "Finished sessions will show up here."));
 }
 
 function stepBar(r) {
@@ -1125,32 +1165,32 @@ function stepBar(r) {
     return "<span></span>";
   }).join("");
   const ended = !running && r.status !== "done";
-  let label = STEP_LABELS[r.step] || (r.step ? r.step : r.status === "queued" ? "Queued" : "—");
-  if (ended && r.step === "finished") label = "Ended";
+  let label = stepLabel(r.step) || (r.status === "queued" ? L("In Warteschlange", "Queued") : "—");
+  if (ended && r.step === "finished") label = L("Beendet", "Ended");
   const n = Math.min(flow.length, Math.max(0, idx + (running ? 1 : 0)));
-  const right = r.status === "done" ? "complete" : ended ? r.status : `${n} / ${flow.length}`;
+  const right = r.status === "done" ? L("abgeschlossen", "complete") : ended ? statusText(r.status) : `${n} / ${flow.length}`;
   return `<div class="steps s-${esc(r.status)}">${segs}</div>
     <div class="step-label"><b>${esc(label)}</b><span>${esc(right)}</span></div>`;
 }
 
 function botCard(r) {
-  const name = r.requested_name || (r.kind !== "signup" ? `Account #${r.account_id}` : "New account");
+  const name = r.requested_name || (r.kind !== "signup" ? `Account #${r.account_id}` : L("Neuer Account", "New account"));
   const initial = (r.requested_name || "?").trim().charAt(0).toUpperCase() || "?";
   const metrics = r.kind === "sync"
-    ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${icon("refresh")}</b><span>stats refresh</span></div></div>`
+    ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${icon("refresh")}</b><span>${L("Stats aktualisieren", "stats refresh")}</span></div></div>`
     : r.kind === "message"
-    ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${r.messages_sent}</b><span>messages sent</span></div></div>`
+    ? `<div class="bot-metrics" style="grid-template-columns:1fr"><div><b>${r.messages_sent}</b><span>${L("Nachrichten gesendet", "messages sent")}</span></div></div>`
     : `<div class="bot-metrics">
-        <div><b>${r.liked}</b><span>liked</span></div><div><b>${r.disliked}</b><span>disliked</span></div>
-        <div><b>${r.matches}</b><span>matches</span></div><div><b>${r.swipes}</b><span>swipes</span></div></div>`;
-  const stop = (r.account_id ? iconBtn("externalLink", `data-account="${r.account_id}"`, "Open account page") : "")
-    + (ACTIVE.has(r.status) ? `<button class="btn small danger" data-stop="${r.id}">${icon("stop")}Stop</button>` : "");
+        <div><b>${r.liked}</b><span>Likes</span></div><div><b>${r.disliked}</b><span>Dislikes</span></div>
+        <div><b>${r.matches}</b><span>Matches</span></div><div><b>${r.swipes}</b><span>Swipes</span></div></div>`;
+  const stop = (r.account_id ? iconBtn("externalLink", `data-account="${r.account_id}"`, L("Accountseite öffnen", "Open account page")) : "")
+    + (ACTIVE.has(r.status) ? `<button class="btn small danger" data-stop="${r.id}">${icon("stop")}${L("Stoppen", "Stop")}</button>` : "");
   return `<div class="bot-card" data-run="${r.id}">
     <div class="bot-head">
       <div class="bot-avatar s-${esc(r.status)}">${esc(initial)}</div>
       <div class="bot-title">
         <div class="bot-name">${esc(name)}${r.kind === "message" ? icon("message") : ""}</div>
-        <div class="bot-sub">${r.worker ? `${workerName(r.worker)} · ` : ""}#${r.id} · ${esc(r.config_name)}${r.account_id ? ` · account #${r.account_id}` : ""}</div>
+        <div class="bot-sub">${r.worker ? `${workerName(r.worker)} · ` : ""}#${r.id}${r.account_id ? ` · Account #${r.account_id}` : ""}</div>
       </div>
       ${badge(r.status)}
     </div>
@@ -1159,7 +1199,7 @@ function botCard(r) {
     ${metrics}
     <div class="bot-foot">
       <div class="meta">
-        <span title="${esc(r.proxy_label || "no proxy")}">${icon("globe")}${esc(r.proxy_label ? r.proxy_label.split(" ")[0] : "direct")}</span>
+        <span title="${esc(r.proxy_label || L("kein Proxy", "no proxy"))}">${icon("globe")}${esc(r.proxy_label ? r.proxy_label.split(" ")[0] : L("direkt", "direct"))}</span>
         <span>${icon("clock")}${esc(duration(r) || "—")}</span>
       </div>
       ${stop}
@@ -1172,7 +1212,7 @@ $("#live-cards").addEventListener("click", guard(async (e) => {
   if (stopBtn) {
     e.stopPropagation();
     await api(`/api/runs/${stopBtn.dataset.stop}/stop`, { method: "POST" });
-    toast(`Stopping session #${stopBtn.dataset.stop}`);
+    toast(L(`Sitzung #${stopBtn.dataset.stop} wird gestoppt`, `Stopping session #${stopBtn.dataset.stop}`));
     return;
   }
   const accBtn = e.target.closest("[data-account]");
@@ -1197,9 +1237,11 @@ function renderLaunchInfo() {
   if (s) {
     const busy = s.running || s.queued;
     $("#launch-capacity").textContent = busy
-      ? `${s.running} worker${s.running === 1 ? "" : "s"} busy — new accounts wait in the queue (${s.queued} waiting)`
-      : `All workers free · ${s.parallel === 1 ? "one by one" : `${s.parallel} in parallel`}`;
-    $("#launch-submit-label").textContent = busy ? "Add to queue" : "Create accounts";
+      ? L(`${s.running} Worker beschäftigt — neue Accounts warten in der Warteschlange (${s.queued} wartend)`,
+          `${s.running} worker${s.running === 1 ? "" : "s"} busy — new accounts wait in the queue (${s.queued} waiting)`)
+      : L(`Alle Worker frei · ${s.parallel === 1 ? "nacheinander" : `${s.parallel} parallel`}`,
+          `All workers free · ${s.parallel === 1 ? "one by one" : `${s.parallel} in parallel`}`);
+    $("#launch-submit-label").textContent = busy ? L("In die Warteschlange", "Add to queue") : L("Accounts erstellen", "Create accounts");
   }
   if (!c) { $("#launch-config-info").innerHTML = ""; return; }
   const st = c.settings;
@@ -1207,15 +1249,16 @@ function renderLaunchInfo() {
   const chip = (text, bad) => `<span class="chip${bad ? " bad" : ""}">${esc(text)}</span>`;
   $("#launch-config-info").innerHTML = [
     chip(apkBad || t("cfg.apkOk"), !!apkBad),
-    chip(`${Math.round(st.like_ratio * 100)}% likes`),
-    chip(st.max_swipes ? `max ${st.max_swipes} swipes` : "swipe until blocked"),
-    chip(st.require_proxy ? "proxy required" : "proxy optional", st.require_proxy && state.stats && !state.stats.proxies_enabled),
-    chip(`${st.photo_pool.length || "all"} photos`),
-    chip(`${st.name_source === "auto" ? "auto" : "custom"} names${c.names_unused !== undefined
-      ? ` · ${fmtNum(c.names_unused)} unused` : ""}`, c.names_unused === 0),
+    chip(L(`${Math.round(st.like_ratio * 100)} % Likes / ${100 - Math.round(st.like_ratio * 100)} % Dislikes`,
+           `${Math.round(st.like_ratio * 100)}% likes / ${100 - Math.round(st.like_ratio * 100)}% dislikes`)),
+    chip(st.max_swipes ? L(`max. ${st.max_swipes} Swipes`, `max ${st.max_swipes} swipes`) : L("swipen bis gesperrt", "swipe until blocked")),
+    chip(st.require_proxy ? L("Proxy erforderlich", "proxy required") : L("Proxy optional", "proxy optional"), st.require_proxy && state.stats && !state.stats.proxies_enabled),
+    chip(L(`${st.photo_pool.length || "alle"} Fotos`, `${st.photo_pool.length || "all"} photos`)),
+    chip(`${st.name_source === "auto" ? L("Automatische Namen", "auto names") : L("Eigene Namen", "custom names")}${c.names_unused !== undefined
+      ? L(` · ${fmtNum(c.names_unused)} frei`, ` · ${fmtNum(c.names_unused)} unused`) : ""}`, c.names_unused === 0),
     ...(st.about_enabled ? [chip(t("about.chip", { n: fmtNum(c.about_unused ?? 0) }), !c.about_unused)] : []),
     ...(st.rename_after_signup ? [chip(t("rename.chip", { n: fmtNum(c.rename_unused ?? 0) }), !c.rename_unused)] : []),
-    chip(`${fmtNum((state.photos || []).filter((p) => p.status === "available").length)} unused photos`,
+    chip(L(`${fmtNum((state.photos || []).filter((p) => p.status === "available").length)} freie Fotos`, `${fmtNum((state.photos || []).filter((p) => p.status === "available").length)} unused photos`),
       !(state.photos || []).some((p) => p.status === "available")),
   ].join("");
 }
@@ -1232,7 +1275,7 @@ $("#launch-form").addEventListener("submit", guard(async (e) => {
   const f = new FormData(e.target);
   const body = { count: +f.get("count"), names: lines(f.get("names")) };
   const res = await api("/api/runs", { method: "POST", body });
-  toast(`Creating ${res.run_ids.length} account(s)`);
+  toast(L(`${res.run_ids.length} Account(s) werden erstellt`, `Creating ${res.run_ids.length} account(s)`));
   e.target.elements.names.value = "";
   guard(loadStats)();
   guard(loadPhotos)();
@@ -1242,9 +1285,9 @@ $("#launch-form").addEventListener("submit", guard(async (e) => {
 }));
 
 $("#stop-all-btn").onclick = guard(async () => {
-  if (!confirm("Stop everything? Accounts in progress stop and the queue is cleared.")) return;
+  if (!confirm(L("Alles stoppen? Laufende Accounts werden gestoppt und die Warteschlange geleert.", "Stop everything? Accounts in progress stop and the queue is cleared."))) return;
   const res = await api("/api/runs/stop-all", { method: "POST" });
-  toast(`Stopping ${res.stopped} account session${res.stopped === 1 ? "" : "s"}`);
+  toast(L(`${res.stopped} Sitzung(en) werden gestoppt`, `Stopping ${res.stopped} account session${res.stopped === 1 ? "" : "s"}`));
 });
 
 // ---------------------------------------------------------------------------
@@ -1253,14 +1296,14 @@ $("#stop-all-btn").onclick = guard(async () => {
 
 async function openRunModal(id) {
   let lastId = 0, ws = null, closed = false, run = null;
-  openModal(`Run #${id}`, `
+  openModal(L(`Sitzung #${id}`, `Session #${id}`), `
     <div id="run-info"></div>
     <div class="log-toolbar">
-      <label class="inline"><input type="checkbox" id="log-debug"> show debug (HTTP bodies)</label>
-      <label class="inline"><input type="checkbox" id="log-follow" checked> auto-scroll</label>
+      <label class="inline"><input type="checkbox" id="log-debug"> ${L("Debug anzeigen (HTTP-Antworten)", "show debug (HTTP bodies)")}</label>
+      <label class="inline"><input type="checkbox" id="log-follow" checked> ${L("automatisch scrollen", "auto-scroll")}</label>
       <span class="muted" id="log-count"></span>
       <div class="actions" style="margin-left:auto">
-        <button class="btn small danger hidden" id="run-stop">Stop</button>
+        <button class="btn small danger hidden" id="run-stop">${L("Stoppen", "Stop")}</button>
       </div>
     </div>
     <div class="log-view" id="log-view"></div>`, () => { closed = true; if (ws) ws.close(); });
@@ -1287,7 +1330,7 @@ async function openRunModal(id) {
       frag.appendChild(div);
     }
     view.appendChild(frag);
-    $("#log-count").textContent = `${count} lines`;
+    $("#log-count").textContent = L(`${count} Zeilen`, `${count} lines`);
     if ($("#log-follow")?.checked) view.scrollTop = view.scrollHeight;
   };
 
@@ -1297,19 +1340,19 @@ async function openRunModal(id) {
     $("#run-stop").classList.toggle("hidden", !isActive);
     $("#run-info").innerHTML = `<dl class="kv">
       <dt>Status</dt><dd>${badge(run.status)} ${esc(reasonText(run.reason))}</dd>
-      <dt>Type / step</dt><dd>${esc(run.kind)} · ${esc(run.step || "—")}</dd>
-      <dt>Config</dt><dd>${esc(run.config_name)}${run.apk_profile_name ? " · APK: " + esc(run.apk_profile_name) : ""}</dd>
+      <dt>${L("Art / Schritt", "Type / step")}</dt><dd>${esc(kindText(run.kind))} · ${esc(stepLabel(run.step) || "—")}</dd>
+      <dt>APK</dt><dd>${esc(run.apk_profile_name || "—")}</dd>
       <dt>Proxy</dt><dd>${esc(run.proxy_label || "—")}</dd>
       <dt>Account</dt><dd>${run.account_id ? `<a href="#account/${run.account_id}" data-close-modal>${esc(run.requested_name || "")} #${run.account_id}</a>` : esc(run.requested_name || "—")}</dd>
-      <dt>Photo</dt><dd>${esc(run.photo || "—")}</dd>
-      <dt>Counters</dt><dd>liked ${run.liked} · disliked ${run.disliked} · matches ${run.matches} · swipes ${run.swipes} · messages ${run.messages_sent}</dd>
-      <dt>Time</dt><dd>created ${fmtDate(run.created_at)} · started ${fmtDate(run.started_at)} · finished ${fmtDate(run.finished_at)} ${run.started_at ? "· " + duration(run) : ""}</dd>
+      <dt>${L("Foto", "Photo")}</dt><dd>${esc(run.photo || "—")}</dd>
+      <dt>${L("Zähler", "Counters")}</dt><dd>Likes ${run.liked} · Dislikes ${run.disliked} · Matches ${run.matches} · Swipes ${run.swipes} · ${L("Nachrichten", "messages")} ${run.messages_sent}</dd>
+      <dt>${L("Zeit", "Time")}</dt><dd>${L("erstellt", "created")} ${fmtDate(run.created_at)} · ${L("gestartet", "started")} ${fmtDate(run.started_at)} · ${L("beendet", "finished")} ${fmtDate(run.finished_at)} ${run.started_at ? "· " + duration(run) : ""}</dd>
     </dl>`;
   };
 
   $("#run-stop").onclick = guard(async () => {
     await api(`/api/runs/${id}/stop`, { method: "POST" });
-    toast(`Stopping run #${id}`);
+    toast(L(`Sitzung #${id} wird gestoppt`, `Stopping session #${id}`));
   });
 
   // Open the socket first so nothing is missed, then backfill from REST.
@@ -1351,19 +1394,19 @@ async function loadRuns() {
   if (kind) qs.set("kind", kind);
   const res = await api("/api/runs?" + qs);
   $("#runs-table").innerHTML = `<thead><tr>
-      <th>#</th><th>Type</th><th>Status</th><th>Name / account</th><th>Config</th><th>Proxy</th><th>Step</th>
-      <th class="num">Liked</th><th class="num">Disliked</th><th class="num">Matches</th><th class="num">Msgs</th>
-      <th>Created</th><th>Duration</th><th>Reason</th><th></th></tr></thead>
+      <th>#</th><th>${L("Art", "Type")}</th><th>Status</th><th>${L("Name / Account", "Name / account")}</th><th>Proxy</th><th>${L("Schritt", "Step")}</th>
+      <th class="num">Likes</th><th class="num">Dislikes</th><th class="num">Matches</th><th class="num">${L("Nachr.", "Msgs")}</th>
+      <th>${L("Erstellt", "Created")}</th><th>${L("Dauer", "Duration")}</th><th>${L("Ergebnis", "Result")}</th><th></th></tr></thead>
     <tbody>${res.items.map((r) => `<tr class="clickable" data-run="${r.id}">
-      <td>${r.id}</td><td>${esc(r.kind)}</td><td>${badge(r.status)}</td>
+      <td>${r.id}</td><td>${esc(kindText(r.kind))}</td><td>${badge(r.status)}</td>
       <td>${esc(r.requested_name || "")}${r.account_id ? ` <span class="muted">#${r.account_id}</span>` : ""}</td>
-      <td>${esc(r.config_name)}</td><td class="wrapcell">${esc(r.proxy_label)}</td><td>${esc(r.step)}</td>
+      <td class="wrapcell">${esc(r.proxy_label || "—")}</td><td>${esc(stepLabel(r.step) || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
       <td>${fmtDate(r.created_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(reasonText(r.reason))}</td>
       <td class="actions">${ACTIVE.has(r.status)
-        ? `<button class="btn small danger" data-stop="${r.id}">Stop</button>`
-        : iconBtn("trash", `data-del="${r.id}"`, "Delete run and its logs", "danger")}</td>
-    </tr>`).join("") || `<tr><td colspan="15" class="muted">No runs</td></tr>`}</tbody>`;
+        ? `<button class="btn small danger" data-stop="${r.id}">${L("Stoppen", "Stop")}</button>`
+        : iconBtn("trash", `data-del="${r.id}"`, L("Sitzung und Log löschen", "Delete session and its log"), "danger")}</td>
+    </tr>`).join("") || `<tr><td colspan="14" class="muted">${L("Keine Sitzungen", "No sessions")}</td></tr>`}</tbody>`;
   renderPager("#runs-pager", res.total, RUNS_LIMIT, state.runsPage, (p) => { state.runsPage = p; guard(loadRuns)(); });
 }
 
@@ -1372,10 +1415,10 @@ $("#runs-table").addEventListener("click", guard(async (e) => {
   const del = e.target.closest("[data-del]");
   if (stop) {
     await api(`/api/runs/${stop.dataset.stop}/stop`, { method: "POST" });
-    return toast("Stopping…");
+    return toast(L("Wird gestoppt …", "Stopping…"));
   }
   if (del) {
-    if (!confirm(`Delete run #${del.dataset.del} and its logs?`)) return;
+    if (!confirm(L(`Sitzung #${del.dataset.del} und ihr Log löschen?`, `Delete session #${del.dataset.del} and its log?`))) return;
     await api(`/api/runs/${del.dataset.del}`, { method: "DELETE" });
     return loadRuns();
   }
@@ -1385,20 +1428,21 @@ $("#runs-table").addEventListener("click", guard(async (e) => {
 $("#runs-status").onchange = $("#runs-kind").onchange = () => { state.runsPage = 0; guard(loadRuns)(); };
 $("#runs-refresh").onclick = guard(loadRuns);
 $("#runs-cleanup").onclick = guard(async () => {
-  const days = prompt("Delete logs of finished runs older than how many days?", "7");
+  const days = prompt(L("Logs beendeter Sitzungen löschen, die älter sind als wie viele Tage?", "Delete logs of finished sessions older than how many days?"), "7");
   if (days === null) return;
-  const deleteRuns = confirm("Also delete the run rows themselves? (OK = yes, Cancel = keep runs, delete logs only)");
+  const deleteRuns = confirm(L("Auch die Sitzungen selbst löschen? (OK = ja, Abbrechen = Sitzungen behalten, nur Logs löschen)",
+                               "Also delete the sessions themselves? (OK = yes, Cancel = keep sessions, delete logs only)"));
   const res = await api("/api/runs/cleanup", { method: "POST", body: { days: +days || 0, delete_runs: deleteRuns } });
-  toast(`Cleaned ${res.runs_cleaned} run(s)`);
+  toast(L(`${res.runs_cleaned} Sitzung(en) bereinigt`, `Cleaned ${res.runs_cleaned} session(s)`));
   loadRuns();
 });
 
 function renderPager(sel, total, limit, page, go) {
   const pages = Math.max(1, Math.ceil(total / limit));
   const el = $(sel);
-  el.innerHTML = `<span class="muted">${total} total · page ${page + 1} / ${pages}</span>
-    <button class="btn small" data-p="${page - 1}" ${page <= 0 ? "disabled" : ""}>${icon("chevronLeft")}Prev</button>
-    <button class="btn small" data-p="${page + 1}" ${page + 1 >= pages ? "disabled" : ""}>Next${icon("chevronRight")}</button>`;
+  el.innerHTML = `<span class="muted">${L(`${total} gesamt · Seite ${page + 1} / ${pages}`, `${total} total · page ${page + 1} / ${pages}`)}</span>
+    <button class="btn small" data-p="${page - 1}" ${page <= 0 ? "disabled" : ""}>${icon("chevronLeft")}${L("Zurück", "Prev")}</button>
+    <button class="btn small" data-p="${page + 1}" ${page + 1 >= pages ? "disabled" : ""}>${L("Weiter", "Next")}${icon("chevronRight")}</button>`;
   el.onclick = (e) => { const b = e.target.closest("[data-p]"); if (b && !b.disabled) go(+b.dataset.p); };
 }
 
@@ -1440,8 +1484,9 @@ function relationshipOptions(current) {
 function offeredByJaumo() {
   const sd = state.meta && state.meta.signup_defaults;
   if (!sd) {
-    return `<p class="field-hint">Jaumo's own list of options is saved automatically at the next account creation
-      (from <code>signup/defaults</code>) and will be shown here.</p>`;
+    return `<p class="field-hint">${L("Jaumos eigene Auswahlliste wird bei der nächsten Account-Erstellung automatisch gespeichert",
+      "Jaumo's own list of options is saved automatically at the next account creation")}
+      (<code>signup/defaults</code>) ${L("und hier angezeigt.", "and will be shown here.")}</p>`;
   }
   const found = [];
   (function walk(v, path) {
@@ -1451,16 +1496,18 @@ function offeredByJaumo() {
   })(sd.data, []);
   const uniq = [...new Set(found)];
   const unknown = uniq.filter((v) => !(state.meta.relationship_values || []).includes(v));
-  return `<div class="sent-list"><span>Jaumo offers (signup/defaults, ${esc(fmtDate(sd.received_at))}):</span>
-      ${uniq.length ? uniq.map((v) => `<code>${esc(v)}</code>`).join(" ") : "no relationship values found in the response"}
-      ${unknown.length ? `<div class="sr-warn">Not in the dropdown yet: ${unknown.map(esc).join(", ")} — tell the developer to add them.</div>` : ""}
-      <details><summary>Show full response</summary><pre class="mono pre-json">${esc(JSON.stringify(sd.data, null, 2))}</pre></details></div>`;
+  return `<div class="sent-list"><span>${L("Jaumo bietet an", "Jaumo offers")} (signup/defaults, ${esc(fmtDate(sd.received_at))}):</span>
+      ${uniq.length ? uniq.map((v) => `<code>${esc(v)}</code>`).join(" ") : L("keine Beziehungswerte in der Antwort", "no relationship values found in the response")}
+      ${unknown.length ? `<div class="sr-warn">${L("Noch nicht in der Auswahl", "Not in the dropdown yet")}: ${unknown.map(esc).join(", ")} — ${L("bitte dem Entwickler melden.", "tell the developer to add them.")}</div>` : ""}
+      <details><summary>${L("Ganze Antwort anzeigen", "Show full response")}</summary><pre class="mono pre-json">${esc(JSON.stringify(sd.data, null, 2))}</pre></details></div>`;
 }
 
-const DELAY_LABELS = {
-  after_signup: "After signup", after_location: "After location", after_refresh: "After token refresh",
-  after_profile: "After profile fetch", before_photo: "Before photo upload", after_photo: "After photo upload",
-  between_swipes: "Between swipes", between_batches: "Between card batches", before_message: "Before each message",
+const DELAY_TEXT = {
+  after_signup: ["Nach der Registrierung", "After signup"], after_location: ["Nach dem Standort", "After location"],
+  after_refresh: ["Nach der Anmeldung", "After token refresh"], after_profile: ["Nach dem Profil-Abruf", "After profile fetch"],
+  before_photo: ["Vor dem Foto-Upload", "Before photo upload"], after_photo: ["Nach dem Foto-Upload", "After photo upload"],
+  between_swipes: ["Zwischen Swipes", "Between swipes"], between_batches: ["Zwischen Kartenstapeln", "Between card batches"],
+  before_message: ["Vor jeder Nachricht", "Before each message"],
 };
 
 const HEALTH_BADGE = { ok: "ok", warning: "warn", failing: "bad", disabled: "bad", untested: "" };
@@ -1545,13 +1592,13 @@ async function loadConfigPage() {
   state.meta = meta;
   const s = c.settings, b = settings.bot;
   const photoSet = new Set(s.photo_pool);
-  const photos = state.photos.map((p) => `<label class="pp-${p.status}" title="${esc(p.name)} — ${p.status}">
+  const photos = state.photos.filter((p) => p.status !== "rejected").map((p) => `<label class="pp-${p.status}" title="${esc(p.name)} — ${esc(photoStatusText(p.status))}">
       <input type="checkbox" name="photo_pool" value="${esc(p.name)}" ${photoSet.has(p.name) ? "checked" : ""}
         ${p.status !== "available" && !photoSet.has(p.name) ? "disabled" : ""}>
       <img src="/api/photos/${encodeURIComponent(p.name)}/thumb" loading="lazy" alt="">
-      <span>${p.status === "available" ? esc(p.name) : esc(p.status)}</span></label>`).join("");
+      <span>${p.status === "available" ? esc(p.name) : esc(photoStatusText(p.status))}</span></label>`).join("");
   const free = state.photos.filter((p) => p.status === "available").length;
-  const delays = Object.entries(DELAY_LABELS).map(([k, label]) => `<label>${esc(label)}
+  const delays = Object.entries(DELAY_TEXT).map(([k, label]) => `<label>${esc(L(...label))}
       <span class="pair"><input type="number" step="any" min="0" name="d_${k}_0" value="${s.delays[k][0]}" required> –
       <input type="number" step="any" min="0" name="d_${k}_1" value="${s.delays[k][1]}" required> s</span></label>`).join("");
   const num = (name, key, attrs, value) => `<label>${esc(t(key))}<input type="number" name="${name}" ${attrs} value="${value}" required></label>`;
@@ -1595,23 +1642,25 @@ async function loadConfigPage() {
     <div class="adv-head">${esc(t("cfg.advanced"))}</div>
     ${advSection("signup", t("cfg.signup"), t("cfg.signupSub"), `
       <div class="form-grid" style="margin-top:4px">
-        <label>Gender<input value="Female (2)" disabled></label>
-        <label>Looking for<select name="looking_for_gender">
-          <option value="1" ${s.looking_for_gender === 1 ? "selected" : ""}>Men (1)</option>
-          <option value="2" ${s.looking_for_gender === 2 ? "selected" : ""}>Women (2)</option></select></label>
-        <label>Relationship search<select name="relationship_search">${relationshipOptions(s.relationship_search)}</select></label>
-        <label>Dating relationship search<select name="dating_relationship_search">${relationshipOptions(s.dating_relationship_search)}</select></label>
+        <label>${L("Geschlecht", "Gender")}<input value="${L("Weiblich (2)", "Female (2)")}" disabled></label>
+        <label>${L("Sucht", "Looking for")}<select name="looking_for_gender">
+          <option value="1" ${s.looking_for_gender === 1 ? "selected" : ""}>${L("Männer (1)", "Men (1)")}</option>
+          <option value="2" ${s.looking_for_gender === 2 ? "selected" : ""}>${L("Frauen (2)", "Women (2)")}</option></select></label>
+        <label>${L("Beziehungssuche", "Relationship search")} (relationship_search)<select name="relationship_search">${relationshipOptions(s.relationship_search)}</select></label>
+        <label>${L("Dating-Beziehungssuche", "Dating relationship search")} (dating_relationship_search)<select name="dating_relationship_search">${relationshipOptions(s.dating_relationship_search)}</select></label>
       </div>
       ${offeredByJaumo()}
       <label class="toggle-row"><input type="checkbox" class="switch" name="allow_in_all_brands" ${s.allow_in_all_brands ? "checked" : ""}>
-        <div><b>Allow in all brands</b><span>Sent as allow_in_all_brands=1 (profile visible across Jaumo's partner apps).</span></div></label>
+        <div><b>${L("In allen Marken erlauben", "Allow in all brands")}</b><span>${L("Gesendet als allow_in_all_brands=1 (Profil auch in Jaumos Partner-Apps sichtbar).", "Sent as allow_in_all_brands=1 (profile visible across Jaumo's partner apps).")}</span></div></label>
       <div class="sent-list">
-        <span>Also sent:</span><code>name</code> from Nicknamen · <code>birthday</code> from the age range · <code>photo_url</code> (fixed value from the original script) ·
-        <code>location_permission</code> and <code>notifications_services</code> empty (as the app does).
-        After signup the location (Städte) is set and the profile photo uploaded. Nothing else (bio, height, …) is set.
+        <span>${L("Außerdem gesendet", "Also sent")}:</span><code>name</code> ${L("aus „Nicknamen“", "from Nicknames")} · <code>birthday</code> ${L("aus dem Altersbereich", "from the age range")} ·
+        <code>photo_url</code> (${L("fester Wert aus dem Original-Skript", "fixed value from the original script")}) ·
+        <code>location_permission</code> ${L("und", "and")} <code>notifications_services</code> ${L("leer (wie die App)", "empty (as the app does)")}.
+        ${L("Nach der Registrierung: Standort (Städte), Profilfoto, optional Profiltext und neuer Nickname.",
+            "After signup: location (Cities), profile photo, optionally profile text and a new nickname.")}
       </div>`)}
     ${advSection("devices", t("cfg.devices"), t("cfg.devicesSub", { n: s.devices.length }), `
-      <label><span>Devices — <code>manufacturer;model;brand</code> per line</span>
+      <label><span>${L("Geräte — eine Zeile je Gerät", "Devices — one per line")}: <code>manufacturer;model;brand</code></span>
         <textarea name="devices" rows="8">${esc(s.devices.map((d) => `${d.manufacturer};${d.model};${d.brand}`).join("\n"))}</textarea></label>`)}
     ${advSection("delays", t("cfg.delays"), t("cfg.delaysSub"), `<div class="delay-grid">${delays}</div>`)}
     ${saveBar("cfg")}
@@ -1632,7 +1681,7 @@ async function loadConfigPage() {
   onSave(form, "cfg", async (f) => {
     const devices = parseDevices(f.devices.value);
     const delaysOut = {};
-    for (const k of Object.keys(DELAY_LABELS)) delaysOut[k] = [+f[`d_${k}_0`].value, +f[`d_${k}_1`].value];
+    for (const k of Object.keys(DELAY_TEXT)) delaysOut[k] = [+f[`d_${k}_0`].value, +f[`d_${k}_1`].value];
     await saveConfig({
       require_proxy: f.require_proxy.checked,
       like_ratio: +f.like_ratio.value,
@@ -1869,30 +1918,30 @@ async function loadProxies() {
   const ids = new Set(proxies.map((p) => p.id));
   state.proxySelected = new Set([...state.proxySelected].filter((id) => ids.has(id)));
   $("#proxies-table").innerHTML = `<thead><tr>
-      <th><input type="checkbox" id="proxy-all"></th><th>#</th><th>Label</th><th>Host:port</th><th>User</th>
-      <th>Mode</th><th>Enabled</th><th class="num">In use</th><th class="num">Used</th><th>Last test</th><th></th></tr></thead>
+      <th><input type="checkbox" id="proxy-all"></th><th>#</th><th>${L("Bezeichnung", "Label")}</th><th>Host:Port</th><th>${L("Benutzer", "User")}</th>
+      <th>${L("Modus", "Mode")}</th><th>${L("Aktiv", "Enabled")}</th><th class="num">${L("In Nutzung", "In use")}</th><th class="num">${L("Genutzt", "Used")}</th><th>${L("Letzter Test", "Last test")}</th><th></th></tr></thead>
     <tbody>${proxies.map((p) => {
-      const test = p.last_test_at == null ? `<span class="muted">never</span>`
-        : p.last_test_ok ? `<span class="badge ok">ok</span> ${esc(p.last_test_ip)} · ${esc(p.last_test_country)}`
-        : `<span class="badge bad" title="${esc(p.last_test_error)}">fail</span> <span class="muted wrapcell">${esc((p.last_test_error || "").slice(0, 60))}</span>`;
+      const test = p.last_test_at == null ? `<span class="muted">${L("nie", "never")}</span>`
+        : p.last_test_ok ? `<span class="badge ok">OK</span> ${esc(p.last_test_ip)} · ${esc(p.last_test_country)}`
+        : `<span class="badge bad" title="${esc(p.last_test_error)}">${L("Fehler", "fail")}</span> <span class="muted wrapcell">${esc((p.last_test_error || "").slice(0, 60))}</span>`;
       return `<tr>
         <td><input type="checkbox" data-sel="${p.id}" ${state.proxySelected.has(p.id) ? "checked" : ""}></td>
         <td>${p.id}</td><td>${esc(p.label)}</td>
         <td class="mono">${esc(p.scheme)}://${esc(p.host)}:${p.port}</td>
         <td class="mono wrapcell" title="${esc(p.username)}">${esc(p.username)}</td>
-        <td>${p.shared ? `<span class="badge info">shared</span>` : `<span class="badge">dedicated</span>`}</td>
+        <td>${p.shared ? `<span class="badge info">${L("geteilt", "shared")}</span>` : `<span class="badge">${L("dediziert", "dedicated")}</span>`}</td>
         <td><input type="checkbox" data-toggle="${p.id}" ${p.enabled ? "checked" : ""}></td>
         <td class="num">${p.in_use}</td><td class="num">${p.use_count}</td>
         <td title="${esc(fmtDate(p.last_test_at))}">${test}</td>
-        <td class="actions">${iconBtn("zap", `data-test="${p.id}"`, "Test proxy")}
-          ${iconBtn("pencil", `data-edit="${p.id}"`, "Edit proxy")}
-          ${iconBtn("trash", `data-del="${p.id}"`, "Delete proxy", "danger")}</td></tr>`;
-    }).join("") || `<tr><td colspan="11" class="muted">No proxies yet</td></tr>`}</tbody>`;
+        <td class="actions">${iconBtn("zap", `data-test="${p.id}"`, L("Proxy testen", "Test proxy"))}
+          ${iconBtn("pencil", `data-edit="${p.id}"`, L("Proxy bearbeiten", "Edit proxy"))}
+          ${iconBtn("trash", `data-del="${p.id}"`, L("Proxy löschen", "Delete proxy"), "danger")}</td></tr>`;
+    }).join("") || `<tr><td colspan="11" class="muted">${L("Noch keine Proxies", "No proxies yet")}</td></tr>`}</tbody>`;
   updateProxySelected();
 }
 
 function updateProxySelected() {
-  $("#proxy-selected").textContent = `${state.proxySelected.size} selected`;
+  $("#proxy-selected").textContent = L(`${state.proxySelected.size} ausgewählt`, `${state.proxySelected.size} selected`);
   $$("#proxy-bulk-actions [data-action]").forEach((b) => (b.disabled = !state.proxySelected.size));
   const all = $("#proxy-all");
   if (all) all.checked = proxies.length > 0 && state.proxySelected.size === proxies.length;
@@ -1920,12 +1969,12 @@ $("#proxies-table").addEventListener("click", guard(async (e) => {
   if (b.dataset.test) {
     b.disabled = true; b.classList.add("spin");
     const r = await api(`/api/proxies/${b.dataset.test}/test`, { method: "POST" });
-    toast(r.ok ? `OK — ${r.ip} (${r.country})` : `Failed: ${r.error}`, !r.ok);
+    toast(r.ok ? `OK — ${r.ip} (${r.country})` : `${L("Fehlgeschlagen", "Failed")}: ${r.error}`, !r.ok);
     return loadProxies();
   }
   if (b.dataset.edit) return openProxyEditor(proxies.find((p) => p.id === +b.dataset.edit));
   if (b.dataset.del) {
-    if (!confirm("Delete this proxy?")) return;
+    if (!confirm(L("Diesen Proxy löschen?", "Delete this proxy?"))) return;
     await api(`/api/proxies/${b.dataset.del}`, { method: "DELETE" });
     return loadProxies();
   }
@@ -1935,10 +1984,10 @@ $("#proxy-bulk-actions").addEventListener("click", guard(async (e) => {
   const b = e.target.closest("[data-action]");
   if (!b || !state.proxySelected.size) return;
   const action = b.dataset.action;
-  if (action === "delete" && !confirm(`Delete ${state.proxySelected.size} proxies?`)) return;
+  if (action === "delete" && !confirm(L(`${state.proxySelected.size} Proxies löschen?`, `Delete ${state.proxySelected.size} proxies?`))) return;
   b.disabled = true;
   const res = await api("/api/proxies/bulk-action", { method: "POST", body: { ids: [...state.proxySelected], action } });
-  if (action === "test") toast(`Tested ${res.tested}: ${res.ok} ok`);
+  if (action === "test") toast(L(`${res.tested} getestet: ${res.ok} OK`, `Tested ${res.tested}: ${res.ok} ok`));
   if (action === "delete") state.proxySelected.clear();
   await loadProxies();
 }));
@@ -1948,7 +1997,7 @@ $("#proxy-test-all").onclick = guard(async () => {
   btn.disabled = true;
   try {
     const res = await api("/api/proxies/test-all", { method: "POST" });
-    toast(`Tested ${res.tested}: ${res.ok} ok`);
+    toast(L(`${res.tested} getestet: ${res.ok} OK`, `Tested ${res.tested}: ${res.ok} ok`));
   } finally { btn.disabled = false; }
   await loadProxies();
 });
@@ -1956,32 +2005,32 @@ $("#proxy-test-all").onclick = guard(async () => {
 $("#proxy-bulk-form").addEventListener("submit", guard(async (e) => {
   e.preventDefault();
   const f = e.target.elements;
-  if (f.replace.checked && !confirm("Replace ALL existing proxies with these lines?")) return;
+  if (f.replace.checked && !confirm(L("ALLE vorhandenen Proxies durch diese Zeilen ersetzen?", "Replace ALL existing proxies with these lines?"))) return;
   const res = await api("/api/proxies/bulk", { method: "POST", body: {
     text: f.text.value, shared: f.shared.value === "1", label: f.label.value.trim(), replace: f.replace.checked,
   } });
-  toast(`Added ${res.added} proxy line(s)`);
+  toast(L(`${res.added} Proxy-Zeile(n) hinzugefügt`, `Added ${res.added} proxy line(s)`));
   e.target.reset();
   await loadProxies();
 }));
 
 function openProxyEditor(p) {
-  openModal(`Edit proxy #${p.id}`, `
+  openModal(L(`Proxy #${p.id} bearbeiten`, `Edit proxy #${p.id}`), `
     <form id="proxy-form">
       <div class="form-grid">
-        <label>Label<input name="label" value="${esc(p.label)}"></label>
-        <label>Scheme<select name="scheme">${["http", "https", "socks5", "socks5h", "socks4"].map((s) =>
+        <label>${L("Bezeichnung", "Label")}<input name="label" value="${esc(p.label)}"></label>
+        <label>${L("Protokoll", "Scheme")}<select name="scheme">${["http", "https", "socks5", "socks5h", "socks4"].map((s) =>
           `<option ${s === p.scheme ? "selected" : ""}>${s}</option>`).join("")}</select></label>
         <label>Host<input name="host" value="${esc(p.host)}" required></label>
         <label>Port<input name="port" type="number" value="${p.port}" required></label>
-        <label class="span-2">Username<input name="username" value="${esc(p.username)}" class="mono"></label>
-        <label class="span-2">Password<input name="password" value="${esc(p.password)}" class="mono"></label>
-        <label class="inline"><input type="checkbox" name="shared" ${p.shared ? "checked" : ""}> Shared (rotating gateway)</label>
-        <label class="inline"><input type="checkbox" name="enabled" ${p.enabled ? "checked" : ""}> Enabled</label>
+        <label class="span-2">${L("Benutzername", "Username")}<input name="username" value="${esc(p.username)}" class="mono"></label>
+        <label class="span-2">${L("Passwort", "Password")}<input name="password" value="${esc(p.password)}" class="mono"></label>
+        <label class="inline"><input type="checkbox" name="shared" ${p.shared ? "checked" : ""}> ${L("Geteilt (rotierendes Gateway)", "Shared (rotating gateway)")}</label>
+        <label class="inline"><input type="checkbox" name="enabled" ${p.enabled ? "checked" : ""}> ${L("Aktiv", "Enabled")}</label>
       </div>
       <p class="error" id="proxy-error"></p>
-      <div class="modal-foot"><button type="button" class="btn ghost" id="proxy-cancel">Cancel</button>
-        <button class="btn primary" type="submit">Save</button></div>
+      <div class="modal-foot"><button type="button" class="btn ghost" id="proxy-cancel">${esc(t("common.cancel"))}</button>
+        <button class="btn primary" type="submit">${L("Speichern", "Save")}</button></div>
     </form>`);
   $("#proxy-cancel").onclick = closeModal;
   $("#proxy-form").addEventListener("submit", async (e) => {
@@ -2008,6 +2057,9 @@ const PHOTO_EXTS = /\.(jpe?g|png|webp|bmp|gif|tiff?|zip)$/i;
 state.photoFilter = "all";
 state.photoSelected = new Set();
 const thumbUrl = (name) => `/api/photos/${encodeURIComponent(name)}/thumb`;
+const PHOTO_STATUS = { available: ["Frei", "Available"], reserved: ["Reserviert", "Reserved"],
+                       used: ["Benutzt", "Used"], rejected: ["Abgelehnt", "Rejected"] };
+const photoStatusText = (s) => (PHOTO_STATUS[s] ? L(...PHOTO_STATUS[s]) : s);
 
 async function loadPhotos() {
   state.photos = await api("/api/photos");
@@ -2019,13 +2071,19 @@ async function loadPhotos() {
 function renderPhotos() {
   const all = state.photos;
   const count = (st) => all.filter((p) => p.status === st).length;
-  const avail = count("available"), used = count("used"), reserved = count("reserved");
+  const avail = count("available"), used = count("used"), reserved = count("reserved"), rejected = count("rejected");
   $("#photo-stats").innerHTML = [
-    kpiTile({ label: "Photos in library", iconName: "image", tone: "accent", value: fmtNum(all.length), foot: "each one goes to a single account" }),
-    kpiTile({ label: "Available", iconName: "checkCircle", tone: "ok", value: fmtNum(avail),
-      foot: avail ? `enough for ${fmtNum(avail)} more account${avail === 1 ? "" : "s"}` : `<span class="sr-danger">upload more to keep creating accounts</span>` }),
-    kpiTile({ label: "Reserved", iconName: "clock", tone: "info", value: fmtNum(reserved), foot: "held by accounts waiting in the queue" }),
-    kpiTile({ label: "Used", iconName: "userCheck", tone: "warn", value: fmtNum(used), foot: "kept for the account's history" }),
+    kpiTile({ label: L("Fotos in der Bibliothek", "Photos in library"), iconName: "image", tone: "accent", value: fmtNum(all.length),
+      foot: L("jedes Foto bekommt nur ein Account", "each one goes to a single account") }),
+    kpiTile({ label: L("Frei", "Available"), iconName: "checkCircle", tone: "ok", value: fmtNum(avail),
+      foot: avail ? L(`reicht für ${fmtNum(avail)} weitere Account(s)`, `enough for ${fmtNum(avail)} more account${avail === 1 ? "" : "s"}`)
+        : `<span class="sr-danger">${L("mehr hochladen, um weiter Accounts zu erstellen", "upload more to keep creating accounts")}</span>` }),
+    kpiTile({ label: L("Reserviert", "Reserved"), iconName: "clock", tone: "info", value: fmtNum(reserved),
+      foot: L("von Accounts in der Warteschlange gehalten", "held by accounts waiting in the queue") }),
+    kpiTile({ label: L("Benutzt", "Used"), iconName: "userCheck", tone: "warn", value: fmtNum(used),
+      foot: L("bleibt für den Verlauf des Accounts", "kept for the account's history") }),
+    kpiTile({ label: L("Abgelehnt", "Rejected"), iconName: "ban", tone: rejected ? "danger" : "", value: fmtNum(rejected),
+      foot: L("von Jaumo abgelehnt — wird nie wieder vergeben", "refused by Jaumo — never given out again") }),
   ].join("");
   $$("#photo-filter button").forEach((b) => {
     const f = b.dataset.filter;
@@ -2035,8 +2093,9 @@ function renderPhotos() {
   });
   const list = state.photoFilter === "all" ? all : all.filter((p) => p.status === state.photoFilter);
   $("#photo-grid").innerHTML = list.length ? list.map(photoCard).join("")
-    : emptyState("image", all.length ? "No photos in this filter" : "Your photo library is empty",
-      all.length ? "Choose another filter above." : "Drop photos, a folder or a ZIP file above to get started.");
+    : emptyState("image", all.length ? L("Keine Fotos in diesem Filter", "No photos in this filter") : L("Die Fotobibliothek ist leer", "Your photo library is empty"),
+      all.length ? L("Oben einen anderen Filter wählen.", "Choose another filter above.")
+        : L("Fotos, einen Ordner oder eine ZIP-Datei oben ablegen, um zu starten.", "Drop photos, a folder or a ZIP file above to get started."));
   updatePhotoSelection();
 }
 
@@ -2044,25 +2103,27 @@ function photoCard(p) {
   const selectable = p.status === "available";
   const owner = p.account
     ? `<a href="#account/${p.account.id}" class="pc-owner">${icon("user")}${esc(p.account.name)} <span class="muted">#${p.account.id}</span></a>`
-    : p.status === "reserved" ? `<span class="pc-owner muted">${icon("clock")}waiting in queue</span>` : "";
+    : p.status === "reserved" ? `<span class="pc-owner muted">${icon("clock")}${L("wartet in der Warteschlange", "waiting in queue")}</span>` : "";
   return `<div class="photo-card s-${p.status}${state.photoSelected.has(p.name) ? " selected" : ""}" data-name="${esc(p.name)}">
     <div class="pc-img" data-view="${esc(p.name)}">
       <img src="${thumbUrl(p.name)}" loading="lazy" alt="">
-      ${selectable ? `<label class="pc-check" title="Select"><input type="checkbox" data-sel="${esc(p.name)}" ${state.photoSelected.has(p.name) ? "checked" : ""}></label>` : ""}
-      <span class="pc-status ${p.status}">${p.status}</span>
+      ${selectable ? `<label class="pc-check" title="${L("Auswählen", "Select")}"><input type="checkbox" data-sel="${esc(p.name)}" ${state.photoSelected.has(p.name) ? "checked" : ""}></label>` : ""}
+      <span class="pc-status ${p.status}">${esc(photoStatusText(p.status))}</span>
     </div>
     <div class="pc-body">
       <div class="pc-name" title="${esc(p.original_name || p.name)}">${esc(p.name)}</div>
       <div class="pc-meta">${p.width}×${p.height} · ${fmtNum(Math.round(p.size / 1024))} KB</div>
-      <div class="pc-foot">${owner || `<span class="pc-owner muted">${icon("checkCircle")}not used yet</span>`}
-        ${selectable ? iconBtn("trash", `data-del="${esc(p.name)}"`, "Delete photo", "danger") : ""}</div>
+      ${p.rejected_reason ? `<div class="pc-reason" title="${esc(photoReasonText(p.rejected_reason))}">${icon("ban")}${esc(photoReasonText(p.rejected_reason))}</div>` : ""}
+      <div class="pc-foot">${owner || `<span class="pc-owner muted">${icon("checkCircle")}${L("noch nicht benutzt", "not used yet")}</span>`}
+        ${p.rejected_reason ? `<button type="button" class="btn small ghost" data-release="${esc(p.name)}" title="${L("Wieder vergeben lassen (z. B. nach Bearbeitung)", "Allow it again (e.g. after editing)")}">${L("Freigeben", "Release")}</button>` : ""}
+        ${selectable ? iconBtn("trash", `data-del="${esc(p.name)}"`, L("Foto löschen", "Delete photo"), "danger") : ""}</div>
     </div>
   </div>`;
 }
 
 function updatePhotoSelection() {
   const n = state.photoSelected.size;
-  $("#photo-selected").textContent = n ? `${n} selected` : "";
+  $("#photo-selected").textContent = n ? L(`${n} ausgewählt`, `${n} selected`) : "";
   $("#photo-bulk-delete").disabled = !n;
   const availableShown = $$("#photo-grid [data-sel]").length;
   $("#photo-select-all").disabled = !availableShown;
@@ -2087,10 +2148,17 @@ $("#photo-grid").addEventListener("click", guard(async (e) => {
   if (e.target.closest(".pc-check") || e.target.closest("a")) return;
   const del = e.target.closest("[data-del]");
   if (del) {
-    if (!confirm(`Delete ${del.dataset.del}?`)) return;
+    if (!confirm(L(`${del.dataset.del} löschen?`, `Delete ${del.dataset.del}?`))) return;
     await api(`/api/photos/${encodeURIComponent(del.dataset.del)}`, { method: "DELETE" });
     state.photoSelected.delete(del.dataset.del);
-    toast("Photo deleted");
+    toast(L("Foto gelöscht", "Photo deleted"));
+    return loadPhotos();
+  }
+  const release = e.target.closest("[data-release]");
+  if (release) {
+    if (!confirm(L("Dieses von Jaumo abgelehnte Foto wieder vergeben lassen?", "Allow this photo again although Jaumo refused it?"))) return;
+    await api(`/api/photos/${encodeURIComponent(release.dataset.release)}/release`, { method: "POST" });
+    toast(L("Foto freigegeben", "Photo released"));
     return loadPhotos();
   }
   const view = e.target.closest("[data-view]");
@@ -2110,10 +2178,11 @@ $("#photo-select-all").onclick = () => {
 
 $("#photo-bulk-delete").onclick = guard(async () => {
   const names = [...state.photoSelected];
-  if (!names.length || !confirm(`Delete ${names.length} photo(s)? This cannot be undone.`)) return;
+  if (!names.length || !confirm(L(`${names.length} Foto(s) löschen? Das kann nicht rückgängig gemacht werden.`, `Delete ${names.length} photo(s)? This cannot be undone.`))) return;
   const res = await api("/api/photos/bulk-delete", { method: "POST", body: { names } });
   state.photoSelected.clear();
-  toast(`Deleted ${res.deleted.length} photo(s)${res.blocked.length ? ` · ${res.blocked.length} kept (in use)` : ""}`);
+  toast(L(`${res.deleted.length} Foto(s) gelöscht${res.blocked.length ? ` · ${res.blocked.length} behalten (in Benutzung)` : ""}`,
+          `Deleted ${res.deleted.length} photo(s)${res.blocked.length ? ` · ${res.blocked.length} kept (in use)` : ""}`));
   await loadPhotos();
 });
 
@@ -2123,10 +2192,11 @@ function openPhotoViewer(name) {
   openModal(p.name, `<div class="viewer">
       <img src="/api/photos/${encodeURIComponent(p.name)}/file" alt="">
       <dl class="kv">
-        <dt>Status</dt><dd>${badge(p.status)}</dd>
-        <dt>Size</dt><dd>${p.width}×${p.height} · ${fmtNum(Math.round(p.size / 1024))} KB</dd>
-        <dt>Uploaded</dt><dd>${fmtDate(p.created_at)}</dd>
-        <dt>Original</dt><dd>${esc(p.original_name)}</dd>
+        <dt>Status</dt><dd><span class="badge ${p.status === "rejected" ? "bad" : ""}">${esc(photoStatusText(p.status))}</span></dd>
+        ${p.rejected_reason ? `<dt>${L("Grund", "Reason")}</dt><dd class="sr-danger">${esc(photoReasonText(p.rejected_reason))} · ${fmtDate(p.rejected_at)}</dd>` : ""}
+        <dt>${L("Größe", "Size")}</dt><dd>${p.width}×${p.height} · ${fmtNum(Math.round(p.size / 1024))} KB</dd>
+        <dt>${L("Hochgeladen", "Uploaded")}</dt><dd>${fmtDate(p.created_at)}</dd>
+        <dt>${L("Original", "Original")}</dt><dd>${esc(p.original_name)}</dd>
         <dt>Account</dt><dd>${p.account ? `<a href="#account/${p.account.id}" data-close>${esc(p.account.name)} #${p.account.id}</a> ${badge(p.account.status)}` : "—"}</dd>
       </dl></div>`);
   $("#modal-body [data-close]")?.addEventListener("click", closeModal);
@@ -2176,12 +2246,12 @@ function postWithProgress(files, onProgress) {
     xhr.open("POST", "/api/photos");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded);
     xhr.onload = () => {
-      if (xhr.status === 401) { showLogin(); return reject(new Error("Not authenticated")); }
+      if (xhr.status === 401) { showLogin(); return reject(new Error(L("Nicht angemeldet", "Not authenticated"))); }
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch { /* ignore */ }
-      xhr.status < 400 ? resolve(data) : reject(new Error(data.detail || `Upload failed (HTTP ${xhr.status})`));
+      xhr.status < 400 ? resolve(data) : reject(new Error(data.detail || L(`Upload fehlgeschlagen (HTTP ${xhr.status})`, `Upload failed (HTTP ${xhr.status})`)));
     };
-    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.onerror = () => reject(new Error(L("Netzwerkfehler beim Hochladen", "Network error during upload")));
     xhr.send(fd);
   });
 }
@@ -2190,8 +2260,8 @@ let uploading = false;
 async function uploadPhotos(fileList) {
   const files = [...fileList].filter((f) => PHOTO_EXTS.test(f.name));
   const skipped = fileList.length - files.length;
-  if (!files.length) return toast("No images or ZIP files found in that selection", true);
-  if (uploading) return toast("An upload is already running — wait for it to finish", true);
+  if (!files.length) return toast(L("In der Auswahl sind keine Bilder oder ZIP-Dateien", "No images or ZIP files found in that selection"), true);
+  if (uploading) return toast(L("Es läuft bereits ein Upload — bitte warten", "An upload is already running — wait for it to finish"), true);
   uploading = true;
   const panel = $("#upload-panel");
   panel.classList.remove("hidden");
@@ -2203,13 +2273,13 @@ async function uploadPhotos(fileList) {
     panel.innerHTML = `<div class="up-head">
         <div class="icon-bubble accent">${icon("upload")}</div>
         <div class="up-text"><b>${esc(phase)}</b>
-          <span>${fmtNum(files.length)} file${files.length === 1 ? "" : "s"} · ${(totalBytes / 1048576).toFixed(1)} MB${skipped ? ` · ${skipped} non-image file(s) ignored` : ""}</span></div>
-        <div class="up-counts"><span class="sr-ok">${icon("checkCircle")}${totals.saved} added</span>
-          <span class="muted">${icon("copy")}${totals.duplicate} duplicates</span>
-          <span class="sr-danger">${icon("alert")}${totals.error} failed</span></div>
+          <span>${fmtNum(files.length)} ${L("Datei(en)", files.length === 1 ? "file" : "files")} · ${(totalBytes / 1048576).toFixed(1)} MB${skipped ? L(` · ${skipped} Nicht-Bild-Datei(en) ignoriert`, ` · ${skipped} non-image file(s) ignored`) : ""}</span></div>
+        <div class="up-counts"><span class="sr-ok">${icon("checkCircle")}${totals.saved} ${L("hinzugefügt", "added")}</span>
+          <span class="muted">${icon("copy")}${totals.duplicate} ${L("Duplikate", "duplicates")}</span>
+          <span class="sr-danger">${icon("alert")}${totals.error} ${L("fehlgeschlagen", "failed")}</span></div>
       </div>
       <div class="meter up-bar"><span style="width:${pctDone}%"></span></div>
-      ${problems.length ? `<details class="up-problems"${totals.error ? " open" : ""}><summary>${problems.length} file(s) not added</summary>
+      ${problems.length ? `<details class="up-problems"${totals.error ? " open" : ""}><summary>${L(`${problems.length} Datei(en) nicht hinzugefügt`, `${problems.length} file(s) not added`)}</summary>
         <ul>${problems.map((r) => `<li><span class="badge ${r.status === "duplicate" ? "" : "bad"}">${r.status}</span>
           <span class="mono">${esc(r.name)}</span> <span class="muted">— ${esc(r.detail)}</span></li>`).join("")}</ul></details>` : ""}`;
   };
@@ -2218,7 +2288,8 @@ async function uploadPhotos(fileList) {
     for (let i = 0; i < batches.length; i++) {
       const b = batches[i];
       const bBytes = b.reduce((a, f) => a + f.size, 0);
-      const label = b.length === 1 && /\.zip$/i.test(b[0].name) ? `Unpacking ${b[0].name}…` : `Uploading batch ${i + 1} of ${batches.length}…`;
+      const label = b.length === 1 && /\.zip$/i.test(b[0].name) ? L(`${b[0].name} wird entpackt …`, `Unpacking ${b[0].name}…`)
+        : L(`Teil ${i + 1} von ${batches.length} wird hochgeladen …`, `Uploading batch ${i + 1} of ${batches.length}…`);
       render(label, Math.round((doneBytes / totalBytes) * 100));
       const res = await postWithProgress(b, (loaded) => render(label, Math.min(99, Math.round(((doneBytes + loaded) / totalBytes) * 100))));
       doneBytes += bBytes;
@@ -2226,10 +2297,11 @@ async function uploadPhotos(fileList) {
       problems.push(...(res.results || []).filter((r) => r.status !== "saved"));
       render(label, Math.round((doneBytes / totalBytes) * 100));
     }
-    render(`Done — ${totals.saved} photo${totals.saved === 1 ? "" : "s"} added`, 100);
-    toast(`${totals.saved} added · ${totals.duplicate} duplicates skipped · ${totals.error} failed`, totals.saved === 0 && totals.error > 0);
+    render(L(`Fertig — ${totals.saved} Foto(s) hinzugefügt`, `Done — ${totals.saved} photo${totals.saved === 1 ? "" : "s"} added`), 100);
+    toast(L(`${totals.saved} hinzugefügt · ${totals.duplicate} Duplikate übersprungen · ${totals.error} fehlgeschlagen`,
+            `${totals.saved} added · ${totals.duplicate} duplicates skipped · ${totals.error} failed`), totals.saved === 0 && totals.error > 0);
   } catch (e) {
-    render(`Upload stopped: ${e.message}`, Math.round((doneBytes / totalBytes) * 100));
+    render(L(`Upload abgebrochen: ${e.message}`, `Upload stopped: ${e.message}`), Math.round((doneBytes / totalBytes) * 100));
     toast(e.message, true);
   } finally {
     uploading = false;
@@ -2357,6 +2429,8 @@ const REASON_DE = [
   [/^(like|dislike) HTTP (\d+)$/, (m) => `${m[1] === "like" ? "Like" : "Dislike"} abgelehnt (HTTP ${m[2]})`],
   [/^zapping HTTP (\d+)$/, (m) => `Karten nicht abrufbar (HTTP ${m[1]})`],
   [/^consecutive failures$/, () => "Mehrere Fehler hintereinander"],
+  [/^photo rejected: (.+)$/, (m) => `Foto abgelehnt: ${photoReasonText(m[1])}`],
+  [/^photo failed: (.+)$/, (m) => `Foto-Problem: ${photoReasonText(m[1])}`],
   [/^photo upload not accepted$/, () => "Foto von Jaumo nicht akzeptiert"],
   [/^photo not registered by server$/, () => "Foto von Jaumo nicht übernommen"],
   [/^network error: (.+)$/, (m) => `Netzwerkfehler (${m[1]})`],
@@ -2366,7 +2440,70 @@ const REASON_DE = [
 function reasonText(reason) {
   if (!reason || LANG !== "de") return reason || "";
   for (const [re, fmt] of REASON_DE) { const m = re.exec(reason); if (m) return fmt(m); }
-  return reason;
+  return serverText(reason);
+}
+
+// Why a photo failed (engine reasons) — German when the panel is German.
+const PHOTO_REASON_DE = [
+  [/^upload refused \(HTTP (\d+)\):? ?(.*)$/, (m) => `Upload abgelehnt (HTTP ${m[1]})${m[2] ? ": " + m[2] : ""}`],
+  [/^confirmation refused \(HTTP (\d+)\):? ?(.*)$/, (m) => `Bestätigung abgelehnt (HTTP ${m[1]})${m[2] ? ": " + m[2] : ""}`],
+  [/^profile photo refused \(HTTP (\d+)\):? ?(.*)$/, (m) => `Profilfoto abgelehnt (HTTP ${m[1]})${m[2] ? ": " + m[2] : ""}`],
+  [/^Jaumo warning: (.*)$/, (m) => `Jaumo-Warnung: ${m[1]}`],
+  [/^not in the gallery after upload \((.*)\)$/, (m) => `nach dem Upload nicht in der Galerie (${m[1]})`],
+  [/^Jaumo did not make it the profile photo$/, () => "Jaumo hat es nicht als Profilfoto übernommen"],
+  [/^rejected by Jaumo$/, () => "von Jaumo abgelehnt"],
+  [/^file not found$/, () => "Datei nicht gefunden"],
+  [/^image file is empty$/, () => "Bilddatei ist leer"],
+  [/^Jaumo gave no (upload|gallery|profile-photo) link$/,
+    (m) => `Jaumo lieferte keinen ${{ upload: "Upload", gallery: "Galerie", "profile-photo": "Profilfoto" }[m[1]]}-Link`],
+  [/^(upload|confirmation) answer (was not readable|had no image URL|was not a photo)$/, (m) =>
+    `${m[1] === "upload" ? "Upload" : "Bestätigung"}: Antwort ${m[2] === "had no image URL" ? "ohne Bild-URL" : "nicht lesbar"}`],
+];
+function photoReasonText(r) {
+  if (!r || LANG !== "de") return r || "";
+  for (const [re, fmt] of PHOTO_REASON_DE) { const m = re.exec(r); if (m) return fmt(m); }
+  return r;
+}
+
+// Common messages from the server (errors, skip reasons, start check) — German when the panel is German.
+const NOUN_DE = { photos: "Fotos", names: "Namen", "profile texts": "Profiltexte", "new nicknames": "neue Nicknamen" };
+const SERVER_DE = [
+  [/^already working$/, () => "arbeitet bereits"],
+  [/^blocked by Jaumo$/, () => "von Jaumo gesperrt"],
+  [/^account was never fully set up/, () => "Account wurde nie vollständig eingerichtet"],
+  [/^no login token stored$/, () => "kein Login gespeichert"],
+  [/^a refresh for this account is already queued or running$/, () => "für diesen Account läuft schon eine Aktualisierung"],
+  [/^account is working — /, () => "Account arbeitet — die Sitzung liest ihre Stats selbst"],
+  [/^refreshed a moment ago — wait (\d+)s$/, (m) => `gerade aktualisiert — noch ${m[1]} s warten`],
+  [/^refreshed recently$/, () => "kürzlich aktualisiert"],
+  [/^nothing is running or queued for this account$/, () => "für diesen Account läuft und wartet nichts"],
+  [/^Not enough unused (photos|names|profile texts|new nicknames): only (\d+) of (\d+)/,
+    (m) => `Nicht genug freie ${NOUN_DE[m[1]]}: nur ${m[2]} von ${m[3]} verfügbar.`],
+  [/^No photos in the library/, () => "Keine Fotos in der Bibliothek — zuerst Fotos hochladen (Seite Fotos)"],
+  [/^The name list is empty/, () => "Die Namensliste ist leer — Namen eintragen oder automatische Namen wählen"],
+  [/^The profile text list is empty/, () => "Die Profiltext-Liste ist leer — Texte eintragen oder Profiltexte ausschalten"],
+  [/^The list of new nicknames is empty/, () => "Die Liste der neuen Nicknamen ist leer — Namen auf der Seite „Nicknamen ändern“ eintragen"],
+  [/^Names must be unique \(Settings\) — (.*)$/, (m) => `Namen müssen eindeutig sein — ${m[1]
+    .replace("already used", "bereits vergeben").replace("typed more than once", "doppelt eingegeben")}`],
+  [/^Messaging is turned off/, () => t("msg.off")],
+  [/^Invalid username or password$/, () => "Benutzername oder Passwort falsch"],
+  [/^config has no APK profile/, () => "Keine APK-Schlüssel hinterlegt (Konfiguration)"],
+  [/^APK profile '.+' is disabled/, () => "Die APK-Schlüssel sind deaktiviert"],
+  [/^No enabled proxy/, () => "Kein aktiver Proxy — die Konfiguration verlangt einen (Seite Proxies)"],
+  [/^no enabled proxies/, () => "Kein aktiver Proxy (die Konfiguration verlangt einen)"],
+  [/^photo is used by an account/, () => "Das Foto gehört zu einem Account und bleibt für dessen Verlauf"],
+  [/^run is not active$/, () => "Die Sitzung läuft nicht"],
+  [/^Not found: (.+) — if the panel was just updated, restart the server$/, (m) => `Nicht gefunden: ${m[1]} — nach einem Update den Server neu starten`],
+  [/^name already exists$/, () => "Name existiert bereits"],
+  [/^(.+): not accepted \(HTTP (\d+)\)$/, (m) => `${m[1]}: nicht akzeptiert (HTTP ${m[2]})`],
+  [/^not set \(HTTP (\S+)\)$/, (m) => `nicht gesetzt (HTTP ${m[1]})`],
+  [/^could not read counters \(HTTP (\S+)\)$/, (m) => `Zähler nicht lesbar (HTTP ${m[1]})`],
+  [/^no usable (login )?token$/, () => "kein gültiger Login"],
+];
+function serverText(msg) {
+  if (!msg || LANG !== "de") return msg || "";
+  for (const [re, fmt] of SERVER_DE) { const m = re.exec(msg); if (m) return fmt(m); }
+  return photoReasonText(msg);
 }
 const RESULT_TONE = { done: "", stopped: "", blocked: "bad", failed: "warn", interrupted: "warn" };
 
@@ -2429,10 +2566,10 @@ function renderAccTable() {
     if (i === 0 || i === pages - 1 || Math.abs(i - a.page) <= 2) nums.push(i);
     else if (nums[nums.length - 1] !== "…") nums.push("…");
   }
-  $("#acc-pages").innerHTML = `<button class="pg" data-pg="${a.page - 1}" ${a.page <= 0 ? "disabled" : ""} aria-label="Previous">${icon("chevronLeft")}</button>
+  $("#acc-pages").innerHTML = `<button class="pg" data-pg="${a.page - 1}" ${a.page <= 0 ? "disabled" : ""} aria-label="${L("Zurück", "Previous")}">${icon("chevronLeft")}</button>
     ${nums.map((n) => n === "…" ? `<span class="pg-gap">…</span>`
       : `<button class="pg${n === a.page ? " active" : ""}" data-pg="${n}">${n + 1}</button>`).join("")}
-    <button class="pg" data-pg="${a.page + 1}" ${a.page + 1 >= pages ? "disabled" : ""} aria-label="Next">${icon("chevronRight")}</button>`;
+    <button class="pg" data-pg="${a.page + 1}" ${a.page + 1 >= pages ? "disabled" : ""} aria-label="${L("Weiter", "Next")}">${icon("chevronRight")}</button>`;
   $("#acc-per").innerHTML = [12, 25, 50, 100].map((n) =>
     `<option value="${n}" ${n === a.per ? "selected" : ""}>${esc(t("pager.per", { n }))}</option>`).join("");
   const all = $("#acc-all");
@@ -2530,7 +2667,7 @@ async function startRename(ids) {
   const res = await api("/api/accounts/rename", { method: "POST", body: { account_ids: ids } });
   if (res.run_ids.length) toast(t("rename.started", { n: res.run_ids.length }));
   if (res.skipped.length) {
-    const why = [...new Set(res.skipped.map((x) => x.reason))].join(", ");
+    const why = [...new Set(res.skipped.map((x) => serverText(x.reason)))].join(", ");
     toast(t("rename.skipped", { n: res.skipped.length, r: why }), !res.run_ids.length);
   }
   if (state.tab === "accounts") reloadAccountsSoon();
@@ -2541,7 +2678,7 @@ async function startSwiping(ids) {
   const res = await api("/api/accounts/swipe", { method: "POST", body: { account_ids: ids } });
   if (res.run_ids.length) toast(t("swipe.started", { n: res.run_ids.length }));
   if (res.skipped.length) {
-    const why = [...new Set(res.skipped.map((x) => x.reason))].join(", ");
+    const why = [...new Set(res.skipped.map((x) => serverText(x.reason)))].join(", ");
     toast(t("swipe.skipped", { n: res.skipped.length, r: why }), !res.run_ids.length);
   }
   guard(loadStats)();
@@ -2626,7 +2763,7 @@ function openMessageDialog(ids) {
     e.preventDefault();
     const res = await api("/api/messages", { method: "POST", body: { account_ids: ids } });
     closeModal();
-    toast(res.run_ids.length ? `${res.run_ids.length} ✓` : "No eligible accounts (need pending matches and a login token)", !res.run_ids.length);
+    toast(res.run_ids.length ? `${res.run_ids.length} ✓` : L("Keine passenden Accounts (offene Matches und Login nötig)", "No eligible accounts (need pending matches and a login token)"), !res.run_ids.length);
   }));
 }
 
@@ -2667,7 +2804,7 @@ async function openSyncDialog() {
     closeModal();
     toast(t("sync.started", { n: res.run_ids.length }));
     if (res.skipped.length) {
-      const why = [...new Set(res.skipped.map((x) => x.reason))].join("; ");
+      const why = [...new Set(res.skipped.map((x) => serverText(x.reason)))].join("; ");
       toast(t("sync.skipped", { n: res.skipped.length, why }), true);
     }
   }));
@@ -2722,7 +2859,7 @@ async function openNewAccounts() {
     box.classList.toggle("hidden", res.ok);
     $("#new-submit").disabled = !res.ok;
     box.innerHTML = res.ok ? "" : `<b>${icon("alert")}${esc(t("new.blocked"))}</b><ul>${res.problems.map((p) =>
-      `<li><span>${esc(t("new.p." + p.code))} <small>${esc(p.message)}</small></span>
+      `<li><span>${esc(t("new.p." + p.code))} <small>${esc(serverText(p.message))}</small></span>
         <a href="#${p.page}" data-close-modal class="btn ghost sm">${esc(t("new.fix"))}</a></li>`).join("")}</ul>`;
   };
   const checkSoon = throttle(check, 400);
@@ -2755,13 +2892,17 @@ $("#acc-new").onclick = guard(openNewAccounts);
 // ---------------------------------------------------------------------------
 
 const EVENT_STYLE = {
-  created: { icon: "userPlus", tone: "accent", text: () => "Account created" },
-  status: { icon: "activity", tone: "info", text: () => "Status changed" },
-  like: { icon: "thumbsUp", tone: "info", text: (e) => `Liked user ${e.user_id}` },
-  match: { icon: "heart", tone: "danger", text: (e) => `Liked user ${e.user_id} — it's a match!` },
-  dislike: { icon: "thumbsDown", tone: "neutral", text: (e) => `Disliked user ${e.user_id}` },
-  message: { icon: "message", tone: "ok", text: (e) => `Messaged user ${e.user_id}` },
-  message_failed: { icon: "alert", tone: "danger", text: (e) => `Message to ${e.user_id} failed` },
+  created: { icon: "userPlus", tone: "accent", text: () => L("Account erstellt", "Account created") },
+  status: { icon: "activity", tone: "info", text: () => L("Status geändert", "Status changed") },
+  like: { icon: "thumbsUp", tone: "info", text: (e) => L(`User ${e.user_id} geliked`, `Liked user ${e.user_id}`) },
+  match: { icon: "heart", tone: "danger", text: (e) => L(`User ${e.user_id} geliked — Match!`, `Liked user ${e.user_id} — it's a match!`) },
+  dislike: { icon: "thumbsDown", tone: "neutral", text: (e) => L(`User ${e.user_id} abgelehnt`, `Disliked user ${e.user_id}`) },
+  message: { icon: "message", tone: "ok", text: (e) => L(`User ${e.user_id} angeschrieben`, `Messaged user ${e.user_id}`) },
+  message_failed: { icon: "alert", tone: "danger", text: (e) => L(`Nachricht an ${e.user_id} fehlgeschlagen`, `Message to ${e.user_id} failed`) },
+  sync: { icon: "refresh", tone: "info", text: () => L("Stats von Jaumo gelesen", "Stats read from Jaumo") },
+  renamed: { icon: "pencil", tone: "accent", text: () => L("Nickname geändert", "Nickname changed") },
+  photo_rejected: { icon: "ban", tone: "danger", text: () => L("Foto von Jaumo abgelehnt", "Photo rejected by Jaumo") },
+  photo_failed: { icon: "alert", tone: "warn", text: () => L("Foto-Schritt fehlgeschlagen", "Photo step failed") },
 };
 
 const acct = { id: null, data: null, runs: [], events: [], ws: null, logWs: null, logRunId: null, listTab: "matches" };
@@ -2784,7 +2925,7 @@ async function openAccountPage(id) {
   closeAccountStreams();
   acct.id = id;
   acct.events = [];
-  $("#account-page").innerHTML = `<div class="empty">${icon("clock")}<b>Loading account…</b></div>`;
+  $("#account-page").innerHTML = `<div class="empty">${icon("clock")}<b>${L("Account wird geladen …", "Loading account…")}</b></div>`;
   // Subscribe first, then load: events that happen while the page loads are buffered, not lost.
   const early = [];
   let loaded = false;
@@ -2835,35 +2976,35 @@ function activeRun() {
 function renderAccountPage() {
   const a = acct.data;
   $("#account-page").innerHTML = `
-    <a href="#accounts" class="back-link">${icon("chevronLeft")}All accounts</a>
+    <a href="#accounts" class="back-link">${icon("chevronLeft")}${L("Alle Accounts", "All accounts")}</a>
     <div id="acc-hero"></div>
     <div id="acc-sync-bar" class="sync-bar"></div>
     <div id="acc-kpis" class="kpi-grid eight"></div>
     <div id="acc-live"></div>
     <div class="grid-12">
       <div class="card span-7">
-        <div class="card-head"><div><h2>Activity</h2><p class="card-sub">Every like, match, message and status change — updates live</p></div></div>
+        <div class="card-head"><div><h2>${L("Aktivität", "Activity")}</h2><p class="card-sub">${L("Jeder Like, Match, jede Nachricht und Statusänderung — live", "Every like, match, message and status change — updates live")}</p></div></div>
         <div id="acc-timeline" class="timeline"></div>
-        <div class="timeline-more"><button class="btn small" id="acc-more">Load older activity</button></div>
+        <div class="timeline-more"><button class="btn small" id="acc-more">${L("Ältere Aktivität laden", "Load older activity")}</button></div>
       </div>
       <div class="span-5 stack">
         <div class="card">
-          <div class="card-head"><div><h2>People</h2></div>
+          <div class="card-head"><div><h2>${L("Personen", "People")}</h2></div>
             <div class="seg" id="acc-list-tabs">
               <button data-list="matches">Matches <span class="seg-count" id="cnt-matches"></span></button>
-              <button data-list="liked">Liked <span class="seg-count" id="cnt-liked"></span></button>
-              <button data-list="disliked">Disliked <span class="seg-count" id="cnt-disliked"></span></button>
+              <button data-list="liked">${L("Geliked", "Liked")} <span class="seg-count" id="cnt-liked"></span></button>
+              <button data-list="disliked">${L("Abgelehnt", "Disliked")} <span class="seg-count" id="cnt-disliked"></span></button>
             </div></div>
           <div id="acc-people"></div>
         </div>
         <div class="card">
-          <div class="card-head"><div><h2>Profile &amp; device</h2></div></div>
+          <div class="card-head"><div><h2>${L("Profil &amp; Gerät", "Profile &amp; device")}</h2></div></div>
           <div id="acc-details"></div>
         </div>
       </div>
     </div>
     <div class="card table-card">
-      <div class="card-head padded"><div><h2>Sessions</h2><p class="card-sub">Signup and messaging runs for this account</p></div></div>
+      <div class="card-head padded"><div><h2>${L("Sitzungen", "Sessions")}</h2><p class="card-sub">${L("Alle Sitzungen dieses Accounts", "All sessions of this account")}</p></div></div>
       <table class="table" id="acc-runs"></table>
     </div>`;
   renderTimeline();
@@ -2889,7 +3030,8 @@ function renderAccountSections() {
   const a = acct.data;
   const run = activeRun();
   const age = ageFrom(a.birthday);
-  const dev = a.device_info ? `${a.device_info.manufacturer} ${a.device_info.model}` : "Unknown device";
+  const dev = a.device_info ? `${a.device_info.manufacturer} ${a.device_info.model}` : L("Unbekanntes Gerät", "Unknown device");
+  const photoRejected = a.photo && (state.photos || []).some((p) => p.name === a.photo && p.status === "rejected");
   const msgOff = !state.config || !state.config.settings.messaging_enabled;
   $("#acc-hero").innerHTML = `<div class="card acc-hero">
     <div class="acc-photo">${a.photo ? `<img src="${thumbUrl(a.photo)}" alt="" data-full="${esc(a.photo)}">` : icon("user")}</div>
@@ -2897,16 +3039,18 @@ function renderAccountSections() {
       <div class="acc-title"><h1>${esc(a.name)}</h1>${badge(a.status)}
         ${(a.name_history || []).length ? `<span class="acc-formerly" title="${esc(a.name_history.join(" → "))}">${esc(t("rename.formerly", { n: a.name_history.join(", ") }))}</span>` : ""}
         ${run ? `<span class="live-chip on"><span class="pulse"></span>${esc(workerName(run.worker))} ${esc(t("state.working").toLowerCase())}</span>` : ""}</div>
-      <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? ` · ${age} years` : ""} · ${esc(a.location || "—")} · joined ${fmtDate(a.created_at)}</div>
+      <div class="acc-sub">Account #${a.id}${a.jaumo_id ? ` · Jaumo ${esc(a.jaumo_id)}` : ""} · ${esc(workerName(a.worker))}${age !== null ? L(` · ${age} Jahre`, ` · ${age} years`) : ""} · ${esc(a.location || "—")} · ${L("erstellt", "joined")} ${fmtDate(a.created_at)}</div>
       ${!run && a.last_result ? `<div class="acc-result">${esc(t("res.last"))} · ${fmtDate(a.last_result.finished_at)}${resultLine(a, "acc-result-text")}</div>` : ""}
       ${a.about_me ? `<p class="acc-about" title="${esc(t("about.label"))}">${icon("fileText")}<span><b>${esc(t("about.textLabel"))}</b> ${esc(a.about_me)}</span></p>`
-        : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(a.about_me_error)}</span></p>` : ""}
-      ${a.rename_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("rename.notSet"))} — ${esc(a.rename_error)}</span></p>` : ""}
+        : a.about_me_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("about.notSet"))} — ${esc(serverText(a.about_me_error))}</span></p>` : ""}
+      ${a.rename_error ? `<p class="acc-about bad">${icon("alert")}<span>${esc(t("rename.notSet"))} — ${esc(serverText(a.rename_error))}</span></p>` : ""}
+      ${a.photo_error ? `<p class="acc-about bad">${icon(photoRejected ? "ban" : "image")}<span><b>${photoRejected ? L("Foto abgelehnt:", "Photo rejected:") : L("Foto-Problem:", "Photo problem:")}</b>
+        ${esc(a.photo || "")} — ${esc(photoReasonText(a.photo_error))}</span></p>` : ""}
       <div class="acc-chips">
         <span class="chip">${icon("smartphone")}${esc(dev)}</span>
-        ${a.config_id ? "" : `<span class="chip">${icon("archive")}legacy import</span>`}
-        <span class="chip">${icon("globe")}${a.proxy_id ? `proxy #${a.proxy_id}` : "no proxy"}</span>
-        <span class="chip ${a.has_token ? "" : "bad"}">${icon("key")}${a.has_token ? "login token stored" : "no login token"}</span>
+        ${a.config_id ? "" : `<span class="chip">${icon("archive")}${L("importiert", "legacy import")}</span>`}
+        <span class="chip">${icon("globe")}${a.proxy_id ? `Proxy #${a.proxy_id}` : L("kein Proxy", "no proxy")}</span>
+        <span class="chip ${a.has_token ? "" : "bad"}">${icon("key")}${a.has_token ? L("Login gespeichert", "login token stored") : L("kein Login gespeichert", "no login token")}</span>
       </div>
     </div>
     <div class="acc-actions">
@@ -2914,7 +3058,7 @@ function renderAccountSections() {
       <button class="btn" id="acc-rename" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"}>${icon("pencil")}${esc(t("rename.btn"))}</button>
       <button class="btn" id="acc-swipe" ${canSwipe({ ...a, working: !!run }) ? "" : "disabled"} title="${esc(t("swipe.tip"))}">${icon("play")}${esc(t("swipe.btn"))}</button>
       ${msgOff ? `<a class="field-hint" href="#configs">${esc(t("msg.off"))}</a>` : ""}
-      <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}Message ${a.pending_messages || ""} pending</button>
+      <button class="btn primary" id="acc-msg" ${a.pending_messages && !msgOff ? "" : "disabled"}>${icon("send")}${L(`${a.pending_messages || ""} offene Matches anschreiben`, `Message ${a.pending_messages || ""} pending`)}</button>
     </div>
   </div>`;
   $("#acc-hero [data-full]")?.addEventListener("click", () => openPhotoViewer(a.photo));
@@ -2923,7 +3067,8 @@ function renderAccountSections() {
   if ($("#acc-stop")) $("#acc-stop").onclick = guard(() => stopAccounts([a.id]));
   $("#acc-msg").onclick = guard(async () => {
     const res = await api("/api/messages", { method: "POST", body: { account_ids: [a.id] } });
-    toast(res.run_ids.length ? "Messaging session queued" : "Nothing to send (no pending matches or a session is already running)", !res.run_ids.length);
+    toast(res.run_ids.length ? L("Anschreiben eingereiht", "Messaging session queued")
+      : L("Nichts zu senden (keine offenen Matches oder es läuft schon eine Sitzung)", "Nothing to send (no pending matches or a session is already running)"), !res.run_ids.length);
     refreshAccountSoon();
   });
 
@@ -2945,49 +3090,50 @@ function renderAccountSections() {
   renderLiveSession(run);
   renderPeople();
 
-  const lf = { 1: "Men", 2: "Women" }[a.looking_for_gender] || a.looking_for_gender;
+  const lf = { 1: L("Männer", "Men"), 2: L("Frauen", "Women") }[a.looking_for_gender] || a.looking_for_gender;
   $("#acc-details").innerHTML = `<dl class="kv">
-      <dt>Name</dt><dd>${esc(a.name)}</dd>
-      <dt>Birthday</dt><dd>${esc(a.birthday || "—")}${age !== null ? ` (${age})` : ""}</dd>
-      <dt>Gender / looking for</dt><dd>Female · ${esc(lf)}</dd>
-      <dt>Relationship (signup)</dt><dd>${a.relationship_search ? `${esc(a.relationship_search)} · dating ${esc(a.dating_relationship_search || "—")}` : "—"}</dd>
-      <dt>Location</dt><dd>${esc(a.location || "—")}${a.latitude ? ` <span class="muted">(${esc(a.latitude)}, ${esc(a.longitude)})</span>` : ""}</dd>
-      <dt>Profile photo</dt><dd>${esc(a.photo || "—")} · ${a.photo_uploaded ? "uploaded" : "not uploaded"} · gallery ${a.gallery_count}</dd>
-      <dt>Signup photo_url</dt><dd class="mono">${esc(a.photo_url || "—")}</dd>
-      <dt>Device</dt><dd>${esc(dev)}</dd>
+      <dt>Name</dt><dd>${esc(a.name)}${(a.name_history || []).length ? ` <span class="muted">(${esc(t("rename.formerly", { n: a.name_history.join(", ") }))})</span>` : ""}</dd>
+      <dt>${L("Geburtstag", "Birthday")}</dt><dd>${esc(a.birthday || "—")}${age !== null ? ` (${age})` : ""}</dd>
+      <dt>${L("Geschlecht / sucht", "Gender / looking for")}</dt><dd>${L("Weiblich", "Female")} · ${esc(lf)}</dd>
+      <dt>${L("Beziehung (Registrierung)", "Relationship (signup)")}</dt><dd>${a.relationship_search ? `${esc(a.relationship_search)} · dating ${esc(a.dating_relationship_search || "—")}` : "—"}</dd>
+      <dt>${L("Standort", "Location")}</dt><dd>${esc(a.location || "—")}${a.latitude ? ` <span class="muted">(${esc(a.latitude)}, ${esc(a.longitude)})</span>` : ""}</dd>
+      <dt>${L("Profilfoto", "Profile photo")}</dt><dd>${esc(a.photo || "—")} · ${a.photo_uploaded ? L("hochgeladen", "uploaded") : L("nicht hochgeladen", "not uploaded")} · ${L("Galerie", "gallery")} ${a.gallery_count}</dd>
+      <dt>${L("Registrierungs-photo_url", "Signup photo_url")}</dt><dd class="mono">${esc(a.photo_url || "—")}</dd>
+      <dt>${L("Gerät", "Device")}</dt><dd>${esc(dev)}</dd>
       <dt>Android ID</dt><dd class="mono">${esc(a.android_id || "—")}</dd>
-      <dt>Last update</dt><dd>${fmtDate(a.updated_at)}</dd>
+      <dt>${L("Letzte Änderung", "Last update")}</dt><dd>${fmtDate(a.updated_at)}</dd>
     </dl>
     <div class="form-grid" style="margin:0">
-      <label>Status<select id="acc-status">${ACC_STATUSES.map((s) => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label class="span-2">Notes<textarea id="acc-notes" rows="2" placeholder="Anything worth remembering about this account">${esc(a.notes)}</textarea></label>
+      <label>Status<select id="acc-status">${ACC_STATUSES.map((s) => `<option value="${s}" ${s === a.status ? "selected" : ""}>${esc(statusText(s))}</option>`).join("")}</select></label>
+      <label class="span-2">${L("Notizen", "Notes")}<textarea id="acc-notes" rows="2" placeholder="${L("Alles, was man sich zu diesem Account merken sollte", "Anything worth remembering about this account")}">${esc(a.notes)}</textarea></label>
     </div>
     <div class="actions">
-      <button class="btn small primary" id="acc-save">${icon("check")}Save</button>
-      <button class="btn small danger" id="acc-delete" ${run ? "disabled title='Stop the running session first'" : ""}>${icon("trash")}Delete account</button>
+      <button class="btn small primary" id="acc-save">${icon("check")}${L("Speichern", "Save")}</button>
+      <button class="btn small danger" id="acc-delete" ${run ? `disabled title="${L("Zuerst die laufende Sitzung stoppen", "Stop the running session first")}"` : ""}>${icon("trash")}${L("Account löschen", "Delete account")}</button>
     </div>`;
   $("#acc-save").onclick = guard(async () => {
     await api(`/api/accounts/${a.id}`, { method: "PATCH", body: { status: $("#acc-status").value, notes: $("#acc-notes").value } });
-    toast("Account saved");
+    toast(L("Account gespeichert", "Account saved"));
     refreshAccountSoon();
   });
   $("#acc-delete").onclick = guard(async () => {
-    if (!confirm(`Delete account "${a.name}" (#${a.id}) from the database? Its tokens and history will be lost.`)) return;
+    if (!confirm(L(`Account „${a.name}“ (#${a.id}) aus der Datenbank löschen? Login und Verlauf gehen verloren.`,
+                   `Delete account "${a.name}" (#${a.id}) from the database? Its tokens and history will be lost.`))) return;
     await api(`/api/accounts/${a.id}`, { method: "DELETE" });
-    toast("Account deleted");
+    toast(L("Account gelöscht", "Account deleted"));
     location.hash = "#accounts";
   });
 
-  $("#acc-runs").innerHTML = `<thead><tr><th>#</th><th>Type</th><th>Status</th><th>Step</th>
-      <th class="num">Liked</th><th class="num">Disliked</th><th class="num">Matches</th><th class="num">Msgs</th>
-      <th>Started</th><th>Duration</th><th>Result</th><th></th></tr></thead>
+  $("#acc-runs").innerHTML = `<thead><tr><th>#</th><th>${L("Art", "Type")}</th><th>Status</th><th>${L("Schritt", "Step")}</th>
+      <th class="num">Likes</th><th class="num">Dislikes</th><th class="num">Matches</th><th class="num">${L("Nachr.", "Msgs")}</th>
+      <th>${L("Gestartet", "Started")}</th><th>${L("Dauer", "Duration")}</th><th>${L("Ergebnis", "Result")}</th><th></th></tr></thead>
     <tbody>${acct.runs.map((r) => `<tr>
-      <td>${r.id}</td><td>${r.kind === "message" ? "Messaging" : r.kind === "sync" ? "Stats refresh" : r.kind === "swipe" ? esc(t("swipe.kind")) : r.kind === "rename" ? esc(t("rename.kind")) : "Signup + swiping"}</td><td>${badge(r.status)}</td>
-      <td>${esc(STEP_LABELS[r.step] || r.step || "—")}</td>
+      <td>${r.id}</td><td>${esc(kindText(r.kind))}</td><td>${badge(r.status)}</td>
+      <td>${esc(stepLabel(r.step) || "—")}</td>
       <td class="num">${r.liked}</td><td class="num">${r.disliked}</td><td class="num">${r.matches}</td><td class="num">${r.messages_sent}</td>
       <td>${fmtDate(r.started_at)}</td><td>${esc(duration(r))}</td><td class="wrapcell" title="${esc(r.reason)}">${esc(reasonText(r.reason) || "—")}</td>
-      <td class="actions">${iconBtn("terminal", `data-log="${r.id}"`, "Open log")}</td></tr>`).join("")
-      || `<tr><td colspan="12" class="muted">No sessions recorded (legacy account)</td></tr>`}</tbody>`;
+      <td class="actions">${iconBtn("terminal", `data-log="${r.id}"`, L("Log öffnen", "Open log"))}</td></tr>`).join("")
+      || `<tr><td colspan="12" class="muted">${L("Keine Sitzungen (importierter Account)", "No sessions recorded (legacy account)")}</td></tr>`}</tbody>`;
   $("#acc-runs").onclick = (e) => { const b = e.target.closest("[data-log]"); if (b) openRunModal(+b.dataset.log); };
 }
 
@@ -3003,7 +3149,7 @@ function renderSyncBar(a) {
     const label = running ? t("sync.running") : left > 0 ? t("sync.wait", { s: left }) : t("sync.refreshOne");
     bar.innerHTML = `<div class="sync-info">${icon("refresh")}
         <span>${esc(a.stats_synced_at ? t("sync.at", { t: relTime(a.stats_synced_at) }) : t("sync.never"))}</span>
-        ${a.stats_sync_error ? `<span class="sr-danger">${esc(t("sync.error", { e: a.stats_sync_error }))}</span>` : ""}</div>
+        ${a.stats_sync_error ? `<span class="sr-danger">${esc(t("sync.error", { e: serverText(a.stats_sync_error) }))}</span>` : ""}</div>
       <button class="btn small" id="acc-sync-btn" ${running || left > 0 ? "disabled" : ""}>${icon("refresh")}${esc(label)}</button>`;
     $("#acc-sync-btn").onclick = guard(async () => {
       await api(`/api/accounts/${a.id}/sync`, { method: "POST" });
@@ -3025,18 +3171,18 @@ function renderLiveSession(run) {
   }
   if (acct.logRunId !== run.id) {
     box.innerHTML = `<div class="card live-card">
-      <div class="card-head"><div><h2>${icon("cpu")} ${esc(workerName(run.worker))} is working on this account</h2>
+      <div class="card-head"><div><h2>${icon("cpu")} ${L(`${esc(workerName(run.worker))} arbeitet an diesem Account`, `${esc(workerName(run.worker))} is working on this account`)}</h2>
         <p class="card-sub" id="acc-live-sub"></p></div>
-        <div class="actions">${iconBtn("terminal", `data-log="${run.id}"`, "Open full log")}
-          <button class="btn small danger" id="acc-stop">${icon("stop")}Stop</button></div></div>
+        <div class="actions">${iconBtn("terminal", `data-log="${run.id}"`, L("Ganzes Log öffnen", "Open full log"))}
+          <button class="btn small danger" id="acc-stop">${icon("stop")}${L("Stoppen", "Stop")}</button></div></div>
       <div id="acc-live-steps"></div>
       <div class="log-view compact" id="acc-live-log"></div>
     </div>`;
-    $("#acc-stop").onclick = guard(async () => { await api(`/api/runs/${run.id}/stop`, { method: "POST" }); toast("Stopping…"); });
+    $("#acc-stop").onclick = guard(async () => { await api(`/api/runs/${run.id}/stop`, { method: "POST" }); toast(L("Wird gestoppt …", "Stopping…")); });
     box.querySelector("[data-log]").onclick = () => openRunModal(run.id);
     streamRunLog(run.id);
   }
-  $("#acc-live-sub").textContent = `Session #${run.id} · ${run.kind === "message" ? "messaging" : run.kind === "swipe" ? esc(t("swipe.kind")) : "signup + swiping"} · ${duration(run) || "starting"} · proxy ${run.proxy_label || "—"}`;
+  $("#acc-live-sub").textContent = `${L("Sitzung", "Session")} #${run.id} · ${kindText(run.kind)} · ${duration(run) || L("startet", "starting")} · Proxy ${run.proxy_label || "—"}`;
   $("#acc-live-steps").innerHTML = stepBar(run);
 }
 
@@ -3087,12 +3233,13 @@ function renderPeople() {
   const items = [...lists[acct.listTab]].reverse();
   $("#acc-people").innerHTML = items.length ? `<div class="people">${items.map((uid) => {
       const tag = acct.listTab === "matches"
-        ? (messaged.has(String(uid)) ? `<span class="badge ok">messaged</span>` : `<span class="badge warn">pending</span>`) : "";
+        ? (messaged.has(String(uid)) ? `<span class="badge ok">${L("angeschrieben", "messaged")}</span>` : `<span class="badge warn">${L("offen", "pending")}</span>`) : "";
       return `<div class="person">${icon(acct.listTab === "matches" ? "heart" : acct.listTab === "liked" ? "thumbsUp" : "thumbsDown")}
         <span class="mono">${esc(uid)}</span>${tag}</div>`;
     }).join("")}</div>`
-    : emptyState(acct.listTab === "matches" ? "heart" : "users", "Nothing here yet",
-      acct.listTab === "matches" ? "Matches appear when a liked user likes back." : "No swipes with this account yet.");
+    : emptyState(acct.listTab === "matches" ? "heart" : "users", L("Noch nichts hier", "Nothing here yet"),
+      acct.listTab === "matches" ? L("Matches erscheinen, wenn ein gelikter User zurück liked.", "Matches appear when a liked user likes back.")
+        : L("Mit diesem Account wurde noch nicht geswiped.", "No swipes with this account yet."));
 }
 
 function timelineItem(e) {
@@ -3101,13 +3248,13 @@ function timelineItem(e) {
     <span class="tl-icon icon-bubble ${st.tone}">${icon(st.icon)}</span>
     <div class="tl-body"><div class="tl-text">${esc(st.text(e))}</div>
       ${e.detail ? `<div class="tl-detail">${esc(e.detail)}</div>` : ""}</div>
-    <time title="${esc(fmtDate(e.ts))}">${esc(fmtTime(e.ts))}<span>${esc(new Date(e.ts).toLocaleDateString(undefined, { day: "numeric", month: "short" }))}</span></time>
+    <time title="${esc(fmtDate(e.ts))}">${esc(fmtTime(e.ts))}<span>${esc(new Date(e.ts).toLocaleDateString(LANG, { day: "numeric", month: "short" }))}</span></time>
   </div>`;
 }
 
 function renderTimeline() {
   $("#acc-timeline").innerHTML = acct.events.length ? acct.events.map(timelineItem).join("")
-    : emptyState("activity", "No activity yet", "Likes, matches and messages will show up here as they happen.");
+    : emptyState("activity", L("Noch keine Aktivität", "No activity yet"), L("Likes, Matches und Nachrichten erscheinen hier, sobald sie passieren.", "Likes, matches and messages will show up here as they happen."));
 }
 
 function prependTimeline(e) {

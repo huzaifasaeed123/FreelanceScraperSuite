@@ -187,7 +187,9 @@ def photo_usage(s: Session) -> tuple[Counter, dict, set]:
 
 def pick_photos(s: Session, settings: dict, count: int, unique: bool) -> list[str]:
     """Least-used photos from the config's pool (or the whole library). Raises ValueError when short."""
-    library = [f for f in s.exec(select(Photo.filename).order_by(Photo.id)).all() if (PHOTOS_DIR / f).exists()]
+    # rejected images are never picked again (Jaumo refused them once), whatever the reuse rule says
+    library = [f for f in s.exec(select(Photo.filename).where(Photo.rejected_reason == "").order_by(Photo.id)).all()
+               if (PHOTOS_DIR / f).exists()]
     pool = [f for f in (settings.get("photo_pool") or []) if f in set(library)] or library
     if not pool:
         raise ValueError("No photos in the library — upload photos first (Photos page)")

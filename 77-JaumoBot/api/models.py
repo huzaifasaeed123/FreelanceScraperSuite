@@ -135,6 +135,7 @@ class Account(SQLModel, table=True):
     about_me_error: str = ""
     name_history: list = Field(default_factory=list, sa_column=Column(JSON))   # earlier nicknames, oldest first
     rename_error: str = ""
+    photo_error: str = ""                                   # why the photo step failed (shown on the account)
     status: str = Field(default="signing_up", index=True)  # signing_up|active|blocked|photo_failed|failed|stopped|legacy
     photo_uploaded: bool = False
     gallery_count: int = 0
@@ -183,6 +184,8 @@ class Photo(SQLModel, table=True):
     size: int = 0
     original_name: str = ""
     created_at: datetime = Field(default_factory=utcnow, index=True)
+    rejected_reason: str = ""                  # Jaumo refused this image -> never given to another account
+    rejected_at: Optional[datetime] = None
 
 
 class AppSetting(SQLModel, table=True):

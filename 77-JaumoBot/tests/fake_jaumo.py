@@ -37,6 +37,7 @@ DEFAULT_CONTROL = {
     "mutual_ids": ["9001", "9002", "9003"],   # matches list (likes.mutual), 2 per page
     "unseen_status": 200,
     "about_status": 200,           # answer to PUT me/data/aboutme
+    "upload_status": 200,          # answer to the photo upload (e.g. 422 = image refused)
     "username_status": 200,        # answer to PUT me/username
 }
 
@@ -281,6 +282,8 @@ async def upload(request: Request):
     state["uploads"].append({"user": u["id"], "bytes": len(body), "valid_multipart": ok})
     if not ok:
         return JSONResponse({"error": "bad upload"}, 400)
+    if state["control"]["upload_status"] != 200:
+        return JSONResponse({"message": "Image does not meet our guidelines"}, state["control"]["upload_status"])
     if state["control"]["photo_warning"]:
         return {"warning": "face not detected"}
     return {"url": f"https://img.fake/{u['id']}.jpg"}

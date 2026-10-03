@@ -22,7 +22,7 @@ from sqlmodel import Session, select
 from bot.engine import (AUTO_FEMALE_NAMES, BotRunner, MessageRunner, RenameRunner, StatsSyncRunner, StopRequested,
                         SwipeRunner)
 
-from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Proxy, RunLog,
+from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog,
                      engine, iso, utcnow)
 from .photolib import pick_photos
 from .proxies import NoProxyAvailable, ProxyPool, proxy_display, proxy_url
@@ -707,6 +707,8 @@ class RunManager:
             self._on_stats(run_id, ctx.get("account_id"), data)
         elif kind == "renamed":
             self._on_renamed(run_id, ctx.get("account_id"), data)
+        elif kind == "photo_problem":
+            self._on_photo_problem(run_id, ctx.get("account_id"), data)
         elif kind == "signup_defaults":
             self._save_signup_defaults(data.get("data"))
         elif kind == "apk_check":
@@ -1155,6 +1157,29 @@ class RunManager:
         finally:
             self.pool.release(proxy.id if proxy else None)
         self._finish(run_id, result)
+
+    def _on_photo_problem(self, run_id, account_id, data):
+        """Store why the photo failed; a photo Jaumo refused is marked so no other account gets it."""
+        reason, rejected = (data.get("reason") or "").strip(), bool(data.get("rejected"))
+        with Session(engine) as s:
+            run = s.get(BotRun, run_id)
+            filename = run.photo if run else None
+            if account_id:
+                acc = s.get(Account, account_id)
+                if acc:
+                    acc.photo_error = reason
+                    s.add(acc)
+            if rejected and filename:
+                photo = s.exec(select(Photo).where(Photo.filename == filename)).first()
+                if photo:
+                    photo.rejected_reason = reason or "rejected by Jaumo"
+                    photo.rejected_at = utcnow()
+                    s.add(photo)
+            s.commit()
+        if account_id:
+            self._account_event(account_id, run_id, "photo_rejected" if rejected else "photo_failed",
+                                detail=f"{filename or ''}: {reason}".strip(": "))
+            self.hub.publish(f"account:{account_id}", {"type": "changed"})
 
     def _on_renamed(self, run_id, account_id, data):
         old, new = (data.get("old") or "").strip(), (data.get("new") or "").strip()

@@ -842,10 +842,12 @@ def list_photos(s: Session = Depends(get_session)):
     out = []
     for p in s.exec(select(Photo).order_by(Photo.id.desc())).all():
         acc = owner.get(p.filename)
-        status = "used" if acc else "reserved" if p.filename in reserved else "available"
+        status = ("rejected" if p.rejected_reason else "used" if acc else "reserved" if p.filename in reserved
+                  else "available")
         out.append({"name": p.filename, "size": p.size, "width": p.width, "height": p.height,
                     "original_name": p.original_name, "created_at": _iso(p.created_at), "status": status,
-                    "uses": usage[p.filename],
+                    "uses": usage[p.filename], "rejected_reason": p.rejected_reason,
+                    "rejected_at": _iso(p.rejected_at),
                     "account": {"id": acc[0], "name": acc[1], "status": acc[2]} if acc else None})
     return out
 
@@ -857,6 +859,18 @@ def upload_photos(files: list[UploadFile] = File(...), s: Session = Depends(get_
     results = import_uploads(s, payload)
     counts = {k: sum(1 for r in results if r["status"] == k) for k in ("saved", "duplicate", "error")}
     return {**counts, "results": results}
+
+
+@app.post("/api/photos/{name}/release", dependencies=auth)
+def release_photo(name: str, s: Session = Depends(get_session)):
+    """Clear a rejection (e.g. after editing the image) so the photo can be picked again."""
+    p = s.exec(select(Photo).where(Photo.filename == name)).first()
+    if not p:
+        raise HTTPException(404, "photo not found")
+    p.rejected_reason, p.rejected_at = "", None
+    s.add(p)
+    s.commit()
+    return {"ok": True}
 
 
 @app.get("/api/photos/{name}/file", dependencies=auth)

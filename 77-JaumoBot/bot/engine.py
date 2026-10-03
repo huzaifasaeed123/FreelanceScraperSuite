@@ -489,13 +489,34 @@ class JaumoClient:
         self.log(f"[PROFILE] FAIL {resp.status_code}: {resp.text}", "error")
         return (None, resp.status_code) if include_status else None
 
+    @staticmethod
+    def _resp_reason(resp):
+        """Short reason from an error response (message / error / detail), for the panel."""
+        try:
+            data = resp.json()
+        except ValueError:
+            data = None
+        if isinstance(data, dict):
+            for k in ("message", "error_description", "error", "detail", "title", "warning"):
+                if isinstance(data.get(k), str) and data[k].strip():
+                    return data[k].strip()[:200]
+        return (resp.text or "").strip()[:200]
+
+    def _photo_problem(self, reason, rejected):
+        """Why the photo step failed. rejected=True: Jaumo refused this image (it is not given to another
+        account); False: a technical problem (file, network, missing link) — the image itself may be fine."""
+        self.photo_problem = {"reason": reason, "rejected": rejected}
+
     def upload_profile_photo(self, access_token, refresh_token, me, image_path, loc):
         """Upload, confirm, and select one JPEG as the primary profile photo."""
+        self.photo_problem = None
         if not os.path.isfile(image_path):
             self.log(f"[PHOTO] FAIL — file not found: {image_path}", "error")
+            self._photo_problem("file not found", False)
             return False, access_token, refresh_token
         if os.path.getsize(image_path) == 0:
             self.log(f"[PHOTO] FAIL — image is empty: {image_path}", "error")
+            self._photo_problem("image file is empty", False)
             return False, access_token, refresh_token
 
         links = me.get("links") or {}
@@ -504,9 +525,11 @@ class JaumoClient:
         confirmation_url = links.get("gallery")
         if not upload_url:
             self.log("[PHOTO] FAIL — /me did not provide links.compliance.gallery", "error")
+            self._photo_problem("Jaumo gave no upload link", False)
             return False, access_token, refresh_token
         if not confirmation_url:
             self.log("[PHOTO] FAIL — /me did not provide links.gallery", "error")
+            self._photo_problem("Jaumo gave no gallery link", False)
             return False, access_token, refresh_token
         location_fields = {
             "latitude": loc["lat"],
@@ -521,21 +544,26 @@ class JaumoClient:
         )
         self.print_response_details("PHOTO UPLOAD", upload_resp)
         if upload_resp.status_code not in (200, 201, 202):
+            code = upload_resp.status_code
+            self._photo_problem(f"upload refused (HTTP {code}): {self._resp_reason(upload_resp)}", 400 <= code < 500)
             return False, access_token, refresh_token
 
         try:
             upload_data = upload_resp.json()
         except ValueError:
             self.log("[PHOTO] FAIL — upload response was not JSON", "error")
+            self._photo_problem("upload answer was not readable", False)
             return False, access_token, refresh_token
 
         warning = upload_data.get("warning")
         uploaded_url = upload_data.get("url")
         if warning:
             self.log("[PHOTO] NOT CONFIRMED — server returned a compliance warning", "error")
+            self._photo_problem(f"Jaumo warning: {warning if isinstance(warning, str) else json.dumps(warning)[:200]}", True)
             return False, access_token, refresh_token
         if not uploaded_url:
             self.log("[PHOTO] FAIL — upload response did not contain a URL", "error")
+            self._photo_problem("upload answer had no image URL", False)
             return False, access_token, refresh_token
 
         # The APK confirms the returned URL through the normal gallery endpoint.
@@ -547,15 +575,19 @@ class JaumoClient:
         self.print_response_details("PHOTO CONFIRM", confirm_resp)
         if confirm_resp.status_code not in (200, 201, 204):
             self.log(f"[PHOTO] Confirmation failed ({confirm_resp.status_code}) — skipping", "error")
+            code = confirm_resp.status_code
+            self._photo_problem(f"confirmation refused (HTTP {code}): {self._resp_reason(confirm_resp)}", 400 <= code < 500)
             return False, access_token, refresh_token
 
         try:
             photo = confirm_resp.json()
         except ValueError:
             self.log("[PHOTO] FAIL — confirmation did not return a Photo object", "error")
+            self._photo_problem("confirmation answer was not readable", False)
             return False, access_token, refresh_token
         if not isinstance(photo, dict):
             self.log("[PHOTO] FAIL — confirmation JSON was not a Photo object", "error")
+            self._photo_problem("confirmation answer was not a photo", False)
             return False, access_token, refresh_token
 
         if photo.get("isProfilePhoto") is True:
@@ -566,12 +598,16 @@ class JaumoClient:
         set_profile_url = photo_links.get("base") if isinstance(photo_links, dict) else None
         if not set_profile_url:
             self.log("[PHOTO] FAIL — confirmed Photo did not provide links.base", "error")
+            self._photo_problem("Jaumo gave no profile-photo link", False)
             return False, access_token, refresh_token
         # SetProfilePhoto in the APK sends an authenticated PUT with an empty map
         # to the confirmed Photo object's dynamically supplied links.base URL.
         set_profile_resp = self._put(set_profile_url, access_token=access_token)
         self.print_response_details("PHOTO SET PRIMARY", set_profile_resp)
         if set_profile_resp.status_code not in (200, 201, 204):
+            code = set_profile_resp.status_code
+            self._photo_problem(f"profile photo refused (HTTP {code}): {self._resp_reason(set_profile_resp)}",
+                                400 <= code < 500)
             return False, access_token, refresh_token
 
         # Some API versions return the updated Photo; when present, enforce the
@@ -583,6 +619,7 @@ class JaumoClient:
                 updated_photo = None
             if isinstance(updated_photo, dict) and updated_photo.get("isProfilePhoto") is False:
                 self.log("[PHOTO] FAIL — server accepted PUT but photo is not primary", "error")
+                self._photo_problem("Jaumo did not make it the profile photo", True)
                 return False, access_token, refresh_token
 
         self.log("[PHOTO] Upload, confirmation, and profile-picture selection accepted")
@@ -1051,8 +1088,11 @@ class BotRunner(_RunnerBase):
         self.access_token, self.refresh_token = access_token, refresh_token
         if not photo_uploaded:
             self.log("[SKIP] Photo upload was not accepted; likes were not attempted.", "error")
+            problem = getattr(c, "photo_problem", None) or {"reason": "photo upload not accepted", "rejected": False}
             self.emit("account_update", status="photo_failed", photo_uploaded=False)
-            return {"status": "failed", "reason": "photo upload not accepted"}
+            self.emit("photo_problem", **problem)
+            return {"status": "failed", "reason": ("photo rejected: " if problem["rejected"] else "photo failed: ")
+                                                  + problem["reason"]}
         self.delay("after_photo")
 
         # Reload /me because its links, missingField and galleryCount may change
@@ -1069,7 +1109,9 @@ class BotRunner(_RunnerBase):
         if gallery_count < 1 or missing_after_upload == "photo":
             self.log("[SKIP] Server has not registered the photo; likes were not attempted.", "error")
             self.emit("account_update", status="photo_failed", gallery_count=gallery_count)
-            return {"status": "failed", "reason": "photo not registered by server"}
+            reason = f"not in the gallery after upload (galleryCount={gallery_count}, missing={missing_after_upload})"
+            self.emit("photo_problem", reason=reason, rejected=True)
+            return {"status": "failed", "reason": f"photo rejected: {reason}"}
         self.ready = True
         self.emit("account_update", status="active", photo_uploaded=True, gallery_count=gallery_count)
 

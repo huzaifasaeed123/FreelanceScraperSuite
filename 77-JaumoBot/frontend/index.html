@@ -16,11 +16,11 @@
 <div id="login-view" class="login-wrap hidden">
   <form id="login-form" class="login-card">
     <div class="login-brand"><div class="logo">J</div><div><div class="brand-name">Account-Manager</div><div class="brand-sub" data-i18n="brand.sub">Accountverwaltung &amp; Automatisierung</div></div></div>
-    <h1>Welcome back</h1>
-    <p class="muted">Sign in to manage your bots.</p>
-    <label>Username<input name="username" autocomplete="username" required></label>
-    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-    <button class="btn primary lg block" type="submit">Sign in</button>
+    <h1 data-de="Willkommen zurück">Welcome back</h1>
+    <p class="muted" data-de="Melde dich an, um deine Accounts zu verwalten.">Sign in to manage your accounts.</p>
+    <label><span data-de="Benutzername">Username</span><input name="username" autocomplete="username" required></label>
+    <label><span data-de="Passwort">Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary lg block" type="submit" data-de="Anmelden">Sign in</button>
     <p id="login-error" class="error"></p>
   </form>
 </div>
@@ -69,7 +69,7 @@
   <div class="main">
 
     <header class="topbar">
-      <button class="icon-btn top-ic mobile-only" id="sb-toggle" title="Menu"><i data-icon="menu"></i></button>
+      <button class="icon-btn top-ic mobile-only" id="sb-toggle" title="Menu" data-de-title="Menü"><i data-icon="menu"></i></button>
       <div class="logo sm mobile-only">J</div>
       <div class="top-search"><i data-icon="search"></i>
         <input id="top-search" type="search" data-i18n-ph="top.search" placeholder="Accounts suchen"></div>
@@ -101,12 +101,12 @@
       <section id="tab-dashboard" class="tab">
         <div class="page-head">
           <div>
-            <h1>Dashboard</h1>
-            <p>Live overview of account creation, accounts and infrastructure</p>
+            <h1 data-i18n="nav.dashboard">Dashboard</h1>
+            <p data-de="Live-Überblick über Account-Erstellung, Accounts und Infrastruktur">Live overview of account creation, accounts and infrastructure</p>
           </div>
           <div class="page-actions">
             <span class="live-chip" id="live-chip"><span class="pulse"></span>Live</span>
-            <button class="btn danger-soft" id="stop-all-btn"><i data-icon="stop"></i>Stop all</button>
+            <button class="btn danger-soft" id="stop-all-btn"><i data-icon="stop"></i><span data-de="Alle stoppen">Stop all</span></button>
           </div>
         </div>
 
@@ -118,8 +118,8 @@
           <div class="card span-8">
             <div class="card-head">
               <div>
-                <h2>Accounts created</h2>
-                <p class="card-sub">Per day · hover a bar for the outcome breakdown</p>
+                <h2 data-de="Erstellte Accounts">Accounts created</h2>
+                <p class="card-sub" data-de="Pro Tag · Balken antippen für die Aufteilung">Per day · hover a bar for the outcome breakdown</p>
               </div>
               <div class="seg" id="chart-range">
                 <button data-days="7">7D</button><button data-days="14" class="active">14D</button><button data-days="30">30D</button>
@@ -132,14 +132,14 @@
           <div class="card span-4 launch-card">
             <div class="card-head">
               <div>
-                <h2>Create accounts</h2>
+                <h2 data-de="Accounts erstellen">Create accounts</h2>
                 <p class="card-sub" id="launch-capacity">&nbsp;</p>
               </div>
               <div class="icon-bubble accent"><i data-icon="rocket"></i></div>
             </div>
             <form id="launch-form">
               <div id="launch-config-info" class="config-info"></div>
-              <label>Accounts to create
+              <label><span data-de="Anzahl Accounts">Accounts to create</span>
                 <div class="stepper">
                   <button type="button" data-step="-1" aria-label="Fewer">−</button>
                   <input name="count" type="number" min="1" max="500" value="1" required>
@@ -147,8 +147,9 @@
                 </div>
               </label>
               <details class="names-details">
-                <summary>Custom names <span class="muted">(optional)</span></summary>
-                <textarea name="names" rows="3" placeholder="One per line — used in order, the rest are picked from the name pool"></textarea>
+                <summary><span data-de="Eigene Namen">Custom names</span> <span class="muted">(optional)</span></summary>
+                <textarea name="names" rows="3" placeholder="One per line — used in order, the rest are picked from the name pool"
+                  data-de-ph="Einer pro Zeile — der Reihe nach verwendet, der Rest kommt aus den Nicknamen"></textarea>
               </details>
               <button class="btn primary lg block" type="submit"><i data-icon="play"></i><span id="launch-submit-label">Create accounts</span></button>
             </form>
@@ -157,15 +158,15 @@
 
         <div class="grid-12">
           <div class="card span-4">
-            <div class="card-head"><div><h2>Account status</h2><p class="card-sub" id="status-sub">All accounts</p></div></div>
+            <div class="card-head"><div><h2 data-de="Account-Status">Account status</h2><p class="card-sub" id="status-sub" data-de="Alle Accounts">All accounts</p></div></div>
             <div id="status-breakdown"></div>
           </div>
           <div class="card span-4">
-            <div class="card-head"><div><h2>Engagement</h2><p class="card-sub">All-time swiping and messaging</p></div></div>
+            <div class="card-head"><div><h2 data-de="Aktivität">Engagement</h2><p class="card-sub" data-de="Swipen und Nachrichten insgesamt">All-time swiping and messaging</p></div></div>
             <div id="engagement"></div>
           </div>
           <div class="card span-4">
-            <div class="card-head"><div><h2>Infrastructure</h2><p class="card-sub">Capacity, proxies and APK profiles</p></div></div>
+            <div class="card-head"><div><h2 data-de="Infrastruktur">Infrastructure</h2><p class="card-sub" data-de="Worker, Proxies, Fotos und APK">Workers, proxies, photos and APK</p></div></div>
             <div id="infra"></div>
           </div>
         </div>
@@ -173,13 +174,13 @@
         <div class="card">
           <div class="card-head">
             <div>
-              <h2>Accounts in progress</h2>
-              <p class="card-sub">What each worker is doing right now — click one for its live log</p>
+              <h2 data-de="Accounts in Arbeit">Accounts in progress</h2>
+              <p class="card-sub" data-de="Was jeder Worker gerade macht — anklicken für das Live-Log">What each worker is doing right now — click one for its live log</p>
             </div>
             <div class="seg" id="live-filter">
-              <button data-filter="active" class="active">In progress <span class="seg-count" id="cnt-active">0</span></button>
-              <button data-filter="recent">Recent <span class="seg-count" id="cnt-recent">0</span></button>
-              <button data-filter="all">All</button>
+              <button data-filter="active" class="active"><span data-de="In Arbeit">In progress</span> <span class="seg-count" id="cnt-active">0</span></button>
+              <button data-filter="recent"><span data-de="Zuletzt">Recent</span> <span class="seg-count" id="cnt-recent">0</span></button>
+              <button data-filter="all" data-de="Alle">All</button>
             </div>
           </div>
           <div id="live-cards" class="bot-grid"></div>
@@ -189,19 +190,24 @@
       <!-- Runs -->
       <section id="tab-runs" class="tab hidden">
         <div class="page-head">
-          <div><h1>Runs &amp; logs</h1><p>Every signup and messaging run with its full log</p></div>
+          <div><h1 data-i18n="nav.logs">Logs</h1><p data-de="Jede Sitzung mit ihrem vollständigen Log">Every session with its full log</p></div>
           <div class="page-actions">
-            <button class="btn" id="runs-refresh"><i data-icon="refresh"></i>Refresh</button>
-            <button class="btn" id="runs-cleanup"><i data-icon="trash"></i>Clean old logs…</button>
+            <button class="btn" id="runs-refresh"><i data-icon="refresh"></i><span data-de="Aktualisieren">Refresh</span></button>
+            <button class="btn" id="runs-cleanup"><i data-icon="trash"></i><span data-de="Alte Logs löschen …">Clean old logs…</span></button>
           </div>
         </div>
         <div class="card toolbar-card">
           <div class="row wrap">
             <label>Status<select id="runs-status">
-              <option value="">All</option><option>queued</option><option>running</option><option>done</option>
-              <option>blocked</option><option>failed</option><option>stopped</option><option>interrupted</option>
+              <option value="" data-de="Alle">All</option><option value="queued" data-de="Wartet">Queued</option>
+              <option value="running" data-de="Läuft">Running</option><option value="done" data-de="Fertig">Done</option>
+              <option value="blocked" data-de="Gesperrt">Blocked</option><option value="failed" data-de="Fehler">Failed</option>
+              <option value="stopped" data-de="Gestoppt">Stopped</option><option value="interrupted" data-de="Unterbrochen">Interrupted</option>
             </select></label>
-            <label>Type<select id="runs-kind"><option value="">All</option><option value="signup">Signup</option><option value="message">Message</option><option value="swipe">Continue swiping</option><option value="rename">Nickname change</option><option value="sync">Stats refresh</option></select></label>
+            <label><span data-de="Art">Type</span><select id="runs-kind"><option value="" data-de="Alle">All</option>
+              <option value="signup" data-de="Erstellung + Swipen">Signup + swiping</option><option value="swipe" data-de="Weiter swipen">Continue swiping</option>
+              <option value="message" data-de="Matches anschreiben">Messaging</option><option value="rename" data-de="Nickname ändern">Nickname change</option>
+              <option value="sync" data-de="Stats aktualisieren">Stats refresh</option></select></label>
           </div>
         </div>
         <div class="card table-card">
@@ -253,38 +259,38 @@
       <!-- Proxies -->
       <section id="tab-proxies" class="tab hidden">
         <div class="page-head">
-          <div><h1>Proxies</h1><p>Shared rotating gateways or dedicated sticky sessions</p></div>
-          <div class="page-actions"><button class="btn" id="proxy-test-all"><i data-icon="zap"></i>Test all</button></div>
+          <div><h1>Proxies</h1><p data-de="Geteilte rotierende Gateways oder dedizierte feste Sitzungen">Shared rotating gateways or dedicated sticky sessions</p></div>
+          <div class="page-actions"><button class="btn" id="proxy-test-all"><i data-icon="zap"></i><span data-de="Alle testen">Test all</span></button></div>
         </div>
         <div class="card">
-          <div class="card-head"><div><h2>Add proxies</h2></div></div>
+          <div class="card-head"><div><h2 data-de="Proxies hinzufügen">Add proxies</h2></div></div>
           <form id="proxy-bulk-form">
-            <label><span>Paste proxy lines (one per line) — <code>host:port:user:pass</code>, <code>user:pass@host:port</code> or <code>http://user:pass@host:port</code></span>
+            <label><span><span data-de="Proxy-Zeilen einfügen (eine pro Zeile)">Paste proxy lines (one per line)</span> — <code>host:port:user:pass</code>, <code>user:pass@host:port</code> <span data-de="oder">or</span> <code>http://user:pass@host:port</code></span>
               <textarea name="text" rows="5" required placeholder="ultra.marsproxies.com:44443:user:pass_country-de"></textarea></label>
             <div class="row wrap">
               <fieldset class="radio-group">
-                <legend>Mode</legend>
-                <label class="inline"><input type="radio" name="shared" value="1" checked> Shared — rotating gateway, all bots may use the same line</label>
-                <label class="inline"><input type="radio" name="shared" value="0"> Dedicated — sticky session, one account per line at a time</label>
+                <legend data-de="Modus">Mode</legend>
+                <label class="inline"><input type="radio" name="shared" value="1" checked> <span data-de="Geteilt — rotierendes Gateway, alle Accounts dürfen dieselbe Zeile nutzen">Shared — rotating gateway, all accounts may use the same line</span></label>
+                <label class="inline"><input type="radio" name="shared" value="0"> <span data-de="Dediziert — feste Sitzung, ein Account pro Zeile gleichzeitig">Dedicated — sticky session, one account per line at a time</span></label>
               </fieldset>
-              <label>Label<input name="label" placeholder="e.g. Mars DE"></label>
-              <label class="inline"><input type="checkbox" name="replace"> Replace all existing proxies</label>
-              <div class="actions"><button class="btn primary" type="submit"><i data-icon="plus"></i>Add</button></div>
+              <label><span data-de="Bezeichnung">Label</span><input name="label" placeholder="e.g. Mars DE" data-de-ph="z. B. Mars DE"></label>
+              <label class="inline"><input type="checkbox" name="replace"> <span data-de="Alle vorhandenen Proxies ersetzen">Replace all existing proxies</span></label>
+              <div class="actions"><button class="btn primary" type="submit"><i data-icon="plus"></i><span data-de="Hinzufügen">Add</span></button></div>
             </div>
           </form>
         </div>
 
         <div class="card table-card">
           <div class="card-head padded">
-            <div><h2>Proxy list</h2></div>
+            <div><h2 data-de="Proxy-Liste">Proxy list</h2></div>
             <div class="actions" id="proxy-bulk-actions">
-              <span class="muted" id="proxy-selected">0 selected</span>
-              <button class="btn small" data-action="test">Test</button>
-              <button class="btn small" data-action="enable">Enable</button>
-              <button class="btn small" data-action="disable">Disable</button>
-              <button class="btn small" data-action="shared">Mark shared</button>
-              <button class="btn small" data-action="dedicated">Mark dedicated</button>
-              <button class="btn small danger" data-action="delete">Delete</button>
+              <span class="muted" id="proxy-selected"></span>
+              <button class="btn small" data-action="test" data-de="Testen">Test</button>
+              <button class="btn small" data-action="enable" data-de="Aktivieren">Enable</button>
+              <button class="btn small" data-action="disable" data-de="Deaktivieren">Disable</button>
+              <button class="btn small" data-action="shared" data-de="Als geteilt markieren">Mark shared</button>
+              <button class="btn small" data-action="dedicated" data-de="Als dediziert markieren">Mark dedicated</button>
+              <button class="btn small danger" data-action="delete" data-de="Löschen">Delete</button>
             </div>
           </div>
           <table class="table" id="proxies-table"></table>
@@ -294,8 +300,8 @@
       <!-- Photos -->
       <section id="tab-photos" class="tab hidden">
         <div class="page-head">
-          <div><h1>Photo library</h1><p>Profile photos for new accounts — each photo is used by one account only</p></div>
-          <div class="page-actions"><button class="btn primary" id="photo-pick-files"><i data-icon="imagePlus"></i>Upload photos</button></div>
+          <div><h1 data-de="Fotos">Photo library</h1><p data-de="Profilfotos für neue Accounts — jedes Foto bekommt nur ein Account">Profile photos for new accounts — each photo is used by one account only</p></div>
+          <div class="page-actions"><button class="btn primary" id="photo-pick-files"><i data-icon="imagePlus"></i><span data-de="Fotos hochladen">Upload photos</span></button></div>
         </div>
         <div id="photo-stats" class="kpi-grid"></div>
 
@@ -304,13 +310,12 @@
           <input type="file" id="photo-folder" webkitdirectory directory multiple hidden>
           <input type="file" id="photo-zip" accept=".zip,application/zip" multiple hidden>
           <div class="dz-icon"><i data-icon="upload"></i></div>
-          <div class="dz-title">Drop photos, folders or ZIP files here</div>
-          <div class="dz-sub">JPG · PNG · WebP · BMP · GIF · TIFF · ZIP — phone rotation fixed, hidden metadata (GPS) removed,
-            resized to max 1600px, duplicates skipped automatically</div>
+          <div class="dz-title" data-de="Fotos, Ordner oder ZIP-Dateien hier ablegen">Drop photos, folders or ZIP files here</div>
+          <div class="dz-sub" data-de="JPG · PNG · WebP · BMP · GIF · TIFF · ZIP — Handy-Drehung korrigiert, versteckte Metadaten (GPS) entfernt, auf max. 1600 px verkleinert, Duplikate automatisch übersprungen">JPG · PNG · WebP · BMP · GIF · TIFF · ZIP — phone rotation fixed, hidden metadata (GPS) removed, resized to max 1600px, duplicates skipped automatically</div>
           <div class="dz-actions">
-            <button class="btn" id="dz-files" type="button"><i data-icon="image"></i>Choose photos</button>
-            <button class="btn" id="dz-folder" type="button"><i data-icon="folder"></i>Choose folder</button>
-            <button class="btn" id="dz-zip" type="button"><i data-icon="archive"></i>Choose ZIP</button>
+            <button class="btn" id="dz-files" type="button"><i data-icon="image"></i><span data-de="Fotos wählen">Choose photos</span></button>
+            <button class="btn" id="dz-folder" type="button"><i data-icon="folder"></i><span data-de="Ordner wählen">Choose folder</span></button>
+            <button class="btn" id="dz-zip" type="button"><i data-icon="archive"></i><span data-de="ZIP wählen">Choose ZIP</span></button>
           </div>
         </div>
         <div class="card upload-panel hidden" id="upload-panel"></div>
@@ -318,15 +323,16 @@
         <div class="card">
           <div class="card-head">
             <div class="seg" id="photo-filter">
-              <button data-filter="all" class="active">All <span class="seg-count"></span></button>
-              <button data-filter="available">Available <span class="seg-count"></span></button>
-              <button data-filter="reserved">Reserved <span class="seg-count"></span></button>
-              <button data-filter="used">Used <span class="seg-count"></span></button>
+              <button data-filter="all" class="active"><span data-de="Alle">All</span> <span class="seg-count"></span></button>
+              <button data-filter="available"><span data-de="Frei">Available</span> <span class="seg-count"></span></button>
+              <button data-filter="reserved"><span data-de="Reserviert">Reserved</span> <span class="seg-count"></span></button>
+              <button data-filter="used"><span data-de="Benutzt">Used</span> <span class="seg-count"></span></button>
+              <button data-filter="rejected"><span data-de="Abgelehnt">Rejected</span> <span class="seg-count"></span></button>
             </div>
             <div class="actions">
               <span class="muted" id="photo-selected"></span>
-              <button class="btn small" id="photo-select-all"><i data-icon="check"></i>Select all available</button>
-              <button class="btn small danger" id="photo-bulk-delete" disabled><i data-icon="trash"></i>Delete selected</button>
+              <button class="btn small" id="photo-select-all"><i data-icon="check"></i><span data-de="Alle freien auswählen">Select all available</span></button>
+              <button class="btn small danger" id="photo-bulk-delete" disabled><i data-icon="trash"></i><span data-de="Auswahl löschen">Delete selected</span></button>
             </div>
           </div>
           <div id="photo-grid" class="photo-lib"></div>
@@ -421,7 +427,7 @@
 <!-- Modal -->
 <div id="modal" class="modal hidden">
   <div class="modal-box">
-    <div class="modal-head"><h2 id="modal-title"></h2><button class="icon-btn" id="modal-close" title="Close"><i data-icon="x"></i></button></div>
+    <div class="modal-head"><h2 id="modal-title"></h2><button class="icon-btn" id="modal-close" title="Close" data-de-title="Schließen"><i data-icon="x"></i></button></div>
     <div id="modal-body"></div>
   </div>
 </div>

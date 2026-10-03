@@ -310,6 +310,14 @@ text, before swiping) and "later" for selected accounts (row menu / bulk / accou
 light queue, reuses a valid login, never while the account works). "Nicknamen ändern" page (one name per line,
 "never reuse"). Earlier names kept in `name_history` and never given out again (signup names included).
 
+Done 2026-10-03 (step 4): **photo rejection** — the engine records why the photo step failed using only the answers
+of the existing photo requests (no extra request): refused upload / confirmation / profile photo (HTTP + Jaumo message),
+compliance warning, not in the gallery after upload. Jaumo refusals mark the photo as rejected (never picked again,
+even with photo reuse on; "Freigeben" clears it); technical problems don't. Shown on the account page ("Foto
+abgelehnt: …"), the photo card, a "Abgelehnt" filter and the timeline.
+**Panel fully in DE/EN** — every page, dialog, toast, status, step, reason and server message switches with the
+language menu (L(de, en) in app.js, data-de in index.html); dates follow the language. Test walks all pages.
+
 Still open from the client confirmation (2026-10-03): nickname change (after signup or later, separate list),
 automatic stats refresh (after every session + every 30 min), "Über mich Text:" label, photo-rejected display,
 panel fully in German. "Emails" only if the client asks for it.
