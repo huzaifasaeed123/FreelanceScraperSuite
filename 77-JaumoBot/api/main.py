@@ -98,41 +98,50 @@ def _seed():
 
 
 def _relabel_verification_blocks():
-    """One-time fix: reclassify accounts currently marked 'blocked' from their last session's log body.
-    Jaumo signals three different things that the old code all stored as 'blocked':
+    """One-time fix: Jaumo signals three different things the old code all stored as 'blocked'. Classify each
+    account from the strongest signal across ALL its sessions (not just the newest), newest session first:
+      - refresh 400 "#locked / violation of terms"    -> blocked (permanent), with the real reason
       - like 403 code 4031 / "Verification required"  -> verification_required (not a block)
       - like 403 code 4032 / "like_capped"            -> limit_reached        (not a block)
-      - refresh 400 "#locked / violation of terms"    -> stays blocked, with the real reason
-    Reads the newest session's error log lines; changes only matching accounts; no-op once settled."""
+    A permanent lock also catches accounts still marked 'active' (the lock hits on a later refresh).
+    Changes only matching accounts and is a no-op once settled."""
+    def signal(acc):
+        runs = s.exec(select(BotRun).where(BotRun.account_id == acc.id, BotRun.kind != "sync")
+                      .order_by(BotRun.id.desc())).all()
+        for r in runs:
+            blob = (r.reason or "") + " " + " ".join(
+                l.msg or "" for l in s.exec(select(RunLog).where(RunLog.run_id == r.id)
+                                            .order_by(RunLog.id.desc()).limit(200)).all())
+            low = blob.lower()
+            if "#locked" in low or "violation of our terms" in low or ("invalid_grant" in low and "lock" in low):
+                return "locked"
+            if "4031" in blob or "verification required" in low:
+                return "verification_required"
+            if "4032" in blob or "like_capped" in low:
+                return "limit_reached"
+        return None
+
     with Session(engine) as s:
-        blocked = s.exec(select(Account).where(Account.status == "blocked")).all()
-        verif = limit = locked = 0
-        for acc in blocked:
-            last = s.exec(select(BotRun).where(BotRun.account_id == acc.id, BotRun.kind != "sync",
-                                               BotRun.status == "blocked").order_by(BotRun.id.desc())).first()
-            body = " ".join(str(x) for x in (acc.verify_info, last.reason if last else "") if x)
-            if last:
-                for row in s.exec(select(RunLog).where(RunLog.run_id == last.id,
-                                                       RunLog.level.in_(("error", "warning")))
-                                  .order_by(RunLog.id.desc()).limit(40)).all():
-                    body += " " + (row.msg or "")
-            low = body.lower()
-            if "#locked" in low or ("invalid_grant" in low and "lock" in low) or "violation of our terms" in low:
+        # blocked rows can be verification / limit / real lock; active rows can secretly be locked
+        candidates = s.exec(select(Account).where(Account.status.in_(("blocked", "active", "legacy")))).all()
+        counts = {"verification_required": 0, "limit_reached": 0, "locked": 0}
+        for acc in candidates:
+            sig = signal(acc)
+            if sig == "locked" and acc.status != "blocked":
+                acc.status = "blocked"
                 acc.verify_info = acc.verify_info or "Account locked by Jaumo (violation of terms)"
                 s.add(acc)
-                locked += 1   # stays "blocked"
-            elif "4031" in body or "verification required" in low:
-                acc.status = "verification_required"
-                acc.verify_info = acc.verify_info or "Verification required"
+                counts["locked"] += 1
+            elif sig in ("verification_required", "limit_reached") and acc.status == "blocked":
+                acc.status = sig
+                if sig == "verification_required":
+                    acc.verify_info = acc.verify_info or "Verification required"
                 s.add(acc)
-                verif += 1
-            elif "4032" in body or "like_capped" in low:
-                acc.status = "limit_reached"
-                s.add(acc)
-                limit += 1
-        if verif or limit or locked:
+                counts[sig] += 1
+        if any(counts.values()):
             s.commit()
-            print(f"[startup] relabelled blocked accounts: {verif} verification, {limit} limit, {locked} kept locked")
+            print(f"[startup] relabelled accounts: {counts['verification_required']} verification, "
+                  f"{counts['limit_reached']} limit, {counts['locked']} locked")
 
 
 def _import_legacy_accounts():
