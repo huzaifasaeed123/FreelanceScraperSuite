@@ -450,7 +450,8 @@ class RunManager:
             self._submit(rid, self._message_worker)
         return ids
 
-    SWIPE_STATUSES = ("active", "legacy", "stopped")   # set up accounts (stopped = stopped by admin)
+    # set up accounts; blocked / verification_required may be retried (limit clears, verification done in-app)
+    SWIPE_STATUSES = ("active", "legacy", "stopped", "blocked", "verification_required")
 
     def launch_swipe(self, account_ids: list[int]) -> dict:
         """Continue swiping with existing accounts (same worker queue as account creation)."""
@@ -464,8 +465,8 @@ class RunManager:
                                                               BotRun.kind != "sync")).all())
             runs, skipped = [], []
             for acc in accounts:
+                # blocked / verification_required are retryable (limit clears, verification done in the app)
                 reason = ("already working" if acc.id in busy
-                          else "blocked by Jaumo" if acc.status == "blocked"
                           else "account was never fully set up (no photo)" if acc.status not in self.SWIPE_STATUSES
                           else "no login token stored" if not (acc.refresh_token or acc.access_token) else "")
                 if reason:
@@ -966,7 +967,7 @@ class RunManager:
         """
         with Session(engine) as s:
             if all_accounts:
-                accs = s.exec(select(Account).where(Account.status.in_(("active", "legacy", "blocked")))
+                accs = s.exec(select(Account).where(Account.status.in_(("active", "legacy")))
                               .order_by(Account.id)).all()
             else:
                 accs = s.exec(select(Account).where(Account.id.in_(account_ids or [-1]))).all()
@@ -989,6 +990,8 @@ class RunManager:
                 elif min_age_seconds and acc.stats_synced_at and \
                         (now - acc.stats_synced_at).total_seconds() < min_age_seconds:
                     reason = "refreshed recently"
+                elif acc.status == "blocked":
+                    reason = "account is blocked by Jaumo — not refreshed (saves the proxy)"
                 elif not (acc.refresh_token or acc.access_token):
                     reason = "no login token stored"
                 elif acc.stats_synced_at and (now - acc.stats_synced_at).total_seconds() < SYNC_COOLDOWN_SECONDS:

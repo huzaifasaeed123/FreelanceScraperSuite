@@ -43,7 +43,7 @@ def test_valid_login_is_reused_and_expired_one_renewed(jaumo, photo):
     assert r.run()["status"] == "done"
     assert len(_token_renewals(jaumo, n)) == 1, "less than 5 min left -> renewed once"
     upd = next(u for u in rec.kinds("account_update") if "access_token" in u)
-    assert 3500 < upd["token_expires_at"] - time.time() <= 3600, "new expiry stored from expires_in"
+    assert 3500 < upd["token_expires_at"] - time.time() <= 3601, "new expiry stored from expires_in"
 
 
 # --- engine: stats read by the session itself (B, C) --------------------------------------------

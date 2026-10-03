@@ -2656,8 +2656,11 @@ $("#acc-table").addEventListener("click", guard(async (e) => {
 }));
 
 // Accounts that were set up and are not working / blocked can continue swiping.
+// An account that is set up (has a login) can be retried — also after a block or a verification wall,
+// because a daily like-limit clears and a verification done in the app lets it swipe again.
+const RETRYABLE = ["active", "legacy", "stopped", "blocked", "verification_required"];
 function canSwipe(a) {
-  return !a.working && a.has_token !== false && ["active", "legacy", "stopped"].includes(a.status);
+  return !a.working && a.has_token !== false && RETRYABLE.includes(a.status);
 }
 
 async function stopAccounts(ids) {

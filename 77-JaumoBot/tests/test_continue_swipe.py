@@ -126,12 +126,15 @@ def test_stop_then_continue_swiping(app, api, jaumo):
 def test_continue_skips_accounts_that_cannot_swipe(app, api, jaumo):
     cid = setup_ready(api, photos=3, max_swipes=1)
     runs = wait_runs_done(api, ok(api.post("/api/runs", json={"config_id": cid, "count": 2}))["run_ids"])
-    ok_id, blocked_id = runs[0]["account_id"], runs[1]["account_id"]
-    ok(api.patch(f"/api/accounts/{blocked_id}", json={"status": "blocked"}))
+    ok_id, bad_id = runs[0]["account_id"], runs[1]["account_id"]
+    # a blocked account is retryable now; one that was never set up (photo_failed) is still skipped
+    ok(api.patch(f"/api/accounts/{ok_id}", json={"status": "blocked"}))
+    ok(api.patch(f"/api/accounts/{bad_id}", json={"status": "photo_failed"}))
     ok(api.put("/api/config", json={"settings": {"max_swipes": 1, "delays": {**FAST_DELAYS, "between_swipes": [1, 1]}}}))
-    res = ok(api.post("/api/accounts/swipe", json={"account_ids": [ok_id, blocked_id]}))
-    assert len(res["run_ids"]) == 1 and res["skipped"] == [{"id": blocked_id, "name": runs[1]["requested_name"],
-                                                            "reason": "blocked by Jaumo"}]
+    res = ok(api.post("/api/accounts/swipe", json={"account_ids": [ok_id, bad_id]}))
+    assert len(res["run_ids"]) == 1, "the blocked account is accepted for a retry"
+    assert res["skipped"] == [{"id": bad_id, "name": runs[1]["requested_name"],
+                               "reason": "account was never fully set up (no photo)"}]
     r = api.post(f"/api/accounts/{ok_id}/swipe")
     assert r.status_code == 409 and r.json()["detail"] == "already working"
     wait_runs_done(api, res["run_ids"])

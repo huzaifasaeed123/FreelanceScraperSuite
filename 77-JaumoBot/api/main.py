@@ -97,6 +97,27 @@ def _seed():
         s.commit()
 
 
+def _relabel_verification_blocks():
+    """One-time fix: accounts marked 'blocked' whose last session failed on a verification 403
+    (code 4031 / "Verification required") are really verification_required, not blocked. Runs on
+    startup, changes only such accounts, and is a no-op once there are none left."""
+    with Session(engine) as s:
+        blocked = s.exec(select(Account).where(Account.status == "blocked")).all()
+        fixed = 0
+        for acc in blocked:
+            last = s.exec(select(BotRun).where(BotRun.account_id == acc.id, BotRun.kind != "sync",
+                                               BotRun.status == "blocked").order_by(BotRun.id.desc())).first()
+            text = " ".join(str(x) for x in (acc.verify_info, last.reason if last else "") if x)
+            if "verification required" in text.lower() or "4031" in text:
+                acc.status = "verification_required"
+                acc.verify_info = acc.verify_info or (last.reason if last else "Verification required")
+                s.add(acc)
+                fixed += 1
+        if fixed:
+            s.commit()
+            print(f"[startup] relabelled {fixed} account(s) from blocked to verification_required")
+
+
 def _import_legacy_accounts():
     """One-time import of the old accounts.txt (JSON lines) into the Account table."""
     path = cfg.LEGACY_ACCOUNTS_FILE
@@ -148,6 +169,7 @@ async def lifespan(app: FastAPI):
     init_db()
     manager.mark_interrupted()
     _seed()
+    _relabel_verification_blocks()
     _import_legacy_accounts()
     with Session(engine) as s:
         sync_library(s)

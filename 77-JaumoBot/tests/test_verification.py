@@ -69,3 +69,41 @@ def test_account_page_shows_jaumo_message(browser, app, jaumo):
         pg.assert_clean("verification account")
     finally:
         pg.close()
+
+
+def test_blocked_and_verification_accounts_can_be_retried(app, api, jaumo):
+    cid = setup_ready(api, photos=3, max_swipes=5, like_ratio=1.0, block_threshold=3)
+    jaumo.control(verification_required=True)
+    vacc = wait_runs_done(api, ok(api.post("/api/runs", json={"count": 1}))["run_ids"])[0]["account_id"]
+    assert ok(api.get(f"/api/accounts/{vacc}"))["status"] == "verification_required"
+    jaumo.control(block_after_likes=2, verification_required=False)
+    bacc = wait_runs_done(api, ok(api.post("/api/runs", json={"count": 1}))["run_ids"])[0]["account_id"]
+    assert ok(api.get(f"/api/accounts/{bacc}"))["status"] == "blocked"
+
+    # both are retryable; once Jaumo is fine again, swiping heals them to active
+    jaumo.control(block_after_likes=0)
+    ok(api.put("/api/config", json={"settings": {"max_swipes": 2}}))
+    for acc in (vacc, bacc):
+        r = ok(api.post(f"/api/accounts/{acc}/swipe"))
+        run = wait_runs_done(api, r["run_ids"])[0]
+        assert run["status"] == "done", run
+        assert ok(api.get(f"/api/accounts/{acc}"))["status"] == "active", "retry heals the account"
+
+
+def test_blocked_accounts_are_not_auto_refreshed(app, api, jaumo):
+    """A blocked account must not generate stats requests (saves the proxy). Manual bulk/per-account refuse it;
+    the account stays retryable via 'Weiter swipen'."""
+    cid = setup_ready(api, photos=2, max_swipes=5, like_ratio=1.0, block_threshold=2)
+    jaumo.control(block_after_likes=1)
+    acc = wait_runs_done(api, ok(api.post("/api/runs", json={"count": 1}))["run_ids"])[0]["account_id"]
+    assert ok(api.get(f"/api/accounts/{acc}"))["status"] == "blocked"
+    n_before = len([r for r in jaumo.state()["requests"] if r["path"] == "/v2/me/unseen/"])
+
+    # "refresh all" skips it
+    res = ok(api.post("/api/accounts/sync", json={"all": True}))
+    assert acc not in res["run_ids"] and res["run_ids"] == []
+    # a direct refresh is refused with a clear reason
+    r = api.post(f"/api/accounts/{acc}/sync")
+    assert r.status_code == 409 and "blocked by Jaumo" in r.json()["detail"]
+    # no extra stats request hit Jaumo through the proxy
+    assert len([x for x in jaumo.state()["requests"] if x["path"] == "/v2/me/unseen/"]) == n_before

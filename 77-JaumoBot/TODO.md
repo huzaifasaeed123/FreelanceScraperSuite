@@ -340,6 +340,24 @@ not a ban, and it cannot be automated (liveness check in the app).
 
 ---
 
+## 8g. Blocked accounts: retry + stop refreshing them (2026-10-04) — ✅ done
+
+- "Weiter swipen" is now allowed for blocked and verification_required accounts (a like-limit clears, a
+  verification is done in the app). A successful retry heals the account to active.
+- **Blocked accounts are no longer refreshed automatically.** "Refresh all" and the 30-min timer only read
+  active/legacy accounts, so a dead account stops generating proxy traffic. A per-account refresh on a blocked
+  account is refused ("blocked by Jaumo — not refreshed").
+- One-time startup relabel: accounts marked "blocked" whose last 403 was a verification (code 4031) become
+  verification_required. Runs once on deploy, no-op afterwards.
+- tools/diagnose.py (read-only, run `python -m tools.diagnose` on the server): account counts, blocked split
+  into verification / terms-ban / unconfirmed, top failure reasons, last error line per failed account.
+
+OPEN — needs Jaumo's real error bodies to separate for sure: (a) daily like-limit (the ~1500 figure is a GUESS,
+not confirmed), (b) permanent terms/violation block. Ask the client for the [LIKE FAILED] body of a 1500-likes
+account and of SophieTG ("violation of terms"). Then add distinct statuses limit_reached vs blocked(permanent).
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),
