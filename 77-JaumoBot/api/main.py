@@ -1317,7 +1317,17 @@ def health():
     return {"ok": True, "active": manager.active_count()}
 
 
-app.mount("/static", StaticFiles(directory=cfg.FRONTEND_DIR), name="static")
+class RevalidatingStaticFiles(StaticFiles):
+    """Panel files (app.js, style.css) are re-checked with the server on every load (ETag -> 304 when unchanged).
+    Without this a browser keeps an old app.js next to a new index.html after a deploy and parts of the panel break."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
+app.mount("/static", RevalidatingStaticFiles(directory=cfg.FRONTEND_DIR), name="static")
 
 
 @app.get("/")

@@ -95,3 +95,14 @@ def test_editor_adds_text_to_selected_photos(browser, app):
         pg.assert_clean("photo text editor")
     finally:
         pg.close()
+
+
+def test_panel_files_are_revalidated_not_cached_blindly(app):
+    """A browser must re-check app.js / style.css on every load, else an old app.js runs next to a new index.html
+    after a deploy (e.g. the 'Add text' button staying disabled)."""
+    import httpx
+    for path in ("/static/app.js", "/static/style.css"):
+        r = httpx.get(app.url + path)
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", path
+        again = httpx.get(app.url + path, headers={"If-None-Match": r.headers["etag"]})
+        assert again.status_code == 304, "unchanged file -> cheap 'not modified'"
