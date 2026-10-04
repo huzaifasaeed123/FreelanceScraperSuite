@@ -141,6 +141,30 @@ def import_uploads(s: Session, files: list[tuple[str, bytes]]) -> list[dict]:
     return results
 
 
+def overwrite_photo(s: Session, filename: str, raw: bytes) -> dict:
+    """Replace the image of an existing library photo (e.g. after drawing a text overlay in the browser).
+    Only a photo that is still available/reserved may be overwritten; a photo already used by an account
+    is kept for its history. Cleans the new bytes, re-encodes, updates the row, hash and thumbnail."""
+    photo = s.exec(select(Photo).where(Photo.filename == filename)).first()
+    if not photo:
+        raise ValueError("photo not found")
+    used = s.exec(select(Account.id).where(Account.photo == filename)).first()
+    if used:
+        raise ValueError("photo is used by an account and cannot be changed")
+    jpeg, w, h = _clean_jpeg(raw)                      # may raise ValueError (too small / unreadable)
+    digest = hashlib.sha256(jpeg).hexdigest()
+    clash = s.exec(select(Photo.filename).where(Photo.sha256 == digest, Photo.filename != filename)).first()
+    if clash:
+        raise ValueError(f"same image as {clash}")
+    (PHOTOS_DIR / filename).write_bytes(jpeg)
+    _write_thumb(filename, jpeg)
+    photo.sha256, photo.width, photo.height, photo.size = digest, w, h, len(jpeg)
+    photo.rejected_reason, photo.rejected_at = "", None   # a re-edited image gets a fresh chance
+    s.add(photo)
+    s.commit()
+    return {"name": filename, "width": w, "height": h, "size": len(jpeg)}
+
+
 def sync_library(s: Session):
     """Register JPEGs already on disk (e.g. copied into the volume) and drop rows whose file vanished."""
     PHOTOS_DIR.mkdir(parents=True, exist_ok=True)

@@ -2131,6 +2131,7 @@ function updatePhotoSelection() {
   const n = state.photoSelected.size;
   $("#photo-selected").textContent = n ? L(`${n} ausgewählt`, `${n} selected`) : "";
   $("#photo-bulk-delete").disabled = !n;
+  if ($("#photo-add-text")) $("#photo-add-text").disabled = !n;
   const availableShown = $$("#photo-grid [data-sel]").length;
   $("#photo-select-all").disabled = !availableShown;
 }
@@ -2204,9 +2205,146 @@ function openPhotoViewer(name) {
         <dt>${L("Hochgeladen", "Uploaded")}</dt><dd>${fmtDate(p.created_at)}</dd>
         <dt>${L("Original", "Original")}</dt><dd>${esc(p.original_name)}</dd>
         <dt>Account</dt><dd>${p.account ? `<a href="#account/${p.account.id}" data-close>${esc(p.account.name)} #${p.account.id}</a> ${badge(p.account.status)}` : "—"}</dd>
-      </dl></div>`);
+      </dl>
+      ${p.status !== "used" ? `<button class="btn small" id="pv-text">${icon("pencil")}${L("Text hinzufügen", "Add text")}</button>` : ""}</div>`);
+  if ($("#pv-text")) $("#pv-text").onclick = () => { closeModal(); openPhotoText([p.name]); };
   $("#modal-body [data-close]")?.addEventListener("click", closeModal);
 }
+
+// --- Add text onto photos (caption overlay, WYSIWYG via canvas) ---------------------------------
+// The preview and the saved image are the SAME canvas, so what you see is exactly what gets saved.
+const POSITIONS = [["tl", "↖"], ["tc", "↑"], ["tr", "↗"], ["ml", "←"], ["mc", "●"], ["mr", "→"],
+                   ["bl", "↙"], ["bc", "↓"], ["br", "↘"]];
+
+function drawCaption(canvas, img, o) {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, W, H);
+  const text = (o.text || "").trim();
+  if (!text) return;
+  const size = Math.round((o.sizePct / 100) * H);
+  ctx.font = `${o.bold ? "700" : "500"} ${size}px Inter, Arial, sans-serif`;
+  ctx.textAlign = o.pos[1] === "l" ? "left" : o.pos[1] === "r" ? "right" : "center";
+  ctx.textBaseline = o.pos[0] === "t" ? "top" : o.pos[0] === "b" ? "bottom" : "middle";
+  const m = Math.round(H * 0.04);
+  const x = o.pos[1] === "l" ? m : o.pos[1] === "r" ? W - m : W / 2;
+  const y = o.pos[0] === "t" ? m : o.pos[0] === "b" ? H - m : H / 2;
+  if (o.outline) {
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(2, size * 0.14);
+    ctx.strokeStyle = o.outlineColor;
+    ctx.strokeText(text, x, y);
+  }
+  ctx.fillStyle = o.color;
+  ctx.fillText(text, x, y);
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92));
+}
+
+async function openPhotoText(names) {
+  names = names.filter((n) => {
+    const p = state.photos.find((x) => x.name === n);
+    return p && p.status !== "used";   // a photo already on an account is kept for its history
+  });
+  if (!names.length) return toast(L("Keine bearbeitbaren Fotos ausgewählt (benutzte Fotos bleiben unverändert).",
+                                    "No editable photos selected (used photos are kept)."), true);
+  const o = { text: "", sizePct: 7, pos: "mc", color: "#ffffff", bold: true, outline: true, outlineColor: "#000000" };
+  openModal(L("Text auf Fotos", "Add text to photos"), `
+    <div class="txt-editor">
+      <div class="txt-preview"><canvas id="txt-canvas"></canvas>
+        <div class="txt-nav">${names.length > 1 ? `<button class="btn ghost sm" id="txt-prev">${icon("chevronLeft")}</button>
+          <span id="txt-count" class="muted"></span>
+          <button class="btn ghost sm" id="txt-next">${icon("chevronRight")}</button>` : ""}</div></div>
+      <div class="txt-controls">
+        <label>${L("Text", "Text")}<input id="txt-text" placeholder="${L("z. B. @SofiheyTelegram", "e.g. @SofiheyTelegram")}" autocomplete="off"></label>
+        <div class="txt-row">
+          <label>${L("Größe", "Size")}<input type="range" id="txt-size" min="3" max="18" value="${o.sizePct}"></label>
+          <label class="txt-check"><input type="checkbox" id="txt-bold" checked> ${L("Fett", "Bold")}</label>
+        </div>
+        <div class="txt-row">
+          <label>${L("Farbe", "Colour")}<input type="color" id="txt-color" value="${o.color}"></label>
+          <label class="txt-check"><input type="checkbox" id="txt-outline" checked> ${L("Umrandung", "Outline")}</label>
+          <label>${L("Umrandungsfarbe", "Outline colour")}<input type="color" id="txt-ocolor" value="${o.outlineColor}"></label>
+        </div>
+        <div><div class="lbl">${L("Position", "Position")}</div>
+          <div class="txt-grid" id="txt-grid">${POSITIONS.map(([k, s]) =>
+            `<button type="button" data-pos="${k}" class="${k === o.pos ? "on" : ""}">${s}</button>`).join("")}</div></div>
+        <p class="field-hint">${L(`Wird auf ${names.length} ausgewählte(s) Foto(s) angewendet und überschreibt sie.`,
+                                 `Applied to ${names.length} selected photo(s), overwriting them.`)}</p>
+        <p class="error" id="txt-error"></p>
+        <div class="modal-foot"><button type="button" class="btn ghost" data-close-modal>${esc(t("common.cancel"))}</button>
+          <button class="btn primary" id="txt-apply">${icon("check")}${L("Anwenden", "Apply")}</button></div>
+      </div>
+    </div>`);
+
+  const canvas = $("#txt-canvas");
+  const imgs = {};
+  let idx = 0;
+  const loadImg = (name) => new Promise((res) => {
+    if (imgs[name]) return res(imgs[name]);
+    const im = new Image();
+    im.crossOrigin = "anonymous";
+    im.onload = () => { imgs[name] = im; res(im); };
+    im.onerror = () => res(null);
+    im.src = `/api/photos/${encodeURIComponent(name)}/file`;
+  });
+  const render = async () => {
+    if ($("#txt-count")) $("#txt-count").textContent = `${idx + 1} / ${names.length}`;   // at once, not after the load
+    const shown = idx;
+    const im = await loadImg(names[shown]);
+    if (im && shown === idx) drawCaption(canvas, im, o);   // ignore a late image if the user already moved on
+  };
+  const read = () => {
+    o.text = $("#txt-text").value;
+    o.sizePct = +$("#txt-size").value;
+    o.bold = $("#txt-bold").checked;
+    o.color = $("#txt-color").value;
+    o.outline = $("#txt-outline").checked;
+    o.outlineColor = $("#txt-ocolor").value;
+  };
+  $("#txt-text").oninput = $("#txt-size").oninput = () => { read(); render(); };
+  ["txt-bold", "txt-color", "txt-outline", "txt-ocolor"].forEach((id) => { $(`#${id}`).onchange = () => { read(); render(); }; });
+  $("#txt-grid").onclick = (e) => {
+    const b = e.target.closest("[data-pos]");
+    if (!b) return;
+    o.pos = b.dataset.pos;
+    $$("#txt-grid button").forEach((x) => x.classList.toggle("on", x === b));
+    render();
+  };
+  if ($("#txt-prev")) $("#txt-prev").onclick = () => { idx = (idx - 1 + names.length) % names.length; render(); };
+  if ($("#txt-next")) $("#txt-next").onclick = () => { idx = (idx + 1) % names.length; render(); };
+  await render();
+
+  $("#txt-apply").onclick = guard(async () => {
+    read();
+    if (!o.text.trim()) { $("#txt-error").textContent = L("Bitte einen Text eingeben.", "Please enter some text."); return; }
+    const btn = $("#txt-apply");
+    btn.disabled = true;
+    let done = 0;
+    const fails = [];
+    for (const name of names) {
+      const im = await loadImg(name);
+      if (!im) { fails.push(`${name}: load`); continue; }
+      drawCaption(canvas, im, o);
+      const blob = await canvasToBlob(canvas);
+      const fd = new FormData();
+      fd.append("file", blob, name);
+      try {
+        await api(`/api/photos/${encodeURIComponent(name)}/overwrite`, { method: "POST", body: fd });
+        done++;
+      } catch (err) { fails.push(`${name}: ${err.message}`); }
+    }
+    closeModal();
+    toast(L(`${done} Foto(s) mit Text gespeichert${fails.length ? ` · ${fails.length} fehlgeschlagen` : ""}`,
+            `${done} photo(s) saved with text${fails.length ? ` · ${fails.length} failed` : ""}`), fails.length && !done);
+    state.photoSelected.clear();
+    await loadPhotos();
+  });
+}
+$("#photo-add-text").onclick = guard(() => openPhotoText([...state.photoSelected]));
 
 // --- Upload ------------------------------------------------------------------
 

@@ -376,6 +376,19 @@ Read the production database over SSH. The four "blocked" accounts were NOT all 
 
 ---
 
+## 8i. Text overlay on photos (2026-10-04) — ✅ done
+
+Client request: put a caption (e.g. a Telegram handle) onto profile photos, one / several / all photos.
+- Photos page: select photos -> "Text hinzufügen" (or the button in a single photo's viewer). Editor with a live
+  canvas preview: text, size, bold, colour, outline + outline colour, 9 positions, prev/next across the selection.
+- The browser draws the caption on a canvas and sends that exact image, so preview == saved file. The server
+  (`POST /api/photos/{name}/overwrite`) cleans it with the normal pipeline, re-hashes it, rewrites file + thumbnail.
+- Overwrites the chosen photos (client's choice). A photo already used by an account is kept for its history;
+  an identical image to another library photo is refused; a rejected photo gets a fresh chance after editing.
+- Tests: 151 passing.
+
+---
+
 ## 9. Tests
 
 9.1 Add tests for: city radius (engine + stored coordinates), relationship dropdown values (§4.6),

@@ -1112,3 +1112,19 @@ details.form-section.adv>:last-child{margin-bottom:14px}
 /* account status: like limit reached (capped, not a block) */
 .state-badge.limit { background: rgba(245, 176, 76, .14); color: #f5b04c; border: 1px solid rgba(245, 176, 76, .35); }
 :root:not([data-theme="dark"]) .state-badge.limit { color: #b45309; }
+
+/* Photo text editor */
+.txt-editor { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 640px) { .txt-editor { grid-template-columns: 1fr; } }
+.txt-preview { display: flex; flex-direction: column; gap: 8px; }
+.txt-preview canvas { width: 100%; height: auto; max-height: 56vh; object-fit: contain; border-radius: 10px; background: #000; }
+.txt-nav { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.txt-controls { display: flex; flex-direction: column; gap: 12px; }
+.txt-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 500; }
+.txt-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.txt-check { flex-direction: row !important; align-items: center; gap: 6px; }
+.txt-controls input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; }
+.txt-controls input[type=range] { accent-color: var(--accent); }
+.txt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 150px; }
+.txt-grid button { padding: 7px 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 14px; }
+.txt-grid button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }

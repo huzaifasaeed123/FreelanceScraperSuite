@@ -26,7 +26,7 @@ from .auth import (COOKIE_NAME, check_credentials, is_https, make_token, require
 from .manager import (ACTIVE_STATUSES, BOT_DEFAULTS, IDENTITY_DEFAULTS, Hub, RunManager, event_public,
                       about_pool_for, about_usage, get_bot_settings, get_identity, get_main_config, name_pool_for,
                       name_usage, rename_pool_for, rename_usage, run_public)
-from .photolib import THUMBS_DIR, delete_photo_files, import_uploads, photo_usage, sync_library
+from .photolib import overwrite_photo, THUMBS_DIR, delete_photo_files, import_uploads, photo_usage, sync_library
 from .models import (Account, AccountEvent, ApkProfile, AppSetting, BotConfig, BotRun, Photo, Proxy, RunLog, engine,
                      get_session, init_db, iso, utcnow)
 from .proxies import parse_proxy_line, save_test_result, split_lines, test_proxy
@@ -907,6 +907,16 @@ def upload_photos(files: list[UploadFile] = File(...), s: Session = Depends(get_
     results = import_uploads(s, payload)
     counts = {k: sum(1 for r in results if r["status"] == k) for k in ("saved", "duplicate", "error")}
     return {**counts, "results": results}
+
+
+@app.post("/api/photos/{name}/overwrite", dependencies=auth)
+def overwrite_photo_image(name: str, file: UploadFile = File(...), s: Session = Depends(get_session)):
+    """Replace a library photo's image with the uploaded one (the browser sends the photo with the text
+    overlay already drawn, so the preview and the saved image match exactly)."""
+    try:
+        return overwrite_photo(s, name, file.file.read())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/photos/{name}/release", dependencies=auth)
