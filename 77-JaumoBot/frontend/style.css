@@ -1128,3 +1128,12 @@ details.form-section.adv>:last-child{margin-bottom:14px}
 .txt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 150px; }
 .txt-grid button { padding: 7px 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 14px; }
 .txt-grid button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+/* several text lines in the photo editor */
+.txt-lines { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.txt-line { padding: 6px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-2);
+  cursor: pointer; font-size: 12.5px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; }
+.txt-line.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.txt-line.add, .txt-line.del { padding: 6px 9px; }
+.txt-line.del { color: var(--danger); }
+.txt-controls textarea { resize: vertical; min-height: 54px; }

@@ -1,6 +1,7 @@
 """Text overlay on library photos: the browser draws the caption, the server cleans + overwrites the photo."""
 
 import hashlib
+from pathlib import Path
 import io
 
 from PIL import Image, ImageDraw
@@ -106,3 +107,109 @@ def test_panel_files_are_revalidated_not_cached_blindly(app):
         assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", path
         again = httpx.get(app.url + path, headers={"If-None-Match": r.headers["etag"]})
         assert again.status_code == 304, "unchanged file -> cheap 'not modified'"
+
+
+# --- several text lines (client: "one line on top and something below it") ---------------------------
+
+def _flat_photo(api, colour=(16, 24, 40), size=(800, 1000)):
+    buf = io.BytesIO()
+    Image.new("RGB", size, colour).save(buf, "JPEG", quality=95)
+    ok(api.post("/api/photos", files=[("files", ("flat.jpg", buf.getvalue(), "image/jpeg"))]))
+    return "flat.jpg"
+
+
+def _light_rows(path, y0, y1):
+    """How many pixels in the band y0..y1 (fractions of the height) are near white."""
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        w, h = im.size
+        return sum(1 for y in range(int(h * y0), int(h * y1), 2) for x in range(0, w, 2)
+                   if min(im.getpixel((x, y))) > 200)
+
+
+def test_rows_of_one_line_are_stacked(browser, app):
+    """Enter inside a line makes a second row under the first (no overlap): 1 row = 1 text band, 2 rows = 2."""
+    pg = Page(browser, app).login("photos")
+    try:
+        script = """async (text) => {
+          const c = document.createElement("canvas"); c.width = 600; c.height = 800;
+          const g = c.getContext("2d"); g.fillStyle = "#101820"; g.fillRect(0, 0, 600, 800);
+          const img = new Image(); img.src = c.toDataURL("image/png"); await img.decode();
+          const out = document.createElement("canvas");
+          drawCaption(out, img, [{ text, sizePct: 8, pos: "mc", color: "#ffffff", bold: true, outline: false, outlineColor: "#000000" }]);
+          const d = out.getContext("2d").getImageData(0, 0, 600, 800).data;
+          let bands = 0, prev = false;
+          for (let y = 0; y < 800; y++) {
+            let hit = false;
+            for (let x = 0; x < 600 && !hit; x++) { const i = (y * 600 + x) * 4; hit = d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200; }
+            if (hit && !prev) bands++;
+            prev = hit;
+          }
+          return bands;
+        }"""
+        assert pg.p.evaluate(script, "ABC") == 1
+        assert pg.p.evaluate(script, "ABC\nXYZ") == 2, "the second row sits under the first one"
+        assert pg.p.evaluate(script, "ABC\n\n  \nXYZ") == 2, "empty rows are ignored"
+    finally:
+        pg.close()
+
+
+def test_two_text_lines_top_and_bottom_on_the_saved_photo(browser, app):
+    api = app.client()
+    setup_ready(api, photos=0)
+    name = _flat_photo(api)
+    pg = Page(browser, app).login("photos")
+    try:
+        pg.p.wait_for_selector("#photo-grid .photo-card")
+        pg.p.locator("#photo-grid [data-sel]").nth(0).check()
+        pg.p.click("#photo-add-text")
+        pg.p.wait_for_function("document.querySelector('#txt-canvas').width > 0")
+        pg.p.fill("#txt-text", "Oben")
+        pg.p.click('#txt-grid [data-pos="tc"]')
+        pg.p.click("#txt-add")
+        assert pg.p.locator("#txt-lines .txt-line[data-line]").count() == 2
+        assert pg.p.get_attribute('#txt-grid [data-pos="mc"]', "class") == "on", "a new line starts at a free spot"
+        assert pg.p.input_value("#txt-text") == "", "the new line starts empty"
+        pg.p.fill("#txt-text", "Unten")
+        pg.p.click('#txt-grid [data-pos="bc"]')
+        # going back to line 1 shows its own settings
+        pg.p.click('#txt-lines [data-line="0"]')
+        assert pg.p.input_value("#txt-text") == "Oben"
+        assert pg.p.get_attribute('#txt-grid [data-pos="tc"]', "class") == "on"
+        pg.p.click("#txt-apply")
+        pg.p.wait_for_selector("#txt-canvas", state="detached", timeout=20000)
+        path = Path(app.storage) / "photos" / name
+        assert _light_rows(path, 0.0, 0.18) > 150, "line 1 is at the top"
+        assert _light_rows(path, 0.82, 1.0) > 150, "line 2 is at the bottom"
+        assert _light_rows(path, 0.30, 0.70) == 0, "nothing in the middle"
+        pg.assert_clean("two text lines")
+    finally:
+        pg.close()
+
+
+def test_long_text_shrinks_to_fit_instead_of_being_cut_off(browser, app):
+    """A caption wider than the photo must not be cropped at the edges: it shrinks until it fits."""
+    pg = Page(browser, app).login("photos")
+    try:
+        script = """async (text) => {
+          const c = document.createElement("canvas"); c.width = 600; c.height = 800;
+          const g = c.getContext("2d"); g.fillStyle = "#101820"; g.fillRect(0, 0, 600, 800);
+          const img = new Image(); img.src = c.toDataURL("image/png"); await img.decode();
+          const out = document.createElement("canvas");
+          drawCaption(out, img, [{ text, sizePct: 12, pos: "mc", color: "#ffffff", bold: true, outline: true, outlineColor: "#000000" }]);
+          const d = out.getContext("2d").getImageData(0, 0, 600, 800).data;
+          let left = 600, right = -1;
+          for (let y = 0; y < 800; y++) for (let x = 0; x < 600; x++) {
+            const i = (y * 600 + x) * 4;
+            if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) { left = Math.min(left, x); right = Math.max(right, x); }
+          }
+          return [left, right];
+        }"""
+        left, right = pg.p.evaluate(script, "Lustkreis.com SecretDesire und noch viel mehr Text")
+        assert left > 5 and right < 594, f"text touches/leaves the photo edge: {left}..{right}"
+        assert right - left > 300, "still large and readable, only as small as needed"
+        # a short text keeps the chosen size (is not shrunk)
+        short_left, short_right = pg.p.evaluate(script, "Hi")
+        assert short_right - short_left < 150
+    finally:
+        pg.close()

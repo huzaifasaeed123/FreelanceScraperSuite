@@ -385,7 +385,11 @@ Client request: put a caption (e.g. a Telegram handle) onto profile photos, one 
   (`POST /api/photos/{name}/overwrite`) cleans it with the normal pipeline, re-hashes it, rewrites file + thumbnail.
 - Overwrites the chosen photos (client's choice). A photo already used by an account is kept for its history;
   an identical image to another library photo is refused; a rejected photo gets a fresh chance after editing.
-- Tests: 151 passing.
+- Follow-up (client: "I can only do one line"): the editor now has several text LINES, each with its own text,
+  position, size, colour and outline; a line can have several rows (Enter). A new line starts at a free spot so it
+  does not cover the previous one (max 6). A long text shrinks to fit the photo width instead of being cut off;
+  the size slider is the maximum.
+- Tests: 30 browser/photo tests pass.
 
 ---
 

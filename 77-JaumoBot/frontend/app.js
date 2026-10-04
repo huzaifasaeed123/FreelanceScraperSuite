@@ -2215,29 +2215,50 @@ function openPhotoViewer(name) {
 // The preview and the saved image are the SAME canvas, so what you see is exactly what gets saved.
 const POSITIONS = [["tl", "↖"], ["tc", "↑"], ["tr", "↗"], ["ml", "←"], ["mc", "●"], ["mr", "→"],
                    ["bl", "↙"], ["bc", "↓"], ["br", "↘"]];
+const MAX_TEXT_LINES = 6;
+// a new text line starts at the first free spot of these, so it does not land on top of the previous one
+const NEW_LINE_SPOTS = ["mc", "tc", "bc", "ml", "mr", "tl", "tr", "bl", "br"];
 
-function drawCaption(canvas, img, o) {
+function newTextLine(used) {
+  const pos = NEW_LINE_SPOTS.find((s) => !used.includes(s)) || "mc";
+  return { text: "", sizePct: 7, pos, color: "#ffffff", bold: true, outline: true, outlineColor: "#000000" };
+}
+
+// Draw every text line onto the photo. One line can have several rows (Enter); they are stacked at its anchor.
+function drawCaption(canvas, img, lines) {
   const W = img.naturalWidth, H = img.naturalHeight;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, W, H);
-  const text = (o.text || "").trim();
-  if (!text) return;
-  const size = Math.round((o.sizePct / 100) * H);
-  ctx.font = `${o.bold ? "700" : "500"} ${size}px Inter, Arial, sans-serif`;
-  ctx.textAlign = o.pos[1] === "l" ? "left" : o.pos[1] === "r" ? "right" : "center";
-  ctx.textBaseline = o.pos[0] === "t" ? "top" : o.pos[0] === "b" ? "bottom" : "middle";
-  const m = Math.round(H * 0.04);
-  const x = o.pos[1] === "l" ? m : o.pos[1] === "r" ? W - m : W / 2;
-  const y = o.pos[0] === "t" ? m : o.pos[0] === "b" ? H - m : H / 2;
-  if (o.outline) {
-    ctx.lineJoin = "round";
-    ctx.lineWidth = Math.max(2, size * 0.14);
-    ctx.strokeStyle = o.outlineColor;
-    ctx.strokeText(text, x, y);
+  for (const o of lines) {
+    const rows = String(o.text || "").split("\n").map((r) => r.trim()).filter(Boolean);
+    if (!rows.length) continue;
+    const m = Math.round(H * 0.04);
+    const setFont = (px) => { ctx.font = `${o.bold ? "700" : "500"} ${px}px Inter, Arial, sans-serif`; };
+    let size = Math.round((o.sizePct / 100) * H);
+    setFont(size);
+    // the size is a maximum: a long text shrinks (all rows of the line together) until it fits the photo width
+    const widest = Math.max(...rows.map((r) => ctx.measureText(r).width));
+    const room = W - 2 * m - (o.outline ? size * 0.14 : 0);
+    if (widest > room) { size = Math.max(8, Math.floor((size * room) / widest)); setFont(size); }
+    const lead = Math.round(size * 1.2);
+    ctx.textAlign = o.pos[1] === "l" ? "left" : o.pos[1] === "r" ? "right" : "center";
+    ctx.textBaseline = "middle";
+    const x = o.pos[1] === "l" ? m : o.pos[1] === "r" ? W - m : W / 2;
+    const block = lead * rows.length;
+    const top = o.pos[0] === "t" ? m : o.pos[0] === "b" ? H - m - block : (H - block) / 2;
+    rows.forEach((row, n) => {
+      const y = top + lead * n + lead / 2;
+      if (o.outline) {
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(2, size * 0.14);
+        ctx.strokeStyle = o.outlineColor;
+        ctx.strokeText(row, x, y);
+      }
+      ctx.fillStyle = o.color;
+      ctx.fillText(row, x, y);
+    });
   }
-  ctx.fillStyle = o.color;
-  ctx.fillText(text, x, y);
 }
 
 function canvasToBlob(canvas) {
@@ -2251,7 +2272,8 @@ async function openPhotoText(names) {
   });
   if (!names.length) return toast(L("Keine bearbeitbaren Fotos ausgewählt (benutzte Fotos bleiben unverändert).",
                                     "No editable photos selected (used photos are kept)."), true);
-  const o = { text: "", sizePct: 7, pos: "mc", color: "#ffffff", bold: true, outline: true, outlineColor: "#000000" };
+  const lines = [newTextLine([])];
+  let cur = 0;
   openModal(L("Text auf Fotos", "Add text to photos"), `
     <div class="txt-editor">
       <div class="txt-preview"><canvas id="txt-canvas"></canvas>
@@ -2259,19 +2281,20 @@ async function openPhotoText(names) {
           <span id="txt-count" class="muted"></span>
           <button class="btn ghost sm" id="txt-next">${icon("chevronRight")}</button>` : ""}</div></div>
       <div class="txt-controls">
-        <label>${L("Text", "Text")}<input id="txt-text" placeholder="${L("z. B. @SofiheyTelegram", "e.g. @SofiheyTelegram")}" autocomplete="off"></label>
+        <div><div class="lbl">${L("Textzeilen", "Text lines")}</div><div class="txt-lines" id="txt-lines"></div></div>
+        <label>${L("Text (Enter = neue Reihe)", "Text (Enter = new row)")}
+          <textarea id="txt-text" rows="2" placeholder="${L("z. B. @SofiheyTelegram", "e.g. @SofiheyTelegram")}"></textarea></label>
         <div class="txt-row">
-          <label>${L("Größe", "Size")}<input type="range" id="txt-size" min="3" max="18" value="${o.sizePct}"></label>
+          <label>${L("Größe", "Size")}<input type="range" id="txt-size" min="3" max="18" value="7"></label>
           <label class="txt-check"><input type="checkbox" id="txt-bold" checked> ${L("Fett", "Bold")}</label>
         </div>
         <div class="txt-row">
-          <label>${L("Farbe", "Colour")}<input type="color" id="txt-color" value="${o.color}"></label>
+          <label>${L("Farbe", "Colour")}<input type="color" id="txt-color" value="#ffffff"></label>
           <label class="txt-check"><input type="checkbox" id="txt-outline" checked> ${L("Umrandung", "Outline")}</label>
-          <label>${L("Umrandungsfarbe", "Outline colour")}<input type="color" id="txt-ocolor" value="${o.outlineColor}"></label>
+          <label>${L("Umrandungsfarbe", "Outline colour")}<input type="color" id="txt-ocolor" value="#000000"></label>
         </div>
-        <div><div class="lbl">${L("Position", "Position")}</div>
-          <div class="txt-grid" id="txt-grid">${POSITIONS.map(([k, s]) =>
-            `<button type="button" data-pos="${k}" class="${k === o.pos ? "on" : ""}">${s}</button>`).join("")}</div></div>
+        <div><div class="lbl">${L("Position dieser Zeile", "Position of this line")}</div>
+          <div class="txt-grid" id="txt-grid">${POSITIONS.map(([k, s]) => `<button type="button" data-pos="${k}">${s}</button>`).join("")}</div></div>
         <p class="field-hint">${L(`Wird auf ${names.length} ausgewählte(s) Foto(s) angewendet und überschreibt sie.`,
                                  `Applied to ${names.length} selected photo(s), overwriting them.`)}</p>
         <p class="error" id="txt-error"></p>
@@ -2295,9 +2318,21 @@ async function openPhotoText(names) {
     if ($("#txt-count")) $("#txt-count").textContent = `${idx + 1} / ${names.length}`;   // at once, not after the load
     const shown = idx;
     const im = await loadImg(names[shown]);
-    if (im && shown === idx) drawCaption(canvas, im, o);   // ignore a late image if the user already moved on
+    if (im && shown === idx) drawCaption(canvas, im, lines);   // ignore a late image if the user already moved on
+  };
+  // controls <-> the selected text line
+  const fill = () => {
+    const o = lines[cur];
+    $("#txt-text").value = o.text;
+    $("#txt-size").value = o.sizePct;
+    $("#txt-bold").checked = o.bold;
+    $("#txt-color").value = o.color;
+    $("#txt-outline").checked = o.outline;
+    $("#txt-ocolor").value = o.outlineColor;
+    $$("#txt-grid button").forEach((b) => b.classList.toggle("on", b.dataset.pos === o.pos));
   };
   const read = () => {
+    const o = lines[cur];
     o.text = $("#txt-text").value;
     o.sizePct = +$("#txt-size").value;
     o.bold = $("#txt-bold").checked;
@@ -2305,22 +2340,47 @@ async function openPhotoText(names) {
     o.outline = $("#txt-outline").checked;
     o.outlineColor = $("#txt-ocolor").value;
   };
-  $("#txt-text").oninput = $("#txt-size").oninput = () => { read(); render(); };
+  const renderLines = () => {
+    $("#txt-lines").innerHTML = lines.map((o, n) => {
+      const label = (o.text.trim().split("\n")[0] || "").slice(0, 14);
+      return `<button type="button" class="txt-line${n === cur ? " on" : ""}" data-line="${n}">${n + 1}${label ? ` · ${esc(label)}` : ""}</button>`;
+    }).join("") + (lines.length < MAX_TEXT_LINES
+      ? `<button type="button" class="txt-line add" id="txt-add" title="${L("Weitere Textzeile", "Another text line")}">${icon("plus")}</button>` : "")
+      + (lines.length > 1 ? `<button type="button" class="txt-line del" id="txt-del" title="${L("Diese Zeile entfernen", "Remove this line")}">${icon("trash")}</button>` : "");
+  };
+  const refresh = () => { renderLines(); fill(); render(); };
+
+  $("#txt-text").oninput = $("#txt-size").oninput = () => { read(); renderLines(); render(); };
   ["txt-bold", "txt-color", "txt-outline", "txt-ocolor"].forEach((id) => { $(`#${id}`).onchange = () => { read(); render(); }; });
   $("#txt-grid").onclick = (e) => {
     const b = e.target.closest("[data-pos]");
     if (!b) return;
-    o.pos = b.dataset.pos;
+    lines[cur].pos = b.dataset.pos;
     $$("#txt-grid button").forEach((x) => x.classList.toggle("on", x === b));
     render();
   };
+  $("#txt-lines").onclick = (e) => {
+    if (e.target.closest("#txt-add")) {
+      read();
+      lines.push(newTextLine(lines.map((l) => l.pos)));
+      cur = lines.length - 1;
+      return refresh();
+    }
+    if (e.target.closest("#txt-del")) {
+      lines.splice(cur, 1);
+      cur = Math.min(cur, lines.length - 1);
+      return refresh();
+    }
+    const b = e.target.closest("[data-line]");
+    if (b) { read(); cur = +b.dataset.line; refresh(); }
+  };
   if ($("#txt-prev")) $("#txt-prev").onclick = () => { idx = (idx - 1 + names.length) % names.length; render(); };
   if ($("#txt-next")) $("#txt-next").onclick = () => { idx = (idx + 1) % names.length; render(); };
-  await render();
+  refresh();
 
   $("#txt-apply").onclick = guard(async () => {
     read();
-    if (!o.text.trim()) { $("#txt-error").textContent = L("Bitte einen Text eingeben.", "Please enter some text."); return; }
+    if (!lines.some((o) => o.text.trim())) { $("#txt-error").textContent = L("Bitte einen Text eingeben.", "Please enter some text."); return; }
     const btn = $("#txt-apply");
     btn.disabled = true;
     let done = 0;
@@ -2328,7 +2388,7 @@ async function openPhotoText(names) {
     for (const name of names) {
       const im = await loadImg(name);
       if (!im) { fails.push(`${name}: load`); continue; }
-      drawCaption(canvas, im, o);
+      drawCaption(canvas, im, lines);
       const blob = await canvasToBlob(canvas);
       const fd = new FormData();
       fd.append("file", blob, name);
