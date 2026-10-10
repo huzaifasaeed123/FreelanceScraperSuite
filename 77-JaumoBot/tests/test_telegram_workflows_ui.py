@@ -113,6 +113,7 @@ def build_brief_workflow(page):
 def test_german_walkthrough_builds_reorders_saves_and_reloads(ui):
     app, api, open_page, dialogs = ui
     page, problems = open_page("de")
+    page.wait_for_selector(f"{T} >> text=Noch kein Ablauf gespeichert")        # the list loads after the title (slow machine)
     assert "Noch kein Ablauf gespeichert" in page.inner_text(T)
 
     build_brief_workflow(page)

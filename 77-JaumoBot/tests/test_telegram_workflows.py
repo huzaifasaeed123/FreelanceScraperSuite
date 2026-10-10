@@ -350,7 +350,7 @@ def test_a_file_must_match_the_step_type(tg):
 
 def test_step_types_are_registered_in_one_place():
     import modules.telegram.api as tg_api
-    assert set(tg_api.STEP_TYPES) == {"text", "image", "voice"}
+    assert set(tg_api.STEP_TYPES) == {"text", "image", "voice", "block"}
     tg_api.STEP_TYPES["probe"] = lambda step: {"content": "ok"}
     try:
         assert tg_api._clean_steps([{"type": "probe", "pause_after": 2}]) == [{"type": "probe", "content": "ok", "pause_after": 2}]
