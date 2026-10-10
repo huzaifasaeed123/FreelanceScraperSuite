@@ -554,21 +554,37 @@ const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 // ---------------------------------------------------------------------------
 
 let modalOnClose = null;
+let modalOpener = null;   // what had the focus before the dialog opened, so closing gives it back
+const modalFocusable = () => $$("#modal button:not([disabled]), #modal [href], #modal input:not([disabled]):not([type=hidden]), #modal select:not([disabled]), #modal textarea:not([disabled]), #modal [tabindex]:not([tabindex='-1'])")
+  .filter((el) => el.offsetParent !== null);
 function openModal(title, html, onClose) {
+  if ($("#modal").classList.contains("hidden")) modalOpener = document.activeElement;
   $("#modal-title").textContent = title;
   $("#modal-body").innerHTML = html;
   $("#modal").classList.remove("hidden");
   modalOnClose = onClose || null;
+  const first = modalFocusable().find((el) => el.closest("#modal-body")) || $("#modal-close");   // a dialog may refine this
+  first.focus();
 }
 function closeModal() {
   $("#modal").classList.add("hidden");
   $("#modal-body").innerHTML = "";
+  if (modalOpener && modalOpener.isConnected) modalOpener.focus();
+  modalOpener = null;
   if (modalOnClose) { const f = modalOnClose; modalOnClose = null; f(); }
 }
 $("#modal-close").onclick = closeModal;
 $("#modal").addEventListener("click", (e) => { if (e.target.closest("[data-close-modal]")) closeModal(); });
 $("#modal").addEventListener("mousedown", (e) => { if (e.target.id === "modal") closeModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#modal").classList.contains("hidden")) closeModal(); });
+document.addEventListener("keydown", (e) => {
+  if ($("#modal").classList.contains("hidden")) return;
+  if (e.key === "Escape") return closeModal();
+  if (e.key !== "Tab") return;
+  const items = modalFocusable();       // Tab cycles inside the dialog, never into the page behind it
+  if (!items.length) return e.preventDefault();
+  const at = items.indexOf(document.activeElement);
+  if (e.shiftKey ? at <= 0 : at === items.length - 1 || at < 0) { e.preventDefault(); items[e.shiftKey ? items.length - 1 : 0].focus(); }
+});
 
 // ---------------------------------------------------------------------------
 // State
@@ -598,6 +614,7 @@ function showLogin() {
   $("#app-view").classList.add("hidden");
   $("#login-view").classList.remove("hidden");
   closeEvents();
+  stopModules();
 }
 
 async function showApp(user) {
@@ -609,7 +626,8 @@ async function showApp(user) {
     $("#top-username").textContent = user;
     $("#top-avatar").textContent = user.charAt(0).toUpperCase();
   }
-  await Promise.all([loadConfig(), loadPhotos()]);
+  await Promise.all([loadConfig(), loadPhotos(), loadModules()]);
+  startModules();
   guard(loadStats)();
   checkServerVersion();
   openEvents();
@@ -657,13 +675,14 @@ function switchTab(route) {
   if (m) { tab = "account"; arg = +m[1]; }
   if (tab !== "account" && !TAB_LOADERS[tab]) tab = "dashboard";
   if (tab !== "account") closeAccountStreams();
+  leaveModuleTab(state.tab);
   state.tab = tab;
   $("#app-view").dataset.tab = tab;
   const hash = "#" + (arg ? `account/${arg}` : tab);
   if (location.hash !== hash) history.replaceState(null, "", hash);
   const navTab = tab === "account" ? "accounts" : tab;
   $$("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === navTab));
-  if (navTab !== "dashboard") $("#nav-jaumo").classList.remove("collapsed");   // the Jaumo group holds every other page
+  $$(".sb-group").forEach((g) => { if (g.querySelector(`[data-tab="${navTab}"]`)) g.classList.remove("collapsed"); });   // open the group that holds this page
   $$(".tab").forEach((s) => s.classList.toggle("hidden", s.id !== "tab-" + tab));
   $("#app-view").classList.remove("nav-open");
   window.scrollTo(0, 0);
@@ -673,6 +692,141 @@ window.addEventListener("hashchange", () => {
   if (!$("#app-view").classList.contains("hidden")) switchTab(location.hash.slice(1) || "dashboard");
 });
 $$("#tabs button").forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
+
+// ---------------------------------------------------------------------------
+// Bot modules. The server lists them (GET /api/modules, from modules/<key>/): each gets a sidebar group
+// and one empty tab section per nav entry. Its panel.js is loaded the first time one of its tabs opens and
+// registers itself as PanelModules[key] = { open(tab, el, mod), close(tab) }. Tab ids are "<key>-<tab>".
+// ---------------------------------------------------------------------------
+
+// Live events of a module (hub channel "<key>:events"); reconnects by itself until close() is called.
+// onOpen runs every time the connection is (re)established: events sent in between are lost, so re-read what you show.
+function moduleSocket(key, onMessage, onOpen) {
+  let ws = null, timer = null, closed = false;
+  const open = () => {
+    ws = new WebSocket(wsUrl(`/ws/modules/${key}`));
+    if (onOpen) ws.onopen = onOpen;
+    ws.onmessage = (e) => {
+      let msg;
+      try { msg = JSON.parse(e.data); } catch { return; }
+      if (msg.type !== "ping") onMessage(msg);
+    };
+    ws.onclose = () => { if (!closed) timer = setTimeout(open, 3000); };
+  };
+  open();
+  return { close() { closed = true; clearTimeout(timer); if (ws) ws.close(); } };
+}
+
+window.PanelModules = {};
+window.PanelKit = {   // what a module's panel.js may use, so it looks and behaves like the rest of the panel
+  api, toast, guard, esc, icon, hydrateIcons, openModal, closeModal, wsUrl, fmtDate, relTime, fmtNum, pct,
+  kpiTile, L, t, applyI18n, throttle, debounce, $, $$, moduleSocket,
+  get lang() { return LANG; },
+};
+const MODULE_TABS = {};   // tab id -> { mod, tab }
+const MODULES = [];       // the modules that have a panel.js
+const panelLoads = {};    // module key -> Promise of its registered panel
+let modulesBuilt = false;
+
+function loadPanelScript(mod) {
+  if (!panelLoads[mod.key]) {
+    panelLoads[mod.key] = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = mod.panel;
+      s.onload = () => (window.PanelModules[mod.key]
+        ? resolve(window.PanelModules[mod.key])
+        : reject(new Error(`${mod.title}: panel.js did not register PanelModules.${mod.key}`)));
+      s.onerror = () => { delete panelLoads[mod.key]; reject(new Error(`${mod.title}: panel.js failed to load`)); };
+      document.head.appendChild(s);
+    });
+  }
+  return panelLoads[mod.key];
+}
+
+async function openModuleTab(id) {
+  const { mod, tab } = MODULE_TABS[id];
+  const el = $("#tab-" + id);
+  if (!mod.panel) {
+    el.innerHTML = `<div class="empty">${icon("bot")}<b>${esc(mod.title)}</b><span>${esc(L("Dieses Modul hat noch keine Oberfläche.", "This module has no interface yet."))}</span></div>`;
+    return;
+  }
+  const panel = await loadPanelScript(mod);
+  await panel.open(tab, el, mod);
+}
+
+function leaveModuleTab(id) {
+  const m = MODULE_TABS[id];
+  const panel = m && window.PanelModules[m.mod.key];
+  if (panel && panel.close) panel.close(m.tab);
+}
+
+function buildModules(mods) {
+  for (const mod of mods) {
+    if (!mod.nav || !mod.nav.length) continue;
+    if (mod.panel) MODULES.push(mod);
+    const ids = mod.nav.map((n) => `${mod.key}-${n.tab}`);
+    mod.nav.forEach((n, i) => {
+      MODULE_TABS[ids[i]] = { mod, tab: n.tab };
+      TAB_LOADERS[ids[i]] = () => openModuleTab(ids[i]);
+      const sec = document.createElement("section");
+      sec.id = "tab-" + ids[i];
+      sec.className = "tab hidden";
+      $("main.content").appendChild(sec);
+    });
+    const label = (n) => {
+      const l = typeof n.label === "string" ? { de: n.label, en: n.label } : n.label;
+      return `<span data-de="${esc(l.de)}">${esc(l.en)}</span>`;
+    };
+    // like the Jaumo group: the header opens the first page, the sub-menu lists the others
+    const group = document.createElement("div");
+    group.className = "sb-group";
+    group.dataset.module = mod.key;
+    group.innerHTML = `
+      <button data-tab="${ids[0]}" class="sb-group-head"><i data-icon="${esc(mod.icon)}"></i><span>${esc(mod.title)}</span>
+        <span class="sb-chev" role="button" tabindex="0"><i data-icon="chevronDown"></i></span></button>
+      <div class="sb-sub">${mod.nav.slice(1).map((n, i) =>
+        `<button data-tab="${ids[i + 1]}"><i data-icon="${esc(n.icon || "chevronRight")}"></i>${label(n)}</button>`).join("")}</div>`;
+    $("#tabs").appendChild(group);
+    hydrateIcons(group);
+    applyI18n(group);
+    group.querySelectorAll("button").forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
+    const storeKey = "nav_" + mod.key;
+    if (prefs.get(storeKey, "1") === "0") group.classList.add("collapsed");
+    const fold = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      group.classList.toggle("collapsed");
+      prefs.set(storeKey, group.classList.contains("collapsed") ? "0" : "1");
+    };
+    const chev = group.querySelector(".sb-chev");
+    chev.addEventListener("click", fold);
+    chev.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") fold(e); });
+  }
+}
+
+async function loadModules() {
+  if (modulesBuilt) return;
+  try {
+    buildModules(await api("/api/modules"));
+    modulesBuilt = true;
+  } catch (e) {
+    console.error("modules:", e);   // the Jaumo panel must keep working without modules
+  }
+}
+
+// A module may watch for events in the background (the Telegram "run active" badge): panel.start(mod) after login,
+// panel.stop() at logout. Both may be called repeatedly.
+async function startModules() {
+  for (const mod of MODULES) {
+    try {
+      const panel = await loadPanelScript(mod);
+      if (panel.start) panel.start(mod);
+    } catch (e) {
+      console.error("modules:", e);
+    }
+  }
+}
+const stopModules = () => Object.values(window.PanelModules).forEach((p) => p.stop && p.stop());
 
 // Jaumo menu group: the header opens the accounts; the arrow folds the sub-menu (remembered per browser).
 try { if (localStorage.getItem("navJaumo") === "0") $("#nav-jaumo").classList.add("collapsed"); } catch { /* storage blocked */ }

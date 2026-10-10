@@ -11,7 +11,8 @@ from typing import Optional
 
 from fastapi import (Depends, FastAPI, File, HTTPException, Query, Request, Response,
                      UploadFile, WebSocket, WebSocketDisconnect)
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy import delete as sa_delete
@@ -34,10 +35,14 @@ from .schemas import (StatsSyncIn, SwipeIn, SettingsIn, PhotoBulkDelete, Account
                       LoginIn, MessageLaunch, ProxyBulkAction, ProxyBulkIn, ProxyIn,
                       ProxyUpdate, RunLaunch)
 
+from modules.registry import registry  # noqa: E402
+
 hub = Hub()
 manager = RunManager(hub)
+registry.load()  # imports each enabled bot module (registers its tables) before init_db() runs
 
-_SOURCE_FILES = [*(cfg.ROOT_DIR / "api").glob("*.py"), *(cfg.ROOT_DIR / "bot").glob("*.py")]
+_SOURCE_FILES = [*(cfg.ROOT_DIR / "api").glob("*.py"), *(cfg.ROOT_DIR / "bot").glob("*.py"),
+                 *(cfg.ROOT_DIR / "modules").rglob("*.py")]
 
 
 def _code_stamp() -> float:
@@ -201,17 +206,32 @@ async def lifespan(app: FastAPI):
         sync_library(s)
         manager.set_parallel(get_bot_settings(s)["parallel_accounts"])
     hub.loop = asyncio.get_running_loop()
+    await registry.startup(hub)
     manager.start_auto_sync()
     if cfg.SECRET_KEY_IS_RANDOM:
         print("[startup] SECRET_KEY not set — sessions will reset on every restart")
     if cfg.ADMIN_PASS == "changeme":
         print("[startup] WARNING: ADMIN_PASS is the default 'changeme'")
     yield
+    await registry.shutdown()
     manager.shutdown()
 
 
-app = FastAPI(title="Jaumo Bot Admin", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="Jaumo Bot Admin", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 auth = [Depends(require_auth)]
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, exc: RequestValidationError):
+    """FastAPI's own 422 echoes the rejected input, which breaks the response itself when that input is NaN or
+    holds a lone surrogate. The reasons are enough."""
+    return JSONResponse({"detail": [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]}, 422)
+
+
+@app.exception_handler(OverflowError)
+async def number_out_of_range(request: Request, exc: OverflowError):
+    """An id or offset beyond what SQLite stores (64 bit): no row can have it."""
+    return JSONResponse({"detail": "Number out of range"}, 422)
 
 
 def _iso(d):
@@ -1306,6 +1326,22 @@ async def ws_account(ws: WebSocket, account_id: int):
 @app.websocket("/ws/runs/{run_id}")
 async def ws_run(ws: WebSocket, run_id: int):
     await _pump(ws, f"run:{run_id}")
+
+
+@app.websocket("/ws/modules/{key}")
+async def ws_module(ws: WebSocket, key: str):
+    """Live events of a bot module: the module publishes to hub channel '<key>:events'."""
+    if key not in registry.modules:
+        await ws.close(code=4404)
+        return
+    await _pump(ws, f"{key}:events")
+
+
+# ---------------------------------------------------------------------------
+# Bot modules (modules/<key>/): /api/<key>/..., /modules-static/<key>/..., GET /api/modules
+# ---------------------------------------------------------------------------
+
+registry.mount(app)
 
 
 # ---------------------------------------------------------------------------

@@ -4,12 +4,16 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     STORAGE_DIR=/app/storage
 
+# ffmpeg converts uploaded voice memos (mp3/m4a/wav/aac) to OGG/Opus, the only format Telegram plays as a voice message
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY bot ./bot
 COPY api ./api
+COPY modules ./modules
 COPY frontend ./frontend
 
 # Single persistent volume: database, photos, legacy accounts import.

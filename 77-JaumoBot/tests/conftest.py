@@ -6,6 +6,7 @@ No request ever reaches the real Jaumo API.
 
 import io
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -110,7 +111,8 @@ class AppServer:
         self._logf = open(self.log, "ab")
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", str(self.port)],
-            cwd=ROOT, env=self.env, stdout=self._logf, stderr=subprocess.STDOUT)
+            cwd=ROOT, env=self.env, stdout=self._logf, stderr=subprocess.STDOUT,
+            creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))   # lets stop_gracefully() reach it on Windows
         wait_until(self._healthy, timeout=40, msg="admin server start")
         return self
 
@@ -131,6 +133,13 @@ class AppServer:
             self.proc.wait(15)
         if getattr(self, "_logf", None):
             self._logf.close()
+
+    def stop_gracefully(self):
+        """Ask uvicorn to shut down the way Ctrl+C / docker stop does, so the lifespan shutdown runs (terminate() kills a
+        Windows process outright)."""
+        self.proc.send_signal(signal.CTRL_BREAK_EVENT if sys.platform == "win32" else signal.SIGTERM)
+        self.proc.wait(30)
+        self._logf.flush()
 
     def client(self, login=True):
         c = httpx.Client(base_url=self.url, timeout=60)
