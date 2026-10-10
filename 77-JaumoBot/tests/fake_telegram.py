@@ -20,7 +20,7 @@ needed, so a test may create and change them while the server runs:
                  fake client tails the file and calls the handlers registered with add_event_handler.
   outbox.jsonl   written by the fake: every send_message / send_file as
                  {ts, account, chat_id, access_hash, peer (class name of the recipient), type, content|file}
-                 (type: text | image | voice).
+                 (type: text | image | voice | block; block = the contact was blocked).
   send_errors.json  {"<chat_id>": {"error": "UserPrivacyRestrictedError", "times": 2, "seconds": 3}}: sends to that
                  chat fail with that Telethon error (or "ConnectionError"); "times" limits how often (default:
                  always, counted down in the file); "after" lets that many sends succeed first; "seconds" is the
@@ -283,7 +283,18 @@ class FakeClient:
         for attr in kwargs.get("attributes") or []:            # what a voice message says about itself
             if getattr(attr, "duration", None) is not None:
                 extra["duration"] = attr.duration
+        if kwargs.get("ttl"):                                   # self-destructing media ("view once" = 2147483647)
+            extra["ttl"] = kwargs["ttl"]
         self._record(entity, "voice" if voice_note else "image", file=str(file), **extra)
+
+    async def __call__(self, request):
+        """Raw Telegram requests: only BlockRequest is used. It is recorded as a "block" in the outbox and can be
+        made to fail with send_errors.json like any send."""
+        if type(request).__name__ != "BlockRequest":
+            raise NotImplementedError(type(request).__name__)
+        await self._send_delay()
+        self._record(request.id, "block")
+        return True
 
     def is_connected(self):
         return self.connected

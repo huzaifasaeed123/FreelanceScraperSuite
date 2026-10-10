@@ -304,6 +304,16 @@ Run by separate test agents after Phase 9, reviewed by the main agent; the resul
 
 ---
 
+### Added after the first live test (client feedback)
+- **Step type "Nutzer blockieren"** (`block`): a final action, only allowed as the LAST step (once). Sends Telegram's plain
+  `contacts.BlockRequest` - no spam report and the chat is NOT deleted (the two boxes of the app's block dialog stay
+  unticked, as the client wants it). The contact is flagged `blocked` in the Chats table; unblocking is manual in Telegram.
+- **Display time of images/voice** (`self_destruct`): like Telegram's own menu - Nicht löschen / Einmalig zeigen / 3 / 10 / 30 s
+  (a voice message: only once). Sent as Telethon `ttl` (once = 2147483647, what the official apps send). Not yet tried against
+  real Telegram: check on the first live run that the photo really shows the flame icon and opens only once.
+- **Upload names with dots** (WhatsApp names like `... at 01.23.45.ogg`) are accepted; the old "double extension" rule
+  protected nothing (files are stored under a generated name and judged by their content).
+
 ## 7. How the work is run (orchestration and testing)
 
 - **Main agent** (this session) owns the plan, hands each phase to a separate **phase agent**, and

@@ -31,6 +31,7 @@ from sqlalchemy import or_
 from sqlalchemy import update as sa_update
 from sqlmodel import Session, select
 from telethon import errors, events
+from telethon.tl.functions.contacts import BlockRequest
 from telethon.tl.types import DocumentAttributeAudio, InputPeerUser
 
 from api.models import engine as db_engine, iso, utcnow
@@ -50,6 +51,15 @@ SLICE = 0.1                # longest sleep between two looks at the pause gate
 REASON_OFFLINE = "Account offline"
 REASON_RESTART = "Server restarted"
 REASON_DROPPED = "Connection to Telegram lost"
+# Telegram's "view once" marker for a photo or voice message (what the official apps send as the self-destruct
+# time; Telethon's own docs only mention 1-60 seconds). Only works in private chats, which every chat here is.
+VIEW_ONCE = 0x7FFFFFFF
+
+
+def _ttl(step: dict) -> dict:
+    """send_file arguments of a step's "show for ..." setting ("once" or seconds); nothing when the media stays."""
+    shown = step.get("self_destruct")
+    return {} if shown is None else {"ttl": VIEW_ONCE if shown == "once" else int(shown)}
 PEER_FLOOD = "Telegram limited this account for writing to new people (PeerFlood)"
 # seconds: between two looks at an account's connection / between two checks that Telegram still accepts its session /
 # first and longest wait of the reconnect loop (it doubles in between)
@@ -915,7 +925,7 @@ class RunEngine:
             if reason:
                 return self._fail_chat(h.run_id, rc_id, reason)
             last = i == len(h.steps) - 1
-            self._sent(h.run_id, rc_id, next_step=None if last else i + 1)
+            self._sent(h.run_id, rc_id, next_step=None if last else i + 1, kind=h.steps[i]["type"])
             pause = h.steps[i]["pause_after"]
             if pause and (not last or self._next_chat(h.run_id)):    # after the very last step nobody is left to wait for
                 await self._wait(h, pause, "pause")
@@ -953,18 +963,25 @@ class RunEngine:
         if step["type"] == "text":
             await client.send_message(peer, step["content"])
             return
+        if step["type"] == "block":
+            # A plain block, as the client wants it: NO spam report (messages.ReportSpam) and the chat is NOT deleted
+            # (messages.DeleteHistory); those are the two boxes of the Telegram app's block dialog, left unticked.
+            # The contact stays in the chat list but can no longer write to this account.
+            await client(BlockRequest(id=peer))
+            return
         from .api import _voice_seconds, media_dir     # api.py imports this module, so the import cannot sit at the top
         path = media_dir() / step["file"]
         if not path.is_file():
             raise FileNotFoundError(path.name)
+        once = _ttl(step)
         if step["type"] != "voice":
-            await client.send_file(peer, path)
+            await client.send_file(peer, path, **once)
             return
         # Telethon reads a voice file's length with the optional hachoir package; without it the message would
         # arrive as 0:00. The length is known here already (OGG header), so say it explicitly.
         seconds = int(round(_voice_seconds(path) or 0))
         await client.send_file(peer, path, voice_note=True,
-                               attributes=[DocumentAttributeAudio(duration=seconds, voice=True)])
+                               attributes=[DocumentAttributeAudio(duration=seconds, voice=True)], **once)
 
     # --- waiting -------------------------------------------------------------------------
 
@@ -1066,15 +1083,18 @@ class RunEngine:
         self._save(run_id, current_run_chat_id=rc_id, current_step_index=0)
         return True
 
-    def _sent(self, run_id: int, rc_id: int, next_step: Optional[int]):
-        """One message went out: count it and move the position on (next_step None = it was the last step, so
-        the chat is closed), all in one commit."""
+    def _sent(self, run_id: int, rc_id: int, next_step: Optional[int], kind: str):
+        """One step was carried out: count it and move the position on (next_step None = it was the last step, so
+        the chat is closed), all in one commit. A message counts as sent; blocking is not a message."""
         now = utcnow()
         with Session(db_engine) as s:
             rc = s.get(TgRunChat, rc_id)
             chat = s.get(TgChat, rc.chat_id)
             rc.steps_done += 1
-            chat.messages_sent += 1
+            if kind == "block":
+                chat.blocked = True
+            else:
+                chat.messages_sent += 1
             run = s.get(TgRun, run_id)
             if next_step is None:
                 rc.status, rc.processed_at = "done", now

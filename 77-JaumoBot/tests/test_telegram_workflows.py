@@ -2,6 +2,7 @@
 deleting, malicious file names and the ogg/opus conversion (a stand-in ffmpeg always, the real one when installed)."""
 
 import json
+import re
 import os
 import shutil
 import sqlite3
@@ -441,9 +442,8 @@ def test_when_nothing_is_accepted_the_call_fails_with_the_reason(tg):
     ("sound.jpg", ogg_opus(), "does not match its extension", 422),
     ("dead.jpg", b"\xff\xd8\xff\xe0" + b"garbage" * 50, "damaged", 422),    # JPEG header, no image behind it
     ("dead.png", b"\x89PNG\r\n\x1a\n" + b"garbage" * 50, "damaged", 422),
-    ("shell.php.jpg", jpg(), "Double file extensions", 422),
-    ("a.b.c.png", png(), "Double file extensions", 422),
-    ("evil.jpg.exe", jpg(), "Double file extensions", 422),
+    ("evil.jpg.exe", jpg(), "does not match its extension", 422),     # the LAST extension has to fit the content
+    ("a.jpg.php", jpg(), "does not match its extension", 422),
     ("../../evil.jpg", jpg(), "Invalid file name", 422),
     ("..\\..\\evil.jpg", jpg(), "Invalid file name", 422),
     ("/etc/passwd.jpg", jpg(), "Invalid file name", 422),
@@ -457,6 +457,17 @@ def test_rejected_uploads(tg, filename, data, fragment, status):
     r = upload(api, (filename, data))
     assert r.status_code == status and fragment in detail(r), r.text
     assert media_files(app) == []                                        # nothing written, not even a temp file
+
+
+def test_dots_inside_a_file_name_are_fine_because_the_stored_name_is_generated(tg):
+    """A client's voice memo was refused as 'double file extension' (WhatsApp names contain dots). What a file is gets
+    decided from its content and it is stored under a generated name, so the dots are harmless."""
+    app, api = tg
+    for filename, data in (("WhatsApp Audio 2026-10-11 at 01.23.45.ogg", ogg_opus(2)), ("a.b.c.png", png()),
+                           ("shell.php.jpg", jpg()), ("Aufnahme.1.2.opus", ogg_opus(1))):
+        saved = ok(upload(api, (filename, data)), 200)["saved"][0]
+        assert re.fullmatch(r"(img|voice)-[0-9a-f]{32}\.[a-z0-9]+", saved["name"]), saved
+    assert len(media_files(app)) == 4
 
 
 def test_upload_size_limits(tg):

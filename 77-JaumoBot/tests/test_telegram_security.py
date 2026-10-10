@@ -522,7 +522,7 @@ def test_a_png_with_html_appended_is_stored_as_an_image_and_served_safely(tg):
     assert "content-disposition" not in got.headers or "attachment" in got.headers["content-disposition"]
 
 
-FILENAMES = ["a.php.jpg", "a.jpg.php", "shell.php.png", "a.jpg.exe", "x.tar.gz", "a.jpg.", "a.jpg ", ".jpg", "jpg",
+FILENAMES = ["a.jpg.php", "shell.php.png", "a.jpg.exe", "x.tar.gz", "a.jpg.", "a.jpg ", ".jpg", "jpg",
              "a", "", "..jpg", "a..jpg", "....", ".", "..", "../a.jpg", "..\\a.jpg", "a/b.jpg", "a\\b.jpg", "/etc/passwd.jpg",
              "C:a.jpg", "a.jpg:stream", "a.jpg::$DATA", "....//a.jpg", "%2e%2e%2fa.jpg\u0000", "a\x00.jpg",
              "a.jpg\x00.php", "a\x01.jpg", "a\x1f.jpg", "a\t.jpg", "ａ.ｊｐｇ", "a.jpg\u200b", "a." + "j" * 300, "a" * 300 + ".jpg",

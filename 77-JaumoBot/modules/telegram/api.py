@@ -62,6 +62,7 @@ class TgChat(SQLModel, table=True):
     first_contact_at: Optional[datetime] = None
     last_contact_at: Optional[datetime] = Field(default=None, index=True)
     last_message: str = ""
+    blocked: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})   # a workflow's "block user" step blocked this contact on Telegram
     chat_status: str = Field(default="pending", index=True)   # pending|in_progress|done|error|paused
     messages_sent: int = 0
     last_processed_at: Optional[datetime] = None
@@ -233,6 +234,35 @@ def status(s: Session = Depends(get_session)):
         "chats": count(select(func.count()).select_from(TgChat)),
         "runs": count(select(func.count()).select_from(TgRun)),
     }
+
+
+class ResetIn(BaseModel):
+    account_id: Optional[int] = None      # one account, or all of them
+
+
+@router.post("/reset")
+def reset_data(body: ResetIn, s: Session = Depends(get_session)):
+    """Start the numbers from zero: delete the stored chats and every run (with its history) of one account or of all.
+    Accounts, workflows and uploaded files stay. Chats that still exist in Telegram come back with the next sync."""
+    one = body.account_id
+    if one is not None:
+        _get_account(s, one)
+    run_where = [] if one is None else [TgRun.account_id == one]
+    chat_where = [] if one is None else [TgChat.account_id == one]
+    if s.exec(select(TgRun.id).where(TgRun.status.in_(ACTIVE_RUN), *run_where)).first():
+        raise HTTPException(409, "A run is still active, stop it first")
+    if any(one is None or acc == one for acc in tg.syncing):
+        raise HTTPException(409, "A chat sync is running, wait until it has finished")
+    run_ids = s.exec(select(TgRun.id).where(*run_where)).all()
+    chats = s.exec(select(func.count()).select_from(TgChat).where(*chat_where)).one()
+    for i in range(0, len(run_ids), 500):      # SQLite limits how many values one IN (...) may hold
+        part = run_ids[i:i + 500]
+        s.exec(sa_delete(TgRunChat).where(TgRunChat.run_id.in_(part)))
+        s.exec(sa_delete(TgRun).where(TgRun.id.in_(part)))
+    s.exec(sa_delete(TgChat).where(*chat_where))
+    s.commit()
+    tg._publish({"type": "reset", "account_id": one})
+    return {"chats": chats, "runs": len(run_ids)}
 
 
 @router.get("/settings")
@@ -626,15 +656,15 @@ def _to_opus(data: bytes, ext: str) -> bytes:
 
 
 def _check_filename(filename: str) -> str:
-    """The extension of an upload. Names that leave the folder or hide a second extension are refused."""
+    """The extension of an upload. Names that could leave the folder are refused. Dots inside the name are fine
+    (WhatsApp Audio 2026-10-11 at 01.23.45.ogg): the file is stored under a generated name and what it is gets
+    decided from its content, so a name like shell.php.jpg cannot do anything."""
     if (not filename or len(filename) > 255 or ".." in filename
             or any(c in filename for c in "/\\:") or any(ord(c) < 32 for c in filename)):
         raise MediaError("Invalid file name")
     stem, dot, ext = filename.rpartition(".")
     if not dot or not stem:
         raise MediaError(f"The file has no extension, {UPLOAD_HINT}")
-    if "." in stem:
-        raise MediaError("Double file extensions are not allowed (rename the file)")
     return ext.lower()
 
 
@@ -787,6 +817,11 @@ def _text_step(step: dict) -> dict:
     return {"content": text}
 
 
+# Telegram's "show for ..." choices of self-destructing media: "once" (view once) or a number of seconds.
+# A voice message can only be played once.
+SELF_DESTRUCT = {"image": ("once", 3, 10, 30), "voice": ("once",)}
+
+
 def _media_step(kind: str) -> Callable[[dict], dict]:
     def check(step: dict) -> dict:
         name = step.get("file")
@@ -796,15 +831,24 @@ def _media_step(kind: str) -> Callable[[dict], dict]:
             raise ValueError(f"the file is not a {kind} file")
         if not (media_dir() / name).is_file():
             raise ValueError("the uploaded file does not exist, upload it again")
-        return {"file": name}
+        shown = step.get("self_destruct")        # how long the contact can see it after opening; absent = it stays
+        if shown is not None and (type(shown) not in (int, str) or shown not in SELF_DESTRUCT[kind]):
+            raise ValueError("self_destruct must be one of: " + ", ".join(str(v) for v in SELF_DESTRUCT[kind]))
+        return {"file": name, **({"self_destruct": shown} if shown is not None else {})}
     return check
+
+
+def _block_step(step: dict) -> dict:
+    return {}      # an action without content: the engine blocks the contact on Telegram
 
 
 STEP_TYPES: dict[str, Callable[[dict], dict]] = {
     "text": _text_step,
     "image": _media_step("image"),
     "voice": _media_step("voice"),
+    "block": _block_step,
 }
+LAST_ONLY = {"block"}      # step types that end a chat, so they may only be the last step (and only once)
 
 
 def _clean_steps(raw: list) -> list[dict]:
@@ -822,11 +866,13 @@ def _clean_steps(raw: list) -> list[dict]:
         pause = step.get("pause_after", 0)
         if type(pause) is not int or not 0 <= pause <= MAX_PAUSE:
             raise HTTPException(422, f"Step {n}: the pause must be a whole number of seconds from 0 to {MAX_PAUSE}")
+        if kind in LAST_ONLY and n != len(raw):
+            raise HTTPException(422, f"Step {n}: blocking the user is only allowed as the last step")
         try:
             fields = STEP_TYPES[kind](step)
         except ValueError as e:
             raise HTTPException(422, f"Step {n}: {e}")
-        steps.append({"type": kind, **fields, "pause_after": pause})
+        steps.append({"type": kind, **fields, "pause_after": 0 if kind in LAST_ONLY else pause})
     return steps
 
 

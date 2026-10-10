@@ -47,6 +47,9 @@
     [/^Workflow not found$/, "Ablauf nicht gefunden"],
     [/^This workflow has an active run/, "Für diesen Ablauf läuft ein Durchlauf, bitte zuerst stoppen"],
     [/^Step (\d+): (.+)$/, (m) => `Schritt ${m[1]}: ${errText(m[2])}`],
+    [/^A run is still active, stop it first$/, "Es läuft noch ein Durchlauf, bitte zuerst stoppen"],
+    [/^A chat sync is running, wait until it has finished$/, "Es läuft gerade eine Chat-Synchronisierung, bitte warten, bis sie fertig ist"],
+    [/^blocking the user is only allowed as the last step$/, "„Nutzer blockieren“ ist nur als letzter Schritt erlaubt"],
     [/^invalid step$/, "ungültiger Schritt"],
     [/^unknown step type$/, "unbekannter Schritttyp"],
     [/^the pause must be a whole number of seconds/, "die Pause muss eine ganze Zahl von 0 bis 86400 Sekunden sein"],
@@ -58,7 +61,6 @@
     [/^Converting this audio file needs ffmpeg/, "Zum Umwandeln dieser Audiodatei wird ffmpeg benötigt, das auf dem Server fehlt. Bitte eine OGG/Opus-Datei hochladen."],
     [/^Invalid file name$/, "Ungültiger Dateiname"],
     [/^The file has no extension/, "Die Datei hat keine Endung (erlaubt: jpg, png, webp, ogg, opus, mp3, m4a, wav, aac)"],
-    [/^Double file extensions are not allowed/, "Doppelte Dateiendungen sind nicht erlaubt (Datei umbenennen)"],
     [/^The file is empty$/, "Die Datei ist leer"],
     [/^Unsupported file type/, "Dateityp nicht unterstützt (erlaubt: jpg, png, webp, ogg, opus, mp3, m4a, wav, aac)"],
     [/^The file content does not match its extension/, "Der Inhalt der Datei passt nicht zur Dateiendung"],
@@ -429,11 +431,12 @@
     const changed = () => { render(); if (opts.onChange) opts.onChange(selected); };
 
     // --- drawing ---
+    const blockedBadge = (c) => c.blocked ? ` <span class="badge bad" title="${esc(L("Der Ablauf hat diesen Nutzer in Telegram blockiert", "A workflow blocked this user on Telegram"))}">🚫 ${esc(L("blockiert", "blocked"))}</span>` : "";
     function row(c) {
       const showAccount = !f.account && accounts.length > 1;
       return `<tr data-id="${c.id}">
         <td class="cb"><input type="checkbox" data-sel ${selected.has(c.id) ? "checked" : ""} aria-label="${esc(L("Chat auswählen", "Select chat"))}"></td>
-        <td class="tg-name"><b>${esc(c.display_name)}</b>${c.username ? `<div class="muted">@${esc(c.username)}</div>` : ""}</td>
+        <td class="tg-name"><b>${esc(c.display_name)}</b>${blockedBadge(c)}${c.username ? `<div class="muted">@${esc(c.username)}</div>` : ""}</td>
         <td class="mono">${esc(c.telegram_id)}</td>
         ${showAccount ? `<td class="tg-opt nowrap">${esc(accountName(c.account_id))}</td>` : ""}
         <td><span class="tg-st">${esc(statusLabel(c.chat_status))}</span>${c.chat_status === "error" && c.error_reason
@@ -664,7 +667,7 @@
 
   // --- Abläufe (workflows): saved list and the step editor ---------------------------------------
   // Each step type is ONE entry here (icon, label, upload rules) and one entry in STEP_TYPES of api.py.
-  // `media` marks a type that sends an uploaded file; `limit` is its size limit in MB.
+  // `media` marks a type that sends an uploaded file; `limit` is its size limit in MB; `action` a final step without content.
 
   const STEP_KINDS = {
     text: { emoji: "📝", de: "Text", en: "Text" },
@@ -672,8 +675,13 @@
       accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" },
     voice: { emoji: "🎤", de: "Sprachmemo", en: "Voice memo", media: "voice", limit: 50,
       accept: ".ogg,.opus,.oga,.mp3,.m4a,.wav,.aac,audio/*" },
+    // an action, not a message: it has no content or pause and may only end a workflow (`action`)
+    block: { emoji: "🚫", de: "Nutzer blockieren", en: "Block user", action: true },
   };
   const kindName = (type) => L(STEP_KINDS[type].de, STEP_KINDS[type].en);
+  // Telegram's own "how long should the media be shown after opening" choices (an image has all, a voice message only "once")
+  const selfDestructChoices = (type) => [["", "Nicht löschen", "Don't delete"], ["once", "Einmalig zeigen", "Show once"],
+    ...(type === "image" ? [["3", "3 Sekunden", "3 seconds"], ["10", "10 Sekunden", "10 seconds"], ["30", "30 Sekunden", "30 seconds"]] : [])];
   const PAUSES = [0, 10, 30, 60, 120, 300, 600];     // the quick choices, in seconds
   const UNITS = { s: 1, min: 60, h: 3600 };
   const MAX_PAUSE = 86400, MAX_TEXT = 4096;
@@ -721,6 +729,7 @@
       .tg-step-type { font-weight: 600; }
       .tg-step-tools { margin-left: auto; display: flex; gap: 4px; }
       .tg-step textarea { width: 100%; font-family: inherit; font-size: 14px; min-height: 76px; }
+      .tg-once { margin-top: 12px; max-width: 340px; }
       .tg-count { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); margin-top: 4px; }
       .tg-count .error { min-height: 0; font-size: 12.5px; }
       .tg-media { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -855,14 +864,14 @@
 
   const pauseUnit = (sec) => (sec && sec % 3600 === 0 ? "h" : sec && sec % 60 === 0 ? "min" : "s");
   function stepFrom(src) {   // an editor step from a server step or from just a type
-    const s = { uid: ++uid, type: src.type, content: src.content || "", file: src.file || "",
-      pause_after: src.pause_after === undefined ? 10 : src.pause_after };
+    const s = { uid: ++uid, type: src.type, content: src.content || "", file: src.file || "", self_destruct: src.self_destruct === undefined ? "" : String(src.self_destruct),
+      pause_after: STEP_KINDS[src.type].action ? 0 : src.pause_after === undefined ? 10 : src.pause_after };
     s.custom = !PAUSES.includes(s.pause_after);
     s.unit = pauseUnit(s.pause_after);
     s.pauseText = String(s.pause_after / UNITS[s.unit]);
     return s;
   }
-  const payloadSteps = () => ed.steps.map((s) => ({ type: s.type, ...(STEP_KINDS[s.type].media ? { file: s.file } : { content: s.content }), pause_after: s.pause_after }));
+  const payloadSteps = () => ed.steps.map((s) => ({ type: s.type, ...(STEP_KINDS[s.type].action ? {} : STEP_KINDS[s.type].media ? { file: s.file, ...(s.self_destruct ? { self_destruct: s.self_destruct === "once" ? "once" : Number(s.self_destruct) } : {}) } : { content: s.content }), pause_after: s.pause_after }));
   const signature = () => JSON.stringify([ed.name, payloadSteps()]);
   const isDirty = () => !!ed && signature() !== ed.saved;
 
@@ -879,7 +888,9 @@
     if (!ed.steps.length) { e.top = L("Füge mindestens einen Schritt hinzu.", "Add at least one step."); e.count++; }
     for (const s of ed.steps) {
       const se = {};
-      if (STEP_KINDS[s.type].media) {
+      if (STEP_KINDS[s.type].action) {
+        if (s !== ed.steps[ed.steps.length - 1]) se.content = L("„Nutzer blockieren“ muss der letzte Schritt sein.", "“Block user” must be the last step.");
+      } else if (STEP_KINDS[s.type].media) {
         if (!s.file) se.content = L("Bitte eine Datei hochladen.", "Upload a file.");
         else if (ed.media[s.file] && ed.media[s.file].missing) se.content = L("Die Datei fehlt auf dem Server, bitte ersetzen.", "The file is missing on the server, please replace it.");
       } else if (!s.content.trim()) se.content = L("Der Text darf nicht leer sein.", "The text must not be empty.");
@@ -908,6 +919,11 @@
 
   function stepBody(s) {
     const kind = STEP_KINDS[s.type];
+    if (kind.action) {
+      return `<div class="tg-warn">${esc(L("Nach diesem Schritt wird der Nutzer in Telegram blockiert und kann diesem Konto nicht mehr schreiben. Es wird nur blockiert: ohne Spam-Meldung und ohne den Chat zu löschen. Entsperren geht nur von Hand in Telegram.",
+        "After this step the user is blocked on Telegram and can no longer write to this account. It only blocks: no spam report and the chat is not deleted. Unblocking is only possible by hand in Telegram."))}</div>
+        <div class="tg-count"><span class="error" data-err="content" role="alert"></span></div>`;
+    }
     if (!kind.media) {
       return `<textarea data-content rows="3" placeholder="${esc(L("Nachrichtentext …", "Message text …"))}" aria-label="${esc(L("Nachrichtentext", "Message text"))}">${esc(s.content)}</textarea>
         <div class="tg-count"><span class="error" data-err="content" role="alert"></span><span data-count>${fmtN(s.content.length)} / ${fmtN(MAX_TEXT)}</span></div>`;
@@ -928,6 +944,9 @@
           ? L(s.type === "image" ? "Bild ersetzen" : "Sprachmemo ersetzen", s.type === "image" ? "Replace image" : "Replace voice memo")
           : L("Datei wählen", "Choose file"))}</span></button>
         <div class="muted" data-up>${s.busy ? esc(L("Wird hochgeladen …", "Uploading …")) : `${esc(L("höchstens", "up to"))} ${kind.limit} MB`}</div></div></div>
+      <label class="tg-once"><span>${esc(L("Anzeigedauer nach dem Öffnen", "Display time after opening"))}</span>
+        <select data-selfdestruct>${selfDestructChoices(s.type).map(([v, de, en]) =>
+          `<option value="${v}" ${s.self_destruct === v ? "selected" : ""}>${esc(L(de, en))}</option>`).join("")}</select></label>
       <div class="tg-count"><span class="error" data-err="content" role="alert"></span></div>`;
   }
 
@@ -942,7 +961,7 @@
             ${iconBtn("arrowDown", `data-act="down" ${last ? "disabled" : ""}`, L("Schritt nach unten", "Move step down"))}
             ${iconBtn("trash", 'data-act="remove"', L("Schritt löschen", "Delete step"))}
           </span></div>
-        ${stepBody(s)}${pauseControl(s)}</div>`;
+        ${stepBody(s)}${STEP_KINDS[s.type].action ? "" : pauseControl(s)}</div>`;
   }
 
   function renderSteps() {
@@ -985,6 +1004,7 @@
 
   function renderEditor() {
     injectWorkflowStyles();
+    injectRunStyles();      // the warning box of the "block user" step lives there
     const el = wfEl;
     const actions = `<button class="btn" data-act="back">${icon("chevronLeft")}<span>${esc(L("Zurück zu den Abläufen", "Back to workflows"))}</span></button>
       <span class="tg-dirty hidden" data-dirty>● ${esc(L("Ungespeicherte Änderungen", "Unsaved changes"))}</span>
@@ -1093,9 +1113,11 @@
       if (!btn || btn.disabled) return;
       if (btn.dataset.add) {
         closeMenu();
-        ed.steps.push(stepFrom({ type: btn.dataset.add }));
+        const added = stepFrom({ type: btn.dataset.add }), end = ed.steps[ed.steps.length - 1];
+        if (end && STEP_KINDS[end.type].action && !STEP_KINDS[added.type].action) ed.steps.splice(ed.steps.length - 1, 0, added);   // "block user" stays last
+        else ed.steps.push(added);
         renderSteps();
-        const card = el.querySelector(".tg-step:last-of-type, .tg-step:last-child") || [...el.querySelectorAll(".tg-step")].pop();
+        const card = el.querySelector(`.tg-step[data-uid="${added.uid}"]`);
         card.scrollIntoView({ block: "center" });
         const first = card.querySelector("textarea, [data-act=pick]");
         if (first) first.focus();
@@ -1107,7 +1129,7 @@
       if (kind === "add-toggle") {
         if (el.querySelector(".tg-menu")) return closeMenu();
         btn.setAttribute("aria-expanded", "true");
-        btn.insertAdjacentHTML("afterend", `<div class="tg-menu" role="menu">${Object.entries(STEP_KINDS).map(([t, k]) =>
+        btn.insertAdjacentHTML("afterend", `<div class="tg-menu" role="menu">${Object.entries(STEP_KINDS).filter(([t, k]) => !(k.action && ed.steps.some((x) => x.type === t))).map(([t, k]) =>
           `<button type="button" role="menuitem" data-add="${t}">${k.emoji} ${esc(L(k.de, k.en))}</button>`).join("")}</div>`);
         return el.querySelector(".tg-menu button").focus();
       }
@@ -1121,7 +1143,7 @@
         const same = moved && moved.querySelector(`[data-act="${kind}"]`);
         (same && !same.disabled ? same : moved.querySelector('[data-act="up"]:not([disabled]), [data-act="down"]:not([disabled])')).focus();
       } else if (kind === "remove") {
-        const filled = STEP_KINDS[s.type].media ? s.file : s.content.trim();
+        const filled = STEP_KINDS[s.type].action ? "" : STEP_KINDS[s.type].media ? s.file : s.content.trim();
         if (filled && !confirm(L(`Schritt ${i + 1} (${kindName(s.type)}) löschen?`, `Delete step ${i + 1} (${kindName(s.type)})?`))) return;
         ed.steps.splice(i, 1);
         renderSteps();
@@ -1164,6 +1186,9 @@
       } else if (t.matches("[data-pause-unit]")) {
         s.unit = t.value;
         s.pause_after = /^\d+$/.test(s.pauseText.trim()) ? Number(s.pauseText.trim()) * UNITS[s.unit] : null;
+        paint();
+      } else if (t.matches("[data-selfdestruct]")) {
+        s.self_destruct = t.value;
         paint();
       } else if (t.matches("[data-file]") && t.files.length) {
         const file = t.files[0];
@@ -1589,6 +1614,7 @@
         <dt>${esc(L("Verbindungsabbruch", "Connection drop"))}</dt><dd>${esc(f.autoResume
           ? L("automatisch fortsetzen, sobald das Konto wieder online ist", "resume automatically when the account is back")
           : L("pausieren, du setzt selbst fort", "pause, you resume yourself"))}</dd></dl>
+      ${w.steps.some((x) => x.type === "block") ? `<div class="tg-warn">${esc(L(`Am Ende ${ids.length === 1 ? "wird" : "werden"} ${fmtN(ids.length)} Nutzer in Telegram blockiert.`, `At the end ${fmtN(ids.length)} ${ids.length === 1 ? "user is" : "users are"} blocked on Telegram.`))}</div>` : ""}
       <p class="hint">${esc(L("Die Chats werden nacheinander bearbeitet. Du kannst den Durchlauf jederzeit pausieren oder stoppen.", "The chats are worked one after another. You can pause or stop the run at any time."))}</p>
       <p class="error" data-go-error></p>
       <div class="actions"><button class="btn" type="button" data-close-modal>${esc(L("Abbrechen", "Cancel"))}</button>
@@ -1964,7 +1990,8 @@
     accountList = await K.api(`${API}/accounts`);
     if (dashEl !== el) return;
     if (ds.account && !accountList.some((a) => String(a.id) === ds.account)) ds.account = "";
-    el.innerHTML = head("Telegram", L("Übersicht über Chats, Sendungen und den laufenden Durchlauf", "Overview of chats, sends and the current run"))
+    el.innerHTML = head("Telegram", L("Übersicht über Chats, Sendungen und den laufenden Durchlauf", "Overview of chats, sends and the current run"),
+        `<button type="button" class="btn danger" data-dash-act="reset">${icon("trash")}<span>${esc(L("Daten auf null setzen", "Reset data to zero"))}</span></button>`)
       + `<div class="acc-toolbar"><select data-dash-account aria-label="${esc(L("Konto", "Account"))}"><option value="">${esc(L("Alle Konten", "All accounts"))}</option>
         ${accountList.map((a) => `<option value="${a.id}" ${String(a.id) === ds.account ? "selected" : ""}>${esc(a.label || a.phone)}</option>`).join("")}</select></div><div data-dash></div>`;
     el.onchange = act(async (e) => {
@@ -1976,8 +2003,36 @@
     el.onclick = (e) => {
       const btn = e.target.closest("[data-dash-act=detail]");
       if (btn) { hs.detail = +btn.dataset.id; location.hash = "#telegram-history"; }
+      if (e.target.closest("[data-dash-act=reset]")) resetDialog();
     };
     await loadDash();
+  }
+
+  // Start the numbers from zero (the stored chats and all runs of the selected account, or of all accounts).
+  function resetDialog() {
+    const acc = accountList.find((a) => String(a.id) === ds.account), d = ds.data || {};
+    const chats = d.chats ? d.chats.total : 0, runs = d.runs || 0;
+    const scope = acc ? acc.label || acc.phone : L("allen Konten", "all accounts");
+    K.openModal(L("Daten auf null setzen?", "Reset the data to zero?"), `
+      <p data-reset-text>${esc(L(`Gelöscht werden die gespeicherten Chats (${fmtN(chats)}) und alle Durchläufe samt Verlauf (${fmtN(runs)}) von ${scope}. Danach beginnen alle Zahlen wieder bei 0 und es wird ab jetzt neu erfasst.`,
+        `This deletes the stored chats (${fmtN(chats)}) and all runs with their history (${fmtN(runs)}) of ${scope}. Afterwards all numbers start at 0 again and everything is tracked from now on.`))}</p>
+      <p class="hint">${esc(L("Bleibt erhalten: Konten, Abläufe und hochgeladene Dateien. Chats, die es in Telegram noch gibt, kommen bei der nächsten Synchronisierung wieder. Das kann nicht rückgängig gemacht werden.",
+        "Kept: accounts, workflows and uploaded files. Chats that still exist in Telegram come back with the next sync. This cannot be undone."))}</p>
+      <p class="error" data-reset-error></p>
+      <div class="actions"><button class="btn" type="button" data-close-modal>${esc(L("Abbrechen", "Cancel"))}</button>
+        <button class="btn danger" type="button" data-go>${esc(L("Jetzt auf null setzen", "Reset now"))}</button></div>`);
+    const go = K.$("#modal [data-go]");
+    go.onclick = async () => {
+      go.disabled = true;
+      try {
+        const r = await K.api(`${API}/reset`, { method: "POST", body: { account_id: acc ? acc.id : null } });
+        K.closeModal();
+        K.toast(L(`Zurückgesetzt: ${fmtN(r.chats)} Chats und ${fmtN(r.runs)} Durchläufe gelöscht`, `Reset: ${fmtN(r.chats)} chats and ${fmtN(r.runs)} runs deleted`));
+        await loadDash();
+      } catch (e) {
+        if (e.message !== "Not authenticated") { K.$("#modal [data-reset-error]").textContent = errText(e.message); go.disabled = false; }
+      }
+    };
   }
 
   // --- Verlauf (history) ---

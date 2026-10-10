@@ -277,3 +277,51 @@ def test_a_voice_step_can_be_replaced_and_the_old_file_is_released(ui):
     assert {m["name"]: m["used_by"] for m in ok(api.get(M))} == {old: [], new: ["Mit Sprachmemo"]}
     ok(api.delete(f"{M}/{old}"))
     assert not problems, problems
+
+
+def test_display_time_and_the_block_step_in_the_editor(ui):
+    """The client's wishes: an image shown only once (Telegram's own choices) and a plain 'block user' step at the end."""
+    app, api, open_page, _ = ui
+    page, problems = open_page("de")
+    page.click(f'{T} [data-act="new"]')
+    page.fill(f"{T} [data-name]", "Einmal ansehen und blockieren")
+    add_step(page, "image")
+    upload(page, last_card(page), "bild.jpg", jpg(), "image/jpeg")
+    choice = last_card(page).locator("[data-selfdestruct]")
+    assert choice.locator("option").all_inner_texts() == ["Nicht löschen", "Einmalig zeigen", "3 Sekunden", "10 Sekunden", "30 Sekunden"]
+    choice.select_option("once")
+    add_step(page, "voice")
+    upload(page, last_card(page), "a.ogg", VOICE_A, "audio/ogg")
+    assert last_card(page).locator("[data-selfdestruct] option").all_inner_texts() == ["Nicht löschen", "Einmalig zeigen"]
+    last_card(page).locator("[data-selfdestruct]").select_option("once")
+
+    add_step(page, "block")
+    cards = page.locator(f"{T} .tg-step")
+    block = cards.nth(2)
+    assert block.locator("[data-pause]").count() == 0                    # an action: no pause, nothing to type
+    assert "Nutzer blockieren" in block.inner_text() and "ohne Spam-Meldung" in block.inner_text()
+    page.click(f'{T} [data-act="add-toggle"]')
+    assert page.locator(f'{T} [data-add="block"]').count() == 0          # only one block step per workflow
+    page.keyboard.press("Escape")
+    add_step(page, "text")                                               # a message added now goes in front of the block step
+    cards.nth(2).locator("[data-content]").fill("Tschüss")
+    assert cards.count() == 4 and "Nutzer blockieren" in cards.nth(3).inner_text()
+
+    cards.nth(3).locator('[data-act="up"]').click()                      # the block step in the middle: refused
+    page.click(f'{T} [data-act="save"]')
+    page.wait_for_selector(f"{T} [data-err=content]:not(:empty)")
+    assert "muss der letzte Schritt sein" in page.inner_text(f"{T} [data-err=content]:not(:empty)")
+    assert ok(api.get(W)) == []
+    cards.nth(2).locator('[data-act="down"]').click()
+    page.click(f'{T} [data-act="save"]')
+    page.wait_for_selector("#toasts >> text=Ablauf gespeichert")
+
+    steps = ok(api.get(W))[0]["steps"]
+    assert [x["type"] for x in steps] == ["image", "voice", "text", "block"]
+    assert steps[0]["self_destruct"] == "once" and steps[1]["self_destruct"] == "once" and "self_destruct" not in steps[2]
+    assert steps[3] == {"type": "block", "pause_after": 0}
+    page.reload()                                                        # reopened, the choices are still set
+    page.click(f"{T} .tg-wf-card")
+    page.wait_for_selector(f"{T} .tg-step")
+    assert page.locator(f"{T} .tg-step").first.locator("[data-selfdestruct]").input_value() == "once"
+    assert not problems, problems
