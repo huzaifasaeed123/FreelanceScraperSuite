@@ -32,10 +32,15 @@ class BotModule:
     # Lifecycle hooks, sync or async. on_startup runs after the DB exists; on_shutdown on server stop.
     on_startup: Optional[Callable[[ModuleContext], Any]] = None
     on_shutdown: Optional[Callable[[ModuleContext], Any]] = None
+    # The card of this bot on the main dashboard: a function returning
+    #   {"status": "active" | "offline" | "error", "metrics": [{"label": {"de": ..., "en": ...}, "value": 24}, ...]}
+    # (three metrics fit the card). The panel adds the title, icon and the link to the bot's own dashboard.
+    summary: Optional[Callable[[], dict]] = None
+    color: str = ""        # accent colour of the card, e.g. "#229ED9"
 
     def manifest(self) -> dict:
         """What the panel needs to render this module (sent by GET /api/modules)."""
-        return {"key": self.key, "title": self.title, "icon": self.icon, "nav": self.nav,
+        return {"key": self.key, "title": self.title, "icon": self.icon, "nav": self.nav, "color": self.color,
                 "panel": f"/modules-static/{self.key}/panel.js" if self.panel else None}
 
 

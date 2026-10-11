@@ -656,8 +656,47 @@ $("#logout-btn").onclick = guard(async () => {
 // Tabs
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Overview (main dashboard): one card per project with a few numbers; a click opens that project's own dashboard
+// ---------------------------------------------------------------------------
+
+const OV_COMING_SOON = [{ key: "whatsapp", title: "WhatsApp", icon: "message", color: "#25D366" }];   // shown until the module exists
+const OV_STATUS = { active: ["Aktiv", "Active", "ok"], ready: ["Bereit", "Ready", "idle"], offline: ["Offline", "Offline", "idle"], error: ["Fehler", "Error", "bad"] };
+
+function ovCard(c) {
+  const [de, en, tone] = OV_STATUS[c.status] || OV_STATUS.error;
+  const metrics = c.metrics.map((m) => `<div class="ov-metric"><b>${fmtNum(m.value)}</b><span>${esc(LANG === "de" ? m.label.de : m.label.en)}</span></div>`).join("");
+  return `<a class="ov-card" href="#${esc(c.link)}" data-ov="${esc(c.key)}" style="--ov:${esc(c.color || "var(--accent)")}">
+    <div class="ov-head"><span class="ov-ic">${icon(c.icon)}</span><b>${esc(c.title)}</b>
+      <span class="ov-status ${tone}"><i></i>${esc(L(de, en))}</span></div>
+    <div class="ov-metrics">${metrics}</div>
+    <div class="ov-link">${esc(L(`Alle ${c.title}-Statistiken ansehen`, `View all ${c.title} statistics`))} →</div></a>`;
+}
+
+function ovSoon(c) {
+  return `<div class="ov-card soon" data-ov="${esc(c.key)}" style="--ov:${esc(c.color)}">
+    <div class="ov-head"><span class="ov-ic">${icon(c.icon)}</span><b>${esc(c.title)}</b>
+      <span class="ov-status idle">${esc(L("Demnächst", "Coming soon"))}</span></div>
+    <p class="ov-soon">${esc(L("In Vorbereitung. Sobald es soweit ist, erscheinen hier die wichtigsten Zahlen.", "In preparation. The key numbers will show up here as soon as it is ready."))}</p></div>`;
+}
+
+async function loadOverview() {
+  const host = $("#overview");
+  const [mods, s] = await Promise.all([api("/api/modules/summary"), api("/api/stats")]);
+  const cards = mods.map(ovCard);
+  OV_COMING_SOON.filter((c) => !mods.some((m) => m.key === c.key)).forEach((c) => cards.push(ovSoon(c)));
+  cards.push(ovCard({
+    key: "jaumo", title: "Jaumo", icon: "heart", color: "#e11d48", link: "jaumo", status: s.running + s.queued > 0 ? "active" : "ready",
+    metrics: [{ label: { de: "Accounts", en: "Accounts" }, value: s.accounts_total }, { label: { de: "Likes", en: "Likes" }, value: s.liked },
+      { label: { de: "Matches", en: "Matches" }, value: s.matches }] }));
+  if ($("#overview") !== host) return;
+  host.innerHTML = cards.join("");
+}
+setInterval(() => { if (state.tab === "dashboard" && !document.hidden) guard(loadOverview)(); }, 15000);
+
 const TAB_LOADERS = {
-  dashboard: () => loadDashboard(),
+  dashboard: () => loadOverview(),
+  jaumo: () => loadDashboard(),
   runs: () => loadRuns(),
   configs: () => loadConfigPage(),
   names: () => loadNamesPage(),
@@ -921,7 +960,7 @@ function openEvents() {
   ws.onopen = () => {
     eventsRetry = 0;
     setLive(true);
-    if (state.tab === "dashboard") guard(loadDashboardRuns)();
+    if (state.tab === "jaumo") guard(loadDashboardRuns)();
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
@@ -943,7 +982,7 @@ function openEvents() {
       if (state.tab === "accounts") reloadAccountsSoon();
     } else if (msg.type === "settings") {
       refreshStatsSoon();
-      if (state.tab === "dashboard") guard(renderSetupCheck)();
+      if (state.tab === "jaumo") guard(renderSetupCheck)();
     } else if (msg.type === "apk") {
       refreshStatsSoon();
       reloadApksSoon();
@@ -965,7 +1004,7 @@ function closeEvents() {
 }
 
 const refreshStatsSoon = throttle(() => guard(loadStats)(), 5000);
-const refreshDailySoon = throttle(() => { if (state.tab === "dashboard") guard(loadDaily)(); }, 5000);
+const refreshDailySoon = throttle(() => { if (state.tab === "jaumo") guard(loadDaily)(); }, 5000);
 const reloadRunsSoon = throttle(() => guard(loadRuns)(), 3000);
 
 // Apply a "counters" push: patch the visible row / cards locally (no HTTP request).
@@ -975,7 +1014,7 @@ function applyCounters(m) {
   const s = state.stats;
   if (s) {
     s.liked += liked; s.disliked += disliked; s.matches += matches; s.messages_sent += msgs;
-    if (state.tab === "dashboard") { renderKpis(); renderEngagement(); }
+    if (state.tab === "jaumo") { renderKpis(); renderEngagement(); }
   }
   const sum = state.acc && state.acc.summary;
   if (sum) {
@@ -1052,7 +1091,7 @@ async function renderSetupCheck() {
   const c = state.config;
   if (!c) { box.classList.add("hidden"); return; }
   const res = await api("/api/runs/check", { method: "POST", body: { count: 1, names: [] } });
-  if (state.tab !== "dashboard") return;
+  if (state.tab !== "jaumo") return;
   box.classList.toggle("hidden", res.ok);
   if (res.ok) { box.innerHTML = ""; return; }
   const byCode = Object.fromEntries(res.problems.map((p) => [p.code, p]));
@@ -1077,7 +1116,7 @@ async function loadStats() {
   renderNotifications();
   $("#nav-running").textContent = s.running || "";
   $("#nav-apk").textContent = state.config && apkProblem(state.config) ? "!" : "";
-  if (state.tab !== "dashboard") return;
+  if (state.tab !== "jaumo") return;
   renderKpis();
   renderStatusBreakdown();
   renderEngagement();
@@ -1095,7 +1134,7 @@ async function loadStats() {
 
 async function loadDaily() {
   state.daily = await api(`/api/stats/daily?days=${state.days}&tz_offset=${new Date().getTimezoneOffset()}`);
-  if (state.tab !== "dashboard") return;
+  if (state.tab !== "jaumo") return;
   renderChart();
   renderKpis();
 }
@@ -1287,7 +1326,7 @@ $("#chart-range").addEventListener("click", guard(async (e) => {
   $$("#chart-range button").forEach((x) => x.classList.toggle("active", x === b));
   await loadDaily();
 }));
-window.addEventListener("resize", debounce(() => { if (state.tab === "dashboard") renderChart(); }, 150));
+window.addEventListener("resize", debounce(() => { if (state.tab === "jaumo") renderChart(); }, 150));
 
 // --- Live bots ----------------------------------------------------------------
 
@@ -1298,7 +1337,7 @@ async function loadDashboardRuns() {
 }
 
 function renderLiveCards() {
-  if (state.tab !== "dashboard") return;
+  if (state.tab !== "jaumo") return;
   const all = [...state.runs.values()].filter((r) => r.kind !== "sync").sort((a, b) => b.id - a.id);
   const active = all.filter((r) => ACTIVE.has(r.status))
     .sort((a, b) => (a.status === b.status ? b.id - a.id : a.status === "running" ? -1 : 1));
@@ -1387,7 +1426,7 @@ $("#live-filter").addEventListener("click", (e) => {
   $$("#live-filter button").forEach((x) => x.classList.toggle("active", x === b));
   renderLiveCards();
 });
-setInterval(() => { if (state.tab === "dashboard" && !document.hidden) renderLiveCards(); }, 5000);
+setInterval(() => { if (state.tab === "jaumo" && !document.hidden) renderLiveCards(); }, 5000);
 
 // --- Launch -------------------------------------------------------------------
 

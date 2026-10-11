@@ -26,7 +26,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, Session, SQLModel, select
 
 from api import settings as cfg
-from api.models import AppSetting, get_session, iso, utcnow
+from api.models import AppSetting, engine as db_engine, get_session, iso, utcnow
 
 
 class TgAccount(SQLModel, table=True):
@@ -62,6 +62,7 @@ class TgChat(SQLModel, table=True):
     first_contact_at: Optional[datetime] = None
     last_contact_at: Optional[datetime] = Field(default=None, index=True)
     last_message: str = ""
+    replied_at: Optional[datetime] = None  # the contact answered something we sent (first answer)
     blocked: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})   # a workflow's "block user" step blocked this contact on Telegram
     chat_status: str = Field(default="pending", index=True)   # pending|in_progress|done|error|paused
     messages_sent: int = 0
@@ -103,6 +104,7 @@ class TgRun(SQLModel, table=True):
     wait_kind: str = Field(default="", sa_column_kwargs={"server_default": ""})  # what next_action_at waits for: pause | flood | retry
     status_msg: str = Field(default="", sa_column_kwargs={"server_default": ""})  # why a run is paused (e.g. "Account offline")
     auto_resume: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})  # go on by itself when the account is back
+    mark_read: bool = Field(default=True, sa_column_kwargs={"server_default": "1"})     # open each chat first: the contact's messages get the "read" ticks
     peer_floods: int = Field(default=0, sa_column_kwargs={"server_default": "0"})       # chats that failed with PeerFlood
     created_at: datetime = Field(default_factory=utcnow, index=True)
     started_at: Optional[datetime] = None
@@ -234,35 +236,6 @@ def status(s: Session = Depends(get_session)):
         "chats": count(select(func.count()).select_from(TgChat)),
         "runs": count(select(func.count()).select_from(TgRun)),
     }
-
-
-class ResetIn(BaseModel):
-    account_id: Optional[int] = None      # one account, or all of them
-
-
-@router.post("/reset")
-def reset_data(body: ResetIn, s: Session = Depends(get_session)):
-    """Start the numbers from zero: delete the stored chats and every run (with its history) of one account or of all.
-    Accounts, workflows and uploaded files stay. Chats that still exist in Telegram come back with the next sync."""
-    one = body.account_id
-    if one is not None:
-        _get_account(s, one)
-    run_where = [] if one is None else [TgRun.account_id == one]
-    chat_where = [] if one is None else [TgChat.account_id == one]
-    if s.exec(select(TgRun.id).where(TgRun.status.in_(ACTIVE_RUN), *run_where)).first():
-        raise HTTPException(409, "A run is still active, stop it first")
-    if any(one is None or acc == one for acc in tg.syncing):
-        raise HTTPException(409, "A chat sync is running, wait until it has finished")
-    run_ids = s.exec(select(TgRun.id).where(*run_where)).all()
-    chats = s.exec(select(func.count()).select_from(TgChat).where(*chat_where)).one()
-    for i in range(0, len(run_ids), 500):      # SQLite limits how many values one IN (...) may hold
-        part = run_ids[i:i + 500]
-        s.exec(sa_delete(TgRunChat).where(TgRunChat.run_id.in_(part)))
-        s.exec(sa_delete(TgRun).where(TgRun.id.in_(part)))
-    s.exec(sa_delete(TgChat).where(*chat_where))
-    s.commit()
-    tg._publish({"type": "reset", "account_id": one})
-    return {"chats": chats, "runs": len(run_ids)}
 
 
 @router.get("/settings")
@@ -460,7 +433,7 @@ def _chat_filters(account_id, status, q, date_from, date_to) -> list:
 
 def _chat_public(c: TgChat) -> dict:
     d = c.model_dump(exclude={"access_hash", "search_text"})
-    for k in ("first_contact_at", "last_contact_at", "last_processed_at", "created_at"):
+    for k in ("first_contact_at", "last_contact_at", "last_processed_at", "created_at", "replied_at"):
         d[k] = iso(d[k])
     return d
 
@@ -1004,6 +977,7 @@ class RunIn(BaseModel):
     on_error: Literal["next", "retry"] = "next"    # a failed chat: go on with the next one | try the step again
     retries: int = Field(3, ge=1, le=5)            # extra attempts per step when on_error = retry
     auto_resume: bool = False                      # go on by itself when the account is online again after a pause
+    mark_read: bool = True                         # before the first message of a chat: mark the contact's messages as read
 
 
 # pause, resume and stop are async on purpose: they flip the run task's asyncio gate, which belongs to the event loop
@@ -1021,8 +995,8 @@ def _run_now(s: Session, id_: int) -> dict:
 
 
 def _start_run(s: Session, account_id: int, workflow_id: Optional[int], name: str, snapshot: dict,
-               chat_ids: list[int], on_error: str, retries: int, auto_resume: bool) -> dict:
-    run_id = tg.runs.start(account_id, workflow_id, name, snapshot, chat_ids, on_error, retries, auto_resume)
+               chat_ids: list[int], on_error: str, retries: int, auto_resume: bool, mark_read: bool) -> dict:
+    run_id = tg.runs.start(account_id, workflow_id, name, snapshot, chat_ids, on_error, retries, auto_resume, mark_read)
     return _run_now(s, run_id)
 
 
@@ -1043,7 +1017,7 @@ async def create_run(body: RunIn, s: Session = Depends(get_session)):
         raise HTTPException(422, "Some of the chats do not belong to this account")
     try:
         return _start_run(s, body.account_id, w.id, w.name, {"name": w.name, "steps": steps}, chat_ids,
-                          body.on_error, body.retries, body.auto_resume)
+                          body.on_error, body.retries, body.auto_resume, body.mark_read)
     except TgError as e:
         raise HTTPException(e.status, str(e))
 
@@ -1217,7 +1191,7 @@ async def restart_run(id_: int, s: Session = Depends(get_session)):
     chat_ids = s.exec(select(TgRunChat.chat_id).where(TgRunChat.run_id == id_).order_by(TgRunChat.position)).all()
     try:
         return _start_run(s, old.account_id, old.workflow_id, old.workflow_name, old.workflow_snapshot, chat_ids,
-                          old.on_error, old.retries, old.auto_resume)
+                          old.on_error, old.retries, old.auto_resume, old.mark_read)
     except TgError as e:
         raise HTTPException(e.status, str(e))
 
@@ -1225,6 +1199,19 @@ async def restart_run(id_: int, s: Session = Depends(get_session)):
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
+
+def overview() -> dict:
+    """The card of Telegram on the main dashboard (modules/base.py: BotModule.summary)."""
+    with Session(db_engine) as s:
+        online = s.exec(select(func.count()).select_from(TgAccount).where(TgAccount.status == "online")).one()
+        open_chats = s.exec(select(func.count()).select_from(TgChat).where(TgChat.chat_status == "pending")).one()
+        sent = s.exec(select(func.coalesce(func.sum(TgChat.messages_sent), 0))).one()
+        replies = s.exec(select(func.count()).select_from(TgChat).where(TgChat.replied_at.is_not(None))).one()
+    return {"status": "active" if online else "offline",
+            "metrics": [{"label": {"de": "Offene Chats", "en": "Open chats"}, "value": open_chats},
+                        {"label": {"de": "Gesendet", "en": "Sent"}, "value": sent},
+                        {"label": {"de": "Antworten", "en": "Replies"}, "value": replies}]}
+
 
 @router.get("/stats")
 def stats(account_id: Optional[int] = None, days: int = Query(14, ge=1, le=90), s: Session = Depends(get_session)):
@@ -1237,6 +1224,7 @@ def stats(account_id: Optional[int] = None, days: int = Query(14, ge=1, le=90), 
     run_where = [TgRun.account_id == account_id] if account_id is not None else []
     by_status = dict(s.exec(select(TgChat.chat_status, func.count()).where(*chat_where).group_by(TgChat.chat_status)).all())
     chats_by = {k: by_status.get(k, 0) for k in CHAT_STATUSES}
+    replied = s.exec(select(func.count()).select_from(TgChat).where(*chat_where, TgChat.replied_at.is_not(None))).one()
 
     def sends(*extra):     # run-chat results, limited to the account's runs
         q = select(TgRunChat.status, func.count()).join(TgRun, TgRun.id == TgRunChat.run_id).where(*run_where, *extra)
@@ -1258,7 +1246,8 @@ def stats(account_id: Optional[int] = None, days: int = Query(14, ge=1, le=90), 
     return {
         "accounts": sum(n for _, n in accounts), "accounts_online": sum(n for st, n in accounts if st == "online"),
         "chats": {"total": sum(chats_by.values()), "unprocessed": chats_by["pending"], "processed": chats_by["done"],
-                  "errors": chats_by["error"], "in_progress": chats_by["in_progress"], "paused": chats_by["paused"]},
+                  "errors": chats_by["error"], "in_progress": chats_by["in_progress"], "paused": chats_by["paused"],
+                  "replied": replied},
         "runs": s.exec(select(func.count()).select_from(TgRun).where(*run_where)).one(),
         "sends": {"successful": results.get("done", 0), "failed": results.get("error", 0),
                   "messages": s.exec(select(func.coalesce(func.sum(TgChat.messages_sent), 0)).where(*chat_where)).one()},

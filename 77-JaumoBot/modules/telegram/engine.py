@@ -164,14 +164,16 @@ def _is_contact(user, own_id: Optional[str]) -> bool:
     return user.id != SERVICE_CHAT_ID and str(user.id) != own_id
 
 
-def _chat_row(user, message) -> dict:
+def _chat_row(user, message, live: bool = False) -> dict:
     """What we store about a chat, from a Telethon user and its latest message."""
     username = getattr(user, "username", None) or ""
     name = " ".join(x for x in (getattr(user, "first_name", None), getattr(user, "last_name", None)) if x)
     text = getattr(message, "message", "") or ("[media]" if getattr(message, "media", None) else "")
     return {"telegram_id": str(user.id), "access_hash": str(getattr(user, "access_hash", None) or ""),
             "display_name": name or username or str(user.id), "username": username,
-            "last_message": text[:300], "date": _utc(getattr(message, "date", None))}
+            "last_message": text[:300], "date": _utc(getattr(message, "date", None)),
+            "incoming": not getattr(message, "out", False),      # the latest message is from the contact
+            "live": live}                                        # it just arrived (not read from the dialog list)
 
 
 def upsert_chats(s: Session, acc_id: int, rows: list[dict]) -> list[tuple[TgChat, bool]]:
@@ -195,6 +197,11 @@ def upsert_chats(s: Session, acc_id: int, rows: list[dict]) -> list[tuple[TgChat
                 chat.first_contact_at = date
             if date and (chat.last_contact_at is None or date >= chat.last_contact_at):
                 chat.last_contact_at, chat.last_message = date, r["last_message"]
+        # "Replies": the contact answered something we sent. A live message is an answer as soon as we have sent
+        # anything; a dialog read later only counts when the contact's last message is newer than our last run on it.
+        if (not created and r.get("incoming") and date and chat.replied_at is None and chat.messages_sent > 0
+                and (r.get("live") or (chat.last_processed_at and date > _utc(chat.last_processed_at)))):
+            chat.replied_at = date
         chat.display_name, chat.username = r["display_name"], r["username"]
         if r["access_hash"]:
             chat.access_hash = r["access_hash"]
@@ -576,7 +583,7 @@ class TelegramEngine:
             if not _is_contact(user, own_id):
                 return
             with Session(db_engine) as s:
-                (chat, created), = upsert_chats(s, acc_id, [_chat_row(user, event.message)])
+                (chat, created), = upsert_chats(s, acc_id, [_chat_row(user, event.message, live=True)])
                 s.commit()
                 chat_id = chat.id
             self._publish({"type": "chat", "account_id": acc_id, "chat_id": chat_id, "new": created})
@@ -722,7 +729,7 @@ def run_state(s: Session, run: TgRun) -> dict:
     return {
         "id": run.id, "account_id": run.account_id, "workflow_id": run.workflow_id, "workflow_name": run.workflow_name,
         "status": run.status, "status_msg": run.status_msg, "on_error": run.on_error, "retries": run.retries,
-        "auto_resume": run.auto_resume, "peer_floods": run.peer_floods,
+        "auto_resume": run.auto_resume, "mark_read": run.mark_read, "peer_floods": run.peer_floods,
         "chat": {"id": chat.id, "name": chat.display_name, "username": chat.username} if chat else None,
         "step": step, "steps_total": len(steps), "next_step_type": next_type,
         "wait_kind": run.wait_kind if due else "",
@@ -777,7 +784,7 @@ class RunEngine:
             s.commit()
 
     def start(self, account_id: int, workflow_id: Optional[int], name: str, snapshot: dict, chat_ids: list[int],
-              on_error: str, retries: int, auto_resume: bool = False) -> int:
+              on_error: str, retries: int, auto_resume: bool = False, mark_read: bool = True) -> int:
         """Create a run over chat_ids (in this order) and start working. There is no await in here: the check for
         another active run and the insert cannot be interleaved with a second start."""
         if not self._online(account_id):
@@ -787,7 +794,7 @@ class RunEngine:
                 raise TgError("This account already has an active run", 409)
             run = TgRun(account_id=account_id, workflow_id=workflow_id, workflow_name=name, workflow_snapshot=snapshot,
                         status="running", total_chats=len(chat_ids), on_error=on_error, retries=retries,
-                        auto_resume=auto_resume, started_at=utcnow())
+                        auto_resume=auto_resume, mark_read=mark_read, started_at=utcnow())
             s.add(run)
             s.flush()
             s.add_all(TgRunChat(run_id=run.id, chat_id=cid, position=n) for n, cid in enumerate(chat_ids))
@@ -916,10 +923,13 @@ class RunEngine:
         with Session(db_engine) as s:
             chat = s.get(TgChat, s.get(TgRunChat, rc_id).chat_id)
             tid, access_hash = chat.telegram_id, chat.access_hash
+            mark_read = s.get(TgRun, h.run_id).mark_read
         try:       # Telethon's entity cache is gone after a restart: the stored access_hash is the only address
             peer = InputPeerUser(int(tid), int(access_hash))
         except (TypeError, ValueError):
             return self._fail_chat(h.run_id, rc_id, "The chat has no access key, sync the chats again")
+        if first == 0 and mark_read:      # a chat that is already under way was opened before
+            await self._open_chat(h, peer)
         for i in range(first, len(h.steps)):
             reason = await self._send_step(h, rc_id, peer, i)
             if reason:
@@ -929,6 +939,19 @@ class RunEngine:
             pause = h.steps[i]["pause_after"]
             if pause and (not last or self._next_chat(h.run_id)):    # after the very last step nobody is left to wait for
                 await self._wait(h, pause, "pause")
+
+    async def _open_chat(self, h: RunHandle, peer):
+        """Open the chat like a person would: the contact's messages get the "read" ticks before our first message goes
+        out. Cosmetic, so a failure here (or a slow answer) must never fail the chat."""
+        client = self.tg.clients.get(h.account_id)
+        if client is None:
+            return
+        try:
+            await asyncio.wait_for(client.send_read_acknowledge(peer), 20)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"[telegram] run {h.run_id}: could not mark the chat as read ({type(e).__name__})")
 
     async def _send_step(self, h: RunHandle, rc_id: int, peer, i: int) -> Optional[str]:
         """Send step i with the run's error policy; returns None, or the reason it finally failed."""

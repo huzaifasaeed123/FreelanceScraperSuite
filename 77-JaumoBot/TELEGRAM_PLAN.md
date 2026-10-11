@@ -311,6 +311,20 @@ Run by separate test agents after Phase 9, reviewed by the main agent; the resul
 - **Display time of images/voice** (`self_destruct`): like Telegram's own menu - Nicht löschen / Einmalig zeigen / 3 / 10 / 30 s
   (a voice message: only once). Sent as Telethon `ttl` (once = 2147483647, what the official apps send). Not yet tried against
   real Telegram: check on the first live run that the photo really shows the flame icon and opens only once.
+- **Open the chat first** (`mark_read`, on by default, a checkbox on the Versand start form): before the first message of each chat the
+  contact's messages are marked as read (`send_read_acknowledge`), so the customer sees the two ticks before our messages arrive.
+  Once per chat (not again when a chat is resumed in the middle); a failure of that call never fails the chat. Stored on the run, so
+  a restart of the run keeps the choice. Dashboard button "Daten auf null setzen" resets the stored chats and runs.
+- **Main dashboard = overview** (client request): one card per project - Telegram (from its module), WhatsApp as "coming soon"
+  (until a `whatsapp` module exists), Jaumo (its own stats) - each with three numbers, a status and a link to the project's own
+  dashboard. The former Jaumo dashboard is now the first page of the Jaumo group (`#jaumo`). Telegram card: Open chats /
+  Sent (messages) / Replies. A module opts in with `BotModule(summary=fn, color="#hex")`; `GET /api/modules/summary` collects
+  the cards (a failing module shows as error, never breaks the others).
+- **Replies** (`replied_at` on a chat): set when the contact answers something we sent - live (a message arriving after we wrote),
+  or found by a later sync (the contact's last message is newer than our last run on the chat). First answer kept. Shown as
+  "geantwortet" in the Chats table, as the "Antworten" tile on the Telegram dashboard and on the overview card.
+- **No reset button** (client request: too easy to wipe the statistics by accident). The button and the `POST /reset` route are
+  removed; every chat and run stays in the statistics. If a reset is ever needed, it is done once on the server by hand.
 - **Upload names with dots** (WhatsApp names like `... at 01.23.45.ogg`) are accepted; the old "double extension" rule
   protected nothing (files are stored under a generated name and judged by their content).
 

@@ -13,7 +13,7 @@ def test_manifest_lists_telegram(api):
     mods = ok(api.get("/api/modules"))
     assert [m["key"] for m in mods] == ["telegram"]
     assert mods[0]["title"] == "Telegram"
-    assert mods[0]["panel"] == "/modules-static/telegram/panel.js"
+    assert mods[0]["panel"] == "/modules-static/telegram/panel.js" and mods[0]["color"] == "#229ED9"
     assert [n["tab"] for n in mods[0]["nav"]] == ["dashboard", "accounts", "chats", "workflows", "runs", "history"]
     assert all({"de", "en"} <= set(n["label"]) for n in mods[0]["nav"])
 

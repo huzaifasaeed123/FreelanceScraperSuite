@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.ui, pytest.mark.skipif(not CHROME.exists(), reason="Ch
 pw_sync = pytest.importorskip("playwright.sync_api")
 
 RAW_KEY = re.compile(r"\b(acc|kpi|st|state|nav|sec|top|filter|sort|new|edit|msg|bulk|pager|col|common|del|sys|brand|outdated)\.[a-zA-Z]+\b")
-TABS = ["dashboard", "accounts", "configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"]
+TABS = ["dashboard", "jaumo", "accounts", "configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"]
 SLOWISH = {k: [0.2, 0.3] for k in FAST_DELAYS}
 
 
@@ -109,7 +109,7 @@ def test_every_page_renders_without_errors(browser, populated, lang, theme, size
         assert pg.p.locator("#acc-tbody tr[data-acc]").count() == total
         assert pg.p.locator("#acc-summary .acc-kpi").count() == 5
         assert str(total) in pg.p.inner_text("#acc-summary")
-        pg.tab("dashboard")
+        pg.tab("jaumo")
         assert pg.p.locator("#kpis .kpi").count() == 4
         pg.tab("photos")
         assert pg.p.locator("#photo-grid .photo-card").count() == 10
@@ -285,14 +285,14 @@ def test_new_accounts_dialog_explains_why_it_cannot_start(browser, app):
 
 def test_dashboard_setup_checklist(browser, app):
     api = app.client()
-    pg = Page(browser, app).login("dashboard")
+    pg = Page(browser, app).login("jaumo")
     try:
         pg.p.wait_for_selector("#setup-check:not(.hidden)")
         todo = pg.p.locator("#setup-check li.todo").evaluate_all("els => els.map(e => e.dataset.setup)")
         assert set(todo) >= {"apk", "photos"}
         setup_ready(api, photos=2)
         pg.tab("photos")
-        pg.tab("dashboard")
+        pg.tab("jaumo")
         pg.p.wait_for_selector("#setup-check.hidden", state="attached")
         pg.assert_clean("setup checklist")
     finally:
@@ -307,7 +307,7 @@ def test_jaumo_menu_group(browser, app):
     pg = Page(browser, app).login("dashboard")
     try:
         subs = pg.p.locator("#nav-jaumo .sb-sub button").evaluate_all("els => els.map(e => e.dataset.tab)")
-        assert subs == ["configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"], "order as in the client's mockup"
+        assert subs == ["jaumo", "configs", "photos", "proxies", "names", "rename", "about", "cities", "runs"], "order as in the client's mockup"
         assert pg.p.locator("#tabs button[data-tab=settings]").count() == 0, "no separate settings page"
         pg.p.click("#nav-jaumo-toggle")
         assert not pg.p.is_visible("#nav-jaumo .sb-sub"), "arrow folds the sub-menu"

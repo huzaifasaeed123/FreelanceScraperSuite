@@ -40,6 +40,8 @@ needed, so a test may create and change them while the server runs:
                  send_delay   number of seconds every send takes (so a test can act while a send is in flight)
                  dump_tasks   true: every connected client writes tasks.json = {"ts", "tasks": [coroutine names of all
                               unfinished asyncio tasks of the server]} about every 0.1 s, to look for leaked tasks
+  reads.jsonl    written by the fake: every chat marked as read {ts, account, chat_id, access_hash, peer};
+                 control.json "read_fails": true makes that call fail
   connections.jsonl  written by the fake: {"client": <object id>, "event": "connect" | "connect_failed" | "disconnect"}, so a
                  test can count connection attempts and prove that every connection the server opened was closed again.
   FAKE_TG_DIALOG_DELAY (env)  seconds iter_dialogs() sleeps per dialog, to keep a sync running for a while.
@@ -286,6 +288,20 @@ class FakeClient:
         if kwargs.get("ttl"):                                   # self-destructing media ("view once" = 2147483647)
             extra["ttl"] = kwargs["ttl"]
         self._record(entity, "voice" if voice_note else "image", file=str(file), **extra)
+
+    async def send_read_acknowledge(self, entity, message=None, **kwargs):
+        """The chat was opened: the contact's messages are marked as read. Written to reads.jsonl (not to the outbox, so the
+        assertions on sends stay as they are); control.json {"read_fails": true} makes it fail."""
+        if _control().get("read_fails"):
+            raise ConnectionError("could not mark as read")
+        d = _dir()
+        if d:
+            line = {"ts": datetime.now(timezone.utc).isoformat(), "account": self.session.value.removeprefix("fake:"),
+                    "chat_id": getattr(entity, "user_id", entity), "access_hash": getattr(entity, "access_hash", None),
+                    "peer": type(entity).__name__}
+            with open(d / "reads.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps(line) + "\n")
+        return True
 
     async def __call__(self, request):
         """Raw Telegram requests: only BlockRequest is used. It is recorded as a "block" in the outbox and can be

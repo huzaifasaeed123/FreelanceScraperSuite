@@ -5,13 +5,14 @@ from pathlib import Path
 
 from modules.base import BotModule
 
-from .api import router
+from .api import overview, router
 from .engine import tg
 
 module = BotModule(
     key="telegram", title="Telegram", icon="send", router=router,
     panel=Path(__file__).with_name("panel.js"),
     on_startup=tg.startup, on_shutdown=tg.shutdown,
+    summary=overview, color="#229ED9",
     # the first entry is the group header's page; the rest form the sub-menu
     nav=[
         {"tab": "dashboard", "label": {"de": "Dashboard", "en": "Dashboard"}, "icon": "activity"},

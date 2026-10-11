@@ -343,3 +343,28 @@ def test_the_retry_option_is_chosen_in_the_form_shown_in_the_confirmation_and_se
     assert (started["on_error"], started["retries"]) == ("retry", 2)
     ok(api.post(f"{API}/runs/{started['id']}/stop"))
     assert not problems, problems
+
+
+def test_the_open_the_chat_option_is_on_by_default_shown_in_the_summary_and_sent_to_the_run(ui):
+    """The client wants the contact's message to show as read before the workflow starts."""
+    app, api, scn, acc, wf, open_page = ui
+    page, problems = open_page("de")
+    form_ready(page)
+    box = f"{T} input[data-form=markRead]"
+    assert page.is_checked(box)
+    assert "Chat vor dem Ablauf öffnen" in page.inner_text(T) and "zwei Haken" in page.inner_text(T)
+    page.select_option(f"{T} select[data-form=workflow]", label="Neukontakt")
+    page.click(f"{T} [data-run-act=preset][data-status=pending]")
+    page.click(f"{T} [data-run-act=start]")
+    assert "Nachrichten des Kontakts vorher als gelesen markieren" in page.inner_text("#modal")
+    page.click("#modal [data-close-modal]")
+
+    page.uncheck(box)                                                # switched off: sent as such and named in the summary
+    page.click(f"{T} [data-run-act=start]")
+    assert "nein, direkt senden" in page.inner_text("#modal")
+    page.click("#modal [data-go]")
+    page.wait_for_selector(LIVE)
+    started = runs(api)[0]
+    assert started["mark_read"] is False
+    ok(api.post(f"{API}/runs/{started['id']}/stop"))
+    assert not problems, problems

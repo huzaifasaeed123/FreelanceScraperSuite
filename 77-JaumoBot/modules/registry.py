@@ -47,6 +47,23 @@ class ModuleRegistry:
         def list_modules():
             return [m.manifest() for m in self.modules.values()]
 
+        @manifest.get("/api/modules/summary")
+        def summaries():
+            """One entry per bot that has a card on the main dashboard. A bot that fails must not break the others."""
+            out = []
+            for m in self.modules.values():
+                if m.summary is None:
+                    continue
+                try:
+                    data = m.summary()
+                except Exception as e:  # noqa: BLE001
+                    print(f"[modules] {m.key} summary failed: {type(e).__name__}: {e}")
+                    data = {"status": "error", "metrics": []}
+                first = m.nav[0]["tab"] if m.nav else ""
+                out.append({"key": m.key, "title": m.title, "icon": m.icon, "color": m.color,
+                            "link": f"{m.key}-{first}" if first else "", **data})
+            return out
+
         app.include_router(manifest, dependencies=[Depends(require_auth)])
         for key, m in self.modules.items():
             if m.router is not None:

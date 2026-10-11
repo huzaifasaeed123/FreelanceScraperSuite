@@ -47,8 +47,6 @@
     [/^Workflow not found$/, "Ablauf nicht gefunden"],
     [/^This workflow has an active run/, "Für diesen Ablauf läuft ein Durchlauf, bitte zuerst stoppen"],
     [/^Step (\d+): (.+)$/, (m) => `Schritt ${m[1]}: ${errText(m[2])}`],
-    [/^A run is still active, stop it first$/, "Es läuft noch ein Durchlauf, bitte zuerst stoppen"],
-    [/^A chat sync is running, wait until it has finished$/, "Es läuft gerade eine Chat-Synchronisierung, bitte warten, bis sie fertig ist"],
     [/^blocking the user is only allowed as the last step$/, "„Nutzer blockieren“ ist nur als letzter Schritt erlaubt"],
     [/^invalid step$/, "ungültiger Schritt"],
     [/^unknown step type$/, "unbekannter Schritttyp"],
@@ -431,12 +429,13 @@
     const changed = () => { render(); if (opts.onChange) opts.onChange(selected); };
 
     // --- drawing ---
+    const repliedBadge = (c) => c.replied_at ? ` <span class="badge ok" title="${esc(L("Dieser Kontakt hat geantwortet", "This contact answered"))}">↩ ${esc(L("geantwortet", "replied"))}</span>` : "";
     const blockedBadge = (c) => c.blocked ? ` <span class="badge bad" title="${esc(L("Der Ablauf hat diesen Nutzer in Telegram blockiert", "A workflow blocked this user on Telegram"))}">🚫 ${esc(L("blockiert", "blocked"))}</span>` : "";
     function row(c) {
       const showAccount = !f.account && accounts.length > 1;
       return `<tr data-id="${c.id}">
         <td class="cb"><input type="checkbox" data-sel ${selected.has(c.id) ? "checked" : ""} aria-label="${esc(L("Chat auswählen", "Select chat"))}"></td>
-        <td class="tg-name"><b>${esc(c.display_name)}</b>${blockedBadge(c)}${c.username ? `<div class="muted">@${esc(c.username)}</div>` : ""}</td>
+        <td class="tg-name"><b>${esc(c.display_name)}</b>${blockedBadge(c)}${repliedBadge(c)}${c.username ? `<div class="muted">@${esc(c.username)}</div>` : ""}</td>
         <td class="mono">${esc(c.telegram_id)}</td>
         ${showAccount ? `<td class="tg-opt nowrap">${esc(accountName(c.account_id))}</td>` : ""}
         <td><span class="tg-st">${esc(statusLabel(c.chat_status))}</span>${c.chat_status === "error" && c.error_reason
@@ -1260,7 +1259,7 @@
   const stepEmoji = (type) => (STEP_KINDS[type] ? STEP_KINDS[type].emoji : "?");
 
   const rs = { account: null, workflows: [], run: null, recvAt: 0, listOffset: null, onlyErrors: false, listSeq: 0,
-    form: { workflow: "", onError: "next", retries: 3, autoResume: false } };
+    form: { workflow: "", onError: "next", retries: 3, autoResume: false, markRead: true } };
   const activeRuns = new Map();   // run id -> state, for every run that is not finished (feeds the sidebar badge)
   let runsEl = null, tickTimer = null, listTimer = null;
 
@@ -1504,6 +1503,10 @@
                 ${rs.workflows.map((w) => `<option value="${w.id}" ${String(w.id) === f.workflow ? "selected" : ""}>${esc(w.name)}</option>`).join("")}</select></label>
             <div data-wf-info></div>`
           : `<p class="hint">${esc(L("Es gibt noch keinen Ablauf.", "There is no workflow yet."))} <a href="#telegram-workflows">${esc(L("Ablauf erstellen", "Create a workflow"))}</a></p>`}
+        <label class="inline" style="margin-top:12px"><input type="checkbox" data-form="markRead" ${f.markRead ? "checked" : ""}>
+          <span>${esc(L("Chat vor dem Ablauf öffnen (Nachrichten des Kontakts als gelesen markieren)", "Open the chat before the workflow (mark the contact's messages as read)"))}</span></label>
+        <p class="hint" style="margin:6px 0 0">${esc(L("Der Kontakt sieht dann die zwei Haken (gelesen), bevor die erste Nachricht kommt – wie bei einer Person, die den Chat öffnet.",
+          "The contact then sees the two ticks (read) before the first message arrives, like a person who opens the chat."))}</p>
       </div>
       <div class="card tg-section"><h3>${esc(L("2 · Chats auswählen", "2 · Select chats"))}</h3>
         <div class="tg-presets">
@@ -1552,7 +1555,7 @@
   function formChanged(input) {
     const f = rs.form, key = input.dataset.form;
     if (key === "retries") f.retries = Math.min(5, Math.max(1, parseInt(input.value, 10) || 1));
-    else if (key === "autoResume") f.autoResume = input.checked;
+    else if (key === "autoResume" || key === "markRead") f[key] = input.checked;
     else f[key] = input.value;
     if (key === "onError") runsEl.querySelector("[data-retries]").classList.toggle("hidden", f.onError !== "retry");
     if (key === "workflow") paintForm();
@@ -1611,6 +1614,9 @@
         <dt>${esc(L("Bei Fehler", "On error"))}</dt><dd>${esc(f.onError === "retry"
           ? L(`Schritt bis zu ${f.retries}× erneut versuchen, dann nächster Chat`, `retry the step up to ${f.retries} times, then the next chat`)
           : L("mit dem nächsten Chat weitermachen", "go on with the next chat"))}</dd>
+        <dt>${esc(L("Chat öffnen", "Open the chat"))}</dt><dd>${esc(f.markRead
+          ? L("Nachrichten des Kontakts vorher als gelesen markieren", "mark the contact's messages as read first")
+          : L("nein, direkt senden", "no, send straight away"))}</dd>
         <dt>${esc(L("Verbindungsabbruch", "Connection drop"))}</dt><dd>${esc(f.autoResume
           ? L("automatisch fortsetzen, sobald das Konto wieder online ist", "resume automatically when the account is back")
           : L("pausieren, du setzt selbst fort", "pause, you resume yourself"))}</dd></dl>
@@ -1628,7 +1634,7 @@
     go.disabled = true;
     try {
       const state = await K.api(`${API}/runs`, { method: "POST",
-        body: { account_id: rs.account, workflow_id: w.id, chat_ids: ids, on_error: f.onError, retries: f.retries, auto_resume: f.autoResume } });
+        body: { account_id: rs.account, workflow_id: w.id, chat_ids: ids, on_error: f.onError, retries: f.retries, auto_resume: f.autoResume, mark_read: f.markRead } });
       K.closeModal();
       rs.run = null;
       setRun(state);
@@ -1836,6 +1842,8 @@
         foot: esc(L(`${fmtN(s.sends.messages)} Nachrichten insgesamt`, `${fmtN(s.sends.messages)} messages in total`)) },
       { label: L("Fehlgeschlagene Sendungen", "Failed sends"), value: fmtN(s.sends.failed), iconName: "ban", tone: "danger",
         foot: esc(L("Chats, die mit Fehler endeten", "Chats that ended in an error")) },
+      { label: L("Antworten", "Replies"), value: fmtN(s.chats.replied), iconName: "message", tone: "info",
+        foot: esc(L("Chats, die geantwortet haben", "Chats that answered")) },
       { label: L("Letzter Durchlauf", "Last run"), value: last ? esc(K.fmtDate(last.finished_at || last.started_at)) : "—", iconName: "clock", tone: "info", long: !!last,
         foot: last ? `${runBadge(last.status)} ${esc(runSummary(last))}` : esc(L("Noch kein Durchlauf beendet", "No run finished yet")) },
       { label: L("Aktueller Chat", "Active chat"), value: a && a.chat ? esc(a.chat.name) : "—", iconName: "user", tone: "accent", long: true,
@@ -1990,8 +1998,7 @@
     accountList = await K.api(`${API}/accounts`);
     if (dashEl !== el) return;
     if (ds.account && !accountList.some((a) => String(a.id) === ds.account)) ds.account = "";
-    el.innerHTML = head("Telegram", L("Übersicht über Chats, Sendungen und den laufenden Durchlauf", "Overview of chats, sends and the current run"),
-        `<button type="button" class="btn danger" data-dash-act="reset">${icon("trash")}<span>${esc(L("Daten auf null setzen", "Reset data to zero"))}</span></button>`)
+    el.innerHTML = head("Telegram", L("Übersicht über Chats, Sendungen und den laufenden Durchlauf", "Overview of chats, sends and the current run"))
       + `<div class="acc-toolbar"><select data-dash-account aria-label="${esc(L("Konto", "Account"))}"><option value="">${esc(L("Alle Konten", "All accounts"))}</option>
         ${accountList.map((a) => `<option value="${a.id}" ${String(a.id) === ds.account ? "selected" : ""}>${esc(a.label || a.phone)}</option>`).join("")}</select></div><div data-dash></div>`;
     el.onchange = act(async (e) => {
@@ -2003,37 +2010,10 @@
     el.onclick = (e) => {
       const btn = e.target.closest("[data-dash-act=detail]");
       if (btn) { hs.detail = +btn.dataset.id; location.hash = "#telegram-history"; }
-      if (e.target.closest("[data-dash-act=reset]")) resetDialog();
     };
     await loadDash();
   }
 
-  // Start the numbers from zero (the stored chats and all runs of the selected account, or of all accounts).
-  function resetDialog() {
-    const acc = accountList.find((a) => String(a.id) === ds.account), d = ds.data || {};
-    const chats = d.chats ? d.chats.total : 0, runs = d.runs || 0;
-    const scope = acc ? acc.label || acc.phone : L("allen Konten", "all accounts");
-    K.openModal(L("Daten auf null setzen?", "Reset the data to zero?"), `
-      <p data-reset-text>${esc(L(`Gelöscht werden die gespeicherten Chats (${fmtN(chats)}) und alle Durchläufe samt Verlauf (${fmtN(runs)}) von ${scope}. Danach beginnen alle Zahlen wieder bei 0 und es wird ab jetzt neu erfasst.`,
-        `This deletes the stored chats (${fmtN(chats)}) and all runs with their history (${fmtN(runs)}) of ${scope}. Afterwards all numbers start at 0 again and everything is tracked from now on.`))}</p>
-      <p class="hint">${esc(L("Bleibt erhalten: Konten, Abläufe und hochgeladene Dateien. Chats, die es in Telegram noch gibt, kommen bei der nächsten Synchronisierung wieder. Das kann nicht rückgängig gemacht werden.",
-        "Kept: accounts, workflows and uploaded files. Chats that still exist in Telegram come back with the next sync. This cannot be undone."))}</p>
-      <p class="error" data-reset-error></p>
-      <div class="actions"><button class="btn" type="button" data-close-modal>${esc(L("Abbrechen", "Cancel"))}</button>
-        <button class="btn danger" type="button" data-go>${esc(L("Jetzt auf null setzen", "Reset now"))}</button></div>`);
-    const go = K.$("#modal [data-go]");
-    go.onclick = async () => {
-      go.disabled = true;
-      try {
-        const r = await K.api(`${API}/reset`, { method: "POST", body: { account_id: acc ? acc.id : null } });
-        K.closeModal();
-        K.toast(L(`Zurückgesetzt: ${fmtN(r.chats)} Chats und ${fmtN(r.runs)} Durchläufe gelöscht`, `Reset: ${fmtN(r.chats)} chats and ${fmtN(r.runs)} runs deleted`));
-        await loadDash();
-      } catch (e) {
-        if (e.message !== "Not authenticated") { K.$("#modal [data-reset-error]").textContent = errText(e.message); go.disabled = false; }
-      }
-    };
-  }
 
   // --- Verlauf (history) ---
 

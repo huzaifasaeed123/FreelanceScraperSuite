@@ -42,6 +42,7 @@
           <span class="sb-badge" id="nav-accounts"></span>
           <span class="sb-chev" id="nav-jaumo-toggle" role="button" tabindex="0" data-i18n-title="nav.toggle"><i data-icon="chevronDown"></i></span></button>
         <div class="sb-sub">
+          <button data-tab="jaumo"><i data-icon="dashboard"></i><span data-i18n="nav.dashboard">Dashboard</span></button>
           <button data-tab="configs"><i data-icon="settings"></i><span data-i18n="nav.config">Konfiguration</span><span class="sb-badge warn" id="nav-apk"></span></button>
           <button data-tab="photos"><i data-icon="image"></i><span data-i18n="nav.photos">Fotos</span></button>
           <button data-tab="proxies"><i data-icon="database"></i><span data-i18n="nav.proxies">Proxies</span></button>
@@ -97,11 +98,22 @@
       <code>python -m uvicorn api.main:app --port 8000</code></div>
 
     <main class="content">
-      <!-- Dashboard -->
+      <!-- Overview: one card per project (Jaumo, the bot modules, what is coming) -->
       <section id="tab-dashboard" class="tab">
         <div class="page-head">
           <div>
-            <h1 data-i18n="nav.dashboard">Dashboard</h1>
+            <h1 data-de="Übersicht">Overview</h1>
+            <p data-de="Alle Projekte auf einen Blick. Ein Klick auf eine Karte öffnet die Details.">All projects at a glance. Click a card for the details.</p>
+          </div>
+        </div>
+        <div id="overview" class="ov-grid"></div>
+      </section>
+
+      <!-- Jaumo dashboard (the former main dashboard) -->
+      <section id="tab-jaumo" class="tab hidden">
+        <div class="page-head">
+          <div>
+            <h1 data-de="Jaumo – Armaturenbrett">Jaumo dashboard</h1>
             <p data-de="Live-Überblick über Account-Erstellung, Accounts und Infrastruktur">Live overview of account creation, accounts and infrastructure</p>
           </div>
           <div class="page-actions">
